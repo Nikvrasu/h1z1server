@@ -337,6 +337,9 @@ packetIdSwitch:
 
             SendSelfToClient(app, session);
         } break;
+        case 0x1197: {
+        printf(MESSAGE_CONCAT_INFO("Handling ClientUpdate 0x97 (ignoring)\n"));
+        } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x\n"), packetId);
         }

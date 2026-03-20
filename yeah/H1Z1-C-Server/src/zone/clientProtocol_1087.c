@@ -4,6 +4,7 @@ void ZonePacketSend(AppState* app, SessionState* session, Arena* arena, Zone_Pac
     u8* packedBuffer = baseBuffer + TunnelDataHeaderLen;
 
     u32 packedLen = zone_packet_pack(kind, packetPtr, packedBuffer);
+    printf("[ZONE SEND] kind=%d packedLen=%u\n", kind, packedLen); 
     u32 totalLen = packedLen + TunnelDataHeaderLen;
 
     // arena_rewind(arena, maxLen - totalLen);
