@@ -127,6 +127,10 @@ void OnLogin(AppState* app, SessionState* session) {
     Zone_Packet_AddLightweightPc addPc = { 0 };
     addPc.character_id = session->characterId;
     addPc.transient_id.value = 52;
+    addPc.id_characterFirstName = session->characterName;
+    addPc.id_characterLastName = STR8("adad");
+    addPc.id_unknownString1 = STR8("adad");
+    addPc.id_characterName = session->characterName;
     addPc.actorModelId = 9240;
     addPc.position.x = -32.26f;
     addPc.position.y = 506.41f;
@@ -135,10 +139,6 @@ void OnLogin(AppState* app, SessionState* session) {
     addPc.rotation.y = -0.58f;
     addPc.rotation.z = -0.08f;
     addPc.rotation.w = 1.f;
-    // addPc.id_characterName = session->characterName;
-    addPc.id_characterName = STR8("awdawd");
     addPc.movementVersion = 1;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
-    ZonePacketSend(app, session, &app->arenaPerTick,
-               Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 }

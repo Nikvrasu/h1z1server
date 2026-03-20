@@ -128,16 +128,25 @@ void LoginPacketHandler(AppState* app, SessionState* session, u8* data, u32 data
             Login_Packet_CharacterLoginRequest packet = { 0 };
             login_packet_unpack(data + offset, dataLen - offset, kind, &packet, &app->arenaPerTick);
 
-            Login_Packet_CharacterLoginReply packetReply = { 0 };
+            printf("[DEBUG] serverTicket: '%.*s' len=%d\n", 
+                   (int)packet.server_ticket.size, 
+                   (char*)packet.server_ticket.data, 
+                   (int)packet.server_ticket.size);
 
             packetReply.character_id = packet.character_id;
             packetReply.server_id = packet.server_id;
             packetReply.status = 1;
 
+            char ticketBuf[256];
+            snprintf(ticketBuf, sizeof(ticketBuf), "7y3Bh44sKWZCYZH:%.*s",
+            (int)session->characterName.size,
+            session->characterName.data);
+
             packetReply.login_payload = (struct login_payload_s[1]){
                 {
                     .server_address = STR8("127.0.0.1:60000"),
-                    .server_ticket = STR8("7y3Bh44sKWZCYZH"),
+                    .server_ticket = string8_make((u8*)ticketBuf, strlen(ticketBuf)),
+                    // .server_ticket = STR8("7y3Bh44sKWZCYZH"),
                     .encryption_key =
                         STR8("\x17\xbd\x08\x6b\x1b\x94\xf0\x2f\xf0\xec\x53\xd7\x63\x58\x9b\x5f"),
                     .soe_protocol_version = 3,

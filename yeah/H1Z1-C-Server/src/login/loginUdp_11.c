@@ -36,12 +36,19 @@ void NameValidation(AppState* app, SessionState* session, u8* data, u32 dataLen)
     login_packet_unpack(data + offset, dataLen - offset, kind, &packet, &app->arenaPerTick);
 
     u32 validationStatus = 1;
+    u32 nameLen = packet.data_client->character_name.size;
 
     session->selected_server_id = packet.server_id;
-    session->characterName.size = packet.data_client->character_name.size;
-    session->characterName.data = packet.data_client->character_name.data;
 
-    u32 nameLen = session->characterName.size;
+    // allocate into arenaTotal so it persists across ticks
+    session->characterName.size = nameLen;
+    session->characterName.data = arena_push_size(&app->arenaTotal, nameLen);
+    memcpy(session->characterName.data,
+           packet.data_client->character_name.data,
+           nameLen);
+
+    printf("[DEBUG] NameValidation stored name: '%.*s' len=%d\n",
+           (int)nameLen, session->characterName.data, (int)nameLen);
 
     if (nameLen < 3 || nameLen > 20) {
         validationStatus = 3;
@@ -56,10 +63,8 @@ void NameValidation(AppState* app, SessionState* session, u8* data, u32 dataLen)
     }
 
     Login_Packet_TunnelAppPacketServerToClient packetReply = { 0 };
-
     packetReply.server_id = session->selected_server_id;
     packetReply.data_server_length = 14 + session->characterName.size;
-
     packetReply.data_server = (struct data_server_s[1]){
         {
             .tunnel_op_code = 0xa7,

@@ -209,10 +209,11 @@ void GatewayPacketSend(AppState* app, SessionState* session, Arena* arena, u32 m
 }
 
 void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dataLen) {
+    printf("[GW] Raw byte 0x%02x, dataLen=%u\n", data[0], dataLen);
     GatewayKindEnum kind;
     printf("\n");
 
-    u8 channel = *data >> 5;
+    u8 channel  = *data >> 5;
     u8 packetId = *data & 0b00011111;
 
     switch (packetId) {
@@ -244,19 +245,19 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
                               &channelZeroIsRoutable);
 
-            GatewayChannelIsRoutable channelOneIsRoutable = {
-                .channel = 1,
-                .isRoutable = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelOneIsRoutable);
+            // GatewayChannelIsRoutable channelOneIsRoutable = {
+            //     .channel = 1,
+            //     .isRoutable = TRUE,
+            // };
+            // GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+            //                   &channelOneIsRoutable);
 
-            GatewayChannelIsRoutable channelTwoIsRoutable = {
-                .channel = 2,
-                .isRoutable = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelTwoIsRoutable);
+            // GatewayChannelIsRoutable channelTwoIsRoutable = {
+            //     .channel = 2,
+            //     .isRoutable = TRUE,
+            // };
+            // GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+            //                   &channelTwoIsRoutable);
 
             GatewayOnLogin(app, session, loginRequest.characterId);
         } break;
@@ -279,37 +280,11 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             }
         } break;
         default: {
-            printf("\n=== UNHANDLED GW raw=0x%02x channel=%u packetId=0x%02x (%u bytes) ===\n",
-                   data[0], channel, packetId, dataLen);
-
-            u32 dumpLen = dataLen < 128 ? dataLen : 128;
-            for (u32 i = 0; i < dumpLen; i++) {
-                if (i > 0 && i % 16 == 0) {
-                    printf("  ");
-                    for (u32 j = i - 16; j < i; j++) {
-                        printf("%c", (data[j] >= 0x20 && data[j] <= 0x7e) ? data[j] : '.');
-                    }
-                    printf("\n");
-                }
-                printf("%02x ", data[i]);
-            }
-            u32 remainder = dumpLen % 16;
-            if (remainder == 0 && dumpLen > 0) remainder = 16;
-            for (u32 p = 0; p < (16 - remainder); p++) printf("   ");
-            printf("  ");
-            for (u32 j = dumpLen - remainder; j < dumpLen; j++) {
-                printf("%c", (data[j] >= 0x20 && data[j] <= 0x7e) ? data[j] : '.');
-            }
-            printf("\n");
-
             if (dataLen > 1) {
-                printf("  -> inner bytes [1..2]: 0x%02x 0x%02x\n",
-                       data[1], dataLen > 2 ? data[2] : 0x00);
+                printf(MESSAGE_CONCAT_INFO("(%u) Routing 0x%02x as tunnel data\n"),
+                       channel, packetId);
+                GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);
             }
-            if (dataLen > 128) {
-                printf("  -> (truncated, %u total bytes)\n", dataLen);
-            }
-            printf("=== END ===\n\n");
         }
     }
 }

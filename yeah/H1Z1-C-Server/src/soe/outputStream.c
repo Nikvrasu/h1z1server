@@ -19,7 +19,7 @@ void OutputStreamWrite(AppState* app, SessionState* session, SOEOutputStream* ou
         u32 initalOffset = sizeof(u32);
 
         for (u32 i = 0; i < dataLen;) {
-            u32 partialDataLen = (dataLen - i, output->pool->packetLen);
+            u32 partialDataLen = MIN(dataLen - i, output->pool->packetLen);
             partialDataLen -= initalOffset;
 
             output->sequence++;
