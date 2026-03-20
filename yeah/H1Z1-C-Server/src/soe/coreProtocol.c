@@ -500,7 +500,12 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
 
         default: {
             kind = CoreKindUnhandled;
-            printf(MESSAGE_CONCAT_WARN("Unhandled core packet 0x%02x\n"), packetId);
+            printf(MESSAGE_CONCAT_WARN("Unhandled core packet 0x%04x\n"), packetId);
+            printf("[CORE DUMP] %u bytes: ", dataLen);
+            for (u32 i = 0; i < (dataLen < 16 ? dataLen : 16); i++) {
+                printf("%02x ", data[i]);
+            }
+            printf("\n");
         }
     }
 }
