@@ -76,12 +76,13 @@ u32 CorePacketPack(CoreKindEnum kind, void* packetPtr, u8* buffer, b32 isSubPack
             printf(MESSAGE_CONCAT_INFO("Packing %s...\n"), coreKindNames[kind]);
             Ack* packet = packetPtr;
 
-            endian_write_u16_big(buffer + offset, CoreAckId);
+            u16 ackId = (u16)(CoreAckId + packet->channel * CoreChannelStride);
+            endian_write_u16_big(buffer + offset, ackId);
             offset += 2;
             endian_write_u16_big(buffer + offset, packet->sequence);
             offset += 2;
 
-            printf("--- sequence: %d\n", packet->sequence);
+            printf("--- channel: %d, sequence: %d\n", packet->channel, packet->sequence);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Packing %s not implemented\n"), coreKindNames[kind]);
@@ -372,6 +373,131 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
 
             OutputStreamUpdateAck(&session->outputStream, (i32)packet.sequence);
         } break;
+
+        // Channel 1
+        case CoreData1Id: {
+            kind = CoreKindData;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch1)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream1, packet.data, packet.dataLen,
+                             packet.sequence, FALSE);
+        } break;
+        case CoreDataFragment1Id: {
+            kind = CoreKindDataFragment;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch1)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream1, packet.data, packet.dataLen,
+                             packet.sequence, TRUE);
+        } break;
+        case CoreAck1Id: {
+            kind = CoreKindAck;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch1)...\n"), coreKindNames[kind]);
+
+            Ack packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            OutputStreamUpdateAck(&session->outputStream1, (i32)packet.sequence);
+        } break;
+
+        // Channel 2
+        case CoreData2Id: {
+            kind = CoreKindData;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch2)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream2, packet.data, packet.dataLen,
+                             packet.sequence, FALSE);
+        } break;
+        case CoreDataFragment2Id: {
+            kind = CoreKindDataFragment;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch2)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream2, packet.data, packet.dataLen,
+                             packet.sequence, TRUE);
+        } break;
+        case CoreAck2Id: {
+            kind = CoreKindAck;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch2)...\n"), coreKindNames[kind]);
+
+            Ack packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            OutputStreamUpdateAck(&session->outputStream2, (i32)packet.sequence);
+        } break;
+
+        // Channel 4
+        case CoreData4Id: {
+            kind = CoreKindData;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch4)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream4, packet.data, packet.dataLen,
+                             packet.sequence, FALSE);
+        } break;
+        case CoreDataFragment4Id: {
+            kind = CoreKindDataFragment;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch4)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream4, packet.data, packet.dataLen,
+                             packet.sequence, TRUE);
+        } break;
+        case CoreAck4Id: {
+            kind = CoreKindAck;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch4)...\n"), coreKindNames[kind]);
+
+            Ack packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            OutputStreamUpdateAck(&session->outputStream4, (i32)packet.sequence);
+        } break;
+
+        // Channel 5
+        case CoreData5Id: {
+            kind = CoreKindData;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch5)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream5, packet.data, packet.dataLen,
+                             packet.sequence, FALSE);
+        } break;
+        case CoreDataFragment5Id: {
+            kind = CoreKindDataFragment;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch5)...\n"), coreKindNames[kind]);
+
+            Data packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            InputStreamWrite(app, session, &session->inputStream5, packet.data, packet.dataLen,
+                             packet.sequence, TRUE);
+        } break;
+        case CoreAck5Id: {
+            kind = CoreKindAck;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ch5)...\n"), coreKindNames[kind]);
+
+            Ack packet = { 0 };
+            CorePacketUnpack(data, dataLen, kind, &packet, isSubPacket, &session->args);
+
+            OutputStreamUpdateAck(&session->outputStream5, (i32)packet.sequence);
+        } break;
+
         default: {
             kind = CoreKindUnhandled;
             printf(MESSAGE_CONCAT_WARN("Unhandled core packet 0x%02x\n"), packetId);
