@@ -141,4 +141,16 @@ void OnLogin(AppState* app, SessionState* session) {
     addPc.rotation.w = 1.f;
     addPc.movementVersion = 1;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
+
+    // Signal to client that initial zone data is complete.
+    // Client waits for ZoneDoneSendingInitialData before sending
+    // ClientInitializationDetails, SetLocale, and eventually ClientIsReady.
+    Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
+    preloadDone.is_done = TRUE;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
 }

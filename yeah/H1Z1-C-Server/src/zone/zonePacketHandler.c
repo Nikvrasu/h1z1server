@@ -55,17 +55,6 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientIsReady;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
-            Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
-
-            preloadDone.is_done = TRUE;
-
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
-
             Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
 
             stateDelta.guid_1 = session->characterId;
