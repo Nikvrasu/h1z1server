@@ -128,10 +128,7 @@ void LoginPacketHandler(AppState* app, SessionState* session, u8* data, u32 data
             Login_Packet_CharacterLoginRequest packet = { 0 };
             login_packet_unpack(data + offset, dataLen - offset, kind, &packet, &app->arenaPerTick);
 
-            printf("[DEBUG] serverTicket: '%.*s' len=%d\n", 
-                   (int)packet.server_ticket.size, 
-                   (char*)packet.server_ticket.data, 
-                   (int)packet.server_ticket.size);
+            Login_Packet_CharacterLoginReply packetReply = { 0 };
 
             packetReply.character_id = packet.character_id;
             packetReply.server_id = packet.server_id;
