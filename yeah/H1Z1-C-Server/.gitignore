@@ -1,0 +1,12 @@
+# Specify filepatterns you want git to ignore.
+_IGNORE_*
+GAME_PACKETS/
+login_binaries/loginModuleTemp.dll
+zone_binaries/zoneModuleTemp.dll
+schema/output
+schema/schema_tool.exe
+LOGIN_PACKETS/
+*.bkp
+zig/*
+patch/H1Emu-Kotk-Patch
+src/cTesting/*
