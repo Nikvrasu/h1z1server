@@ -215,7 +215,18 @@ struct SessionState {
 
     i32 nextAck;
     i32 previousAck;
-    
+
+    // Per-channel ack tracking for channels 1, 2, 4, 5
+    // (channel 0 uses nextAck/previousAck above)
+    i32 nextAck1;
+    i32 previousAck1;
+    i32 nextAck2;
+    i32 previousAck2;
+    i32 nextAck4;
+    i32 previousAck4;
+    i32 nextAck5;
+    i32 previousAck5;
+
     // Channel 0
     FragmentPool inputPool;
     FragmentPool outputPool;
