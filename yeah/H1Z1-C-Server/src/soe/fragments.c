@@ -58,8 +58,5 @@ void FragmentAdvance(FragmentPool* pool) {
         pool->entry[i].isFragment = 0;
     }
 
-    if (pool->fragmentCount >= MAX_FRAGMENTS) {
-        pool->fragmentCount = 0;
-        pool->sequenceBase = 0; // NOTE: double check this
-    }
+    pool->fragmentCount = 0;
 }

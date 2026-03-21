@@ -46,7 +46,7 @@ void OnLogin(AppState* app, SessionState* session) {
         .cloudShadows = 0.2f,
 
         .zone_id = 5,
-        .zone_id_2 = 5,
+        .zone_id_2 = 0,
         .name_id = 7699,
         .unk_bool2 = TRUE,
         .lighting = STR8("Lighting_Z2.txt"),
@@ -169,7 +169,7 @@ void OnLogin(AppState* app, SessionState* session) {
     beginZoning.name_id                      = 61609;
     beginZoning.unk_dword_1                  = 0x0f2b07d0;
     beginZoning.unk_bool_1                   = FALSE;
-    beginZoning.wait_for_zone_ready          = TRUE;
+    beginZoning.wait_for_zone_ready          = FALSE;
     beginZoning.unk_bool_2                   = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                 Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
@@ -182,6 +182,8 @@ void OnLogin(AppState* app, SessionState* session) {
     // SendSelfToClient(app, session);
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 20000,
     "D:/h1z1server/yeah/H1Z1-C-Server/data/sendself_patched.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 256,
+    "D:/h1z1server/yeah/H1Z1-C-Server/data/clientupdate.bin");
 
     Zone_Packet_AddLightweightPc addPc = { 0 };
     addPc.character_id = session->characterId;
@@ -207,13 +209,26 @@ void OnLogin(AppState* app, SessionState* session) {
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
+                Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
     ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+                Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+    
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 64,
+    "D:/h1z1server/yeah/H1Z1-C-Server/data/broadcast.bin");
+    
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 64,
+    "D:/h1z1server/yeah/H1Z1-C-Server/data/missing.bin");
+
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 64,
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/setclientarea.bin");
+
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 20000,
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/sendself_patched.bin");
 
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 256,
         "D:/h1z1server/yeah/H1Z1-C-Server/data/deploy.bin");
+
     ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
+                Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
 }
