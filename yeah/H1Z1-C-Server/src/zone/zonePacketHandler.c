@@ -337,9 +337,15 @@ packetIdSwitch:
 
             SendSelfToClient(app, session);
         } break;
-        case 0x1197: {
-        printf(MESSAGE_CONCAT_INFO("Handling ClientUpdate 0x97 (ignoring)\n"));
-        } break;
+        case 0x11:
+            if (dataLen > 1 && data[1] == 0x97) {
+                printf("[ZONE] Received 0x1197 (zone ready), sending deploy packet\n");
+                ZonePacketRawFileSend(app, session, &app->arenaPerTick, 256,
+                    "D:/h1z1server/yeah/H1Z1-C-Server/data/deploy.bin");
+            } else {
+                printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x11 0x%02x\n"), dataLen > 1 ? data[1] : 0);
+            }
+            break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x\n"), packetId);
         }

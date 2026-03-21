@@ -87,6 +87,8 @@ void InputStreamFragmentProcess(AppState* app, SessionState* session, SOEInputSt
 
 void InputStreamWrite(AppState* app, SessionState* session, SOEInputStream* input, u8* data,
                       u32 dataLen, i32 sequence, b32 isFragment) {
+                        printf("[STREAM] Write: seq=%d nextSeq=%d prevAck=%d isFragment=%d dataLen=%u\n",
+           sequence, input->nextSequence, input->previousAck, isFragment, dataLen);
     if (input->nextSequence == -1) {
         input->nextSequence = sequence;
     }

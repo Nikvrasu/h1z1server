@@ -269,6 +269,9 @@ CoreKindEnum CorePacketGetKind(u8* data, u32 dataLen) {
 
 void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8* data, u32 dataLen,
                       b32 isSubPacket) {
+
+        printf("[CORE HANDLE] opcode=0x%04x dataLen=%u isSubPacket=%d\n", 
+           endian_read_u16_big(data), dataLen, isSubPacket);
     CoreKindEnum kind;
     u32 offset;
 
@@ -497,8 +500,13 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
 
             OutputStreamUpdateAck(&session->outputStream5, (i32)packet.sequence);
         } break;
-
         default: {
+            printf(MESSAGE_CONCAT_WARN("Unhandled core packet 0x%04x\n"), packetId);
+            printf("[CORE DUMP] %u bytes: ", dataLen);
+            for (u32 i = 0; i < (dataLen < 16 ? dataLen : 16); i++) {
+                printf("%02x ", data[i]);
+            }
+            printf("\n");
             kind = CoreKindUnhandled;
             printf(MESSAGE_CONCAT_WARN("Unhandled core packet 0x%02x\n"), packetId);
         }

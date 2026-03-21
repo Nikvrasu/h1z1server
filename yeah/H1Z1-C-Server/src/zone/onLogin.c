@@ -121,8 +121,67 @@ void OnLogin(AppState* app, SessionState* session) {
        (int)session->characterName.size, 
        session->characterName.data,
        (int)session->characterName.size);
-       
-    SendSelfToClient(app, session);
+
+    // EXPERIMENTAL!!!!
+    // ClientBeginZoning — triggers zone load on the client
+        Zone_Packet_ClientBeginZoning beginZoning = { 0 };
+    beginZoning.zone_name                    = STR8("Z2");
+    beginZoning.zone_type                    = 4;
+    beginZoning.pos                          = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+    beginZoning.rot                          = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+    beginZoning.overcast                     = 1.0f;
+    beginZoning.fogDensity                   = 0.000173f;
+    beginZoning.fogFloor                     = 10.0f;
+    beginZoning.fogGradient                  = 0.0144f;
+    beginZoning.globalPrecipitation          = 0.0f;
+    beginZoning.temperature                  = 75.0f;
+    beginZoning.skyClarity                   = 0.0f;
+    beginZoning.cloudWeight0                 = 0.05f;
+    beginZoning.cloudWeight1                 = 0.0f;
+    beginZoning.cloudWeight2                 = 0.05f;
+    beginZoning.cloudWeight3                 = 0.15f;
+    beginZoning.transitionTime               = 0.0f;
+    beginZoning.sunAxisX                     = 38.0f;
+    beginZoning.sunAxisY                     = -15.0f;
+    beginZoning.sunAxisZ                     = 0.0f;
+    beginZoning.windDirX                     = -1.0f;
+    beginZoning.windDirY                     = -0.5f;
+    beginZoning.windDirZ                     = -1.0f;
+    beginZoning.wind                         = 3.0f;
+    beginZoning.rainMinStrength              = 0.0f;
+    beginZoning.rainRampUpTimeSeconds        = 1.0f;
+    beginZoning.cloudFile                    = STR8("sky_Z_clouds.dds");
+    beginZoning.stratusCloudTiling           = 0.30f;
+    beginZoning.stratusCloudScrollU          = -0.002f;
+    beginZoning.stratusCloudScrollV          = 0.0f;
+    beginZoning.stratusCloudHeight           = 1000.0f;
+    beginZoning.cumulusCloudTiling           = 0.20f;
+    beginZoning.cumulusCloudScrollU          = 0.0f;
+    beginZoning.cumulusCloudScrollV          = 0.002f;
+    beginZoning.cumulusCloudHeight           = 8000.0f;
+    beginZoning.cloudAnimationSpeed          = 0.0f;
+    beginZoning.cloudSilverLiningThickness   = 0.25f;
+    beginZoning.cloudSilverLiningBrightness  = 7.0f;
+    beginZoning.cloudShadows                 = 0.5f;
+    beginZoning.unk_byte_1                   = 4;
+    beginZoning.zone_id_1                    = 5;
+    beginZoning.zone_id_2                    = 0;
+    beginZoning.name_id                      = 61609;
+    beginZoning.unk_dword_1                  = 0x0f2b07d0;
+    beginZoning.unk_bool_1                   = FALSE;
+    beginZoning.wait_for_zone_ready          = TRUE;
+    beginZoning.unk_bool_2                   = FALSE;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
+
+    Zone_Packet_ClientInitializationDetails initDetails = { 0 };
+    initDetails.unk_u32_1 = 1;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_ClientInitializationDetails, &initDetails);
+    // EXPERIMENTAL ^
+    // SendSelfToClient(app, session);
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 20000,
+    "D:/h1z1server/yeah/H1Z1-C-Server/data/sendself_patched.bin");
 
     Zone_Packet_AddLightweightPc addPc = { 0 };
     addPc.character_id = session->characterId;
@@ -149,8 +208,12 @@ void OnLogin(AppState* app, SessionState* session) {
     preloadDone.is_done = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
+
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 256,
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/deploy.bin");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
 }
