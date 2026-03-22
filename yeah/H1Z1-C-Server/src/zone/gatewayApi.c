@@ -208,6 +208,40 @@ void GatewayPacketSend(AppState* app, SessionState* session, Arena* arena, u32 m
     OutputStreamWrite(app, session, &session->outputStream, packedBuffer, packedLen, FALSE);
 }
 
+// ============================================================================
+// Extract character name from server ticket.
+// Ticket format: "7y3Bh44sKWZCYZH:CharacterName"
+// Everything after the first ':' is the character name.
+// Stores into session->characterName using arenaTotal so it persists.
+// ============================================================================
+void GatewayExtractCharacterName(AppState* app, SessionState* session,
+                                 char* ticket, u32 ticketLen) {
+    // Find the colon separator
+    u32 colonPos = 0;
+    b32 found = FALSE;
+    for (u32 i = 0; i < ticketLen; i++) {
+        if (ticket[i] == ':') {
+            colonPos = i;
+            found = TRUE;
+            break;
+        }
+    }
+
+    if (found && (colonPos + 1) < ticketLen) {
+        u32 nameLen = ticketLen - colonPos - 1;
+        session->characterName.size = nameLen;
+        session->characterName.data = arena_push_size(&app->arenaTotal, nameLen);
+        memcpy(session->characterName.data, ticket + colonPos + 1, nameLen);
+
+        printf("[GW] Extracted character name from ticket: '%.*s' len=%u\n",
+               (int)nameLen, session->characterName.data, nameLen);
+    } else {
+        printf("[GW] WARNING: No character name found in server ticket!\n");
+        session->characterName.size = 0;
+        session->characterName.data = NULL;
+    }
+}
+
 void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dataLen) {
     printf("[GW] Raw byte 0x%02x, dataLen=%u\n", data[0], dataLen);
     GatewayKindEnum kind;
@@ -223,6 +257,12 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
 
             GatewayLoginRequest loginRequest = { 0 };
             GatewayPacketUnpack(data, dataLen, kind, &loginRequest, &app->arenaPerTick);
+
+            // Extract character name from server ticket BEFORE enabling encryption
+            // (ticket data is in per-tick arena, need to copy to arenaTotal)
+            GatewayExtractCharacterName(app, session,
+                                        loginRequest.serverTicket,
+                                        loginRequest.serverTicketLen);
 
             printf("[*] Enabling encryption for session\n");
 
@@ -245,19 +285,19 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
                               &channelZeroIsRoutable);
 
-            // GatewayChannelIsRoutable channelOneIsRoutable = {
-            //     .channel = 1,
-            //     .isRoutable = TRUE,
-            // };
-            // GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-            //                   &channelOneIsRoutable);
+            GatewayChannelIsRoutable channelOneIsRoutable = {
+                .channel = 1,
+                .isRoutable = TRUE,
+            };
+            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+                              &channelOneIsRoutable);
 
-            // GatewayChannelIsRoutable channelTwoIsRoutable = {
-            //     .channel = 2,
-            //     .isRoutable = TRUE,
-            // };
-            // GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-            //                   &channelTwoIsRoutable);
+            GatewayChannelIsRoutable channelTwoIsRoutable = {
+                .channel = 2,
+                .isRoutable = TRUE,
+            };
+            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+                              &channelTwoIsRoutable);
 
             GatewayOnLogin(app, session, loginRequest.characterId);
         } break;

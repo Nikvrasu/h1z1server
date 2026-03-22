@@ -1,10 +1,10 @@
 void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataLen) {
     if (dataLen == 0) {
-    printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
-    return;
-}
-printf("[ZONE] Incoming packet first bytes: 0x%02x 0x%02x (len=%u)\n", 
-       data[0], dataLen > 1 ? data[1] : 0, dataLen);
+        printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
+        return;
+    }
+    printf("[ZONE] Incoming packet first bytes: 0x%02x 0x%02x 0x%02x (len=%u)\n",
+           data[0], dataLen > 1 ? data[1] : 0, dataLen > 2 ? data[2] : 0, dataLen);
     Zone_Packet_Kind kind;
     printf("\n");
 
@@ -155,7 +155,7 @@ packetIdSwitch:
                 .continent_id = 1,
                 .info_name_id = 1,
                 .zone_description_id = 1,
-                .zone_name = STR8("LoginZone"),
+                .zone_name = STR8("Z2"),
                 .hex_size = 100,
                 .is_production_zone = 1,
             },
@@ -262,9 +262,7 @@ packetIdSwitch:
                 .zone_type = 4,
                 .pos = { .x = 1000.f, .y = 1000.f, .z = 1000.f, .w = 1.f },
                 .rot = { .x = 0.f, .y = 0.f, .z = 0.f, .w = 1.f },
-
                 .cloudFile = STR8(""),
-
                 .unk_byte_1 = 5,
                 .zone_id_1 = 5,
                 .zone_id_2 = 0,
@@ -277,77 +275,60 @@ packetIdSwitch:
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientBeginZoning,
                            &beginZoning);
 
-            Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-
-            setEquipment.unk_string_1 = STR8("Default");
-            setEquipment.unk_string_2 = STR8("#");
-            setEquipment.unk_bool_2 = TRUE;
-
-            setEquipment.length_1 = (struct length_1_s[1]){
-            [0] = {
-                .character_id = session->characterId,
-                .profile_id = 5,
-            },
-        };
-
-            setEquipment.equipment_slot_array_count = 1;
-            setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
-            [0] = {
-                .length_2 = (struct length_2_s[1]){
-                    [0] = {
-                        .tint_alias = STR8("Default"),
-                        .decal_alias = STR8("#"),
-                    },
-                },
-            },
-        };
-
-            setEquipment.attachments_data_1_count = 1;
-
-            setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
-            [0] = {
-                .tint_alias = STR8("Default"),
-                .decal_alias = STR8("#"),
-            },
-        };
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-
-            Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = {
-            .character_id = session->characterId,
-            .loadout_id = 0,
-            .loadout_slot_data_count = 1,
-            .loadout_slot_data =
-                (struct loadout_slot_data_s[1]){
-                    [0] = {
-                        .hotbar_slot_id = 0,
-                        .loadout_id_1 = 0,
-                        .slot_id = 0,
-                        .item_def_id1 = 0,
-                        .loadout_item_guid = 0x0ull,
-                        .unk_byte_1 = 255,
-                        .unk_dword_1 = 0,
-                    },
-                },
-
-            .current_slot_id = 0,
-        };
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_Loadout_SetLoadoutSlots,
-                           &setLoadoutSlots);
-
             SendSelfToClient(app, session);
         } break;
-        case 0x11:
-            if (dataLen > 1 && data[1] == 0x97) {
-                printf("[ZONE] Received 0x1197 (zone ready), sending deploy packet\n");
-                ZonePacketRawFileSend(app, session, &app->arenaPerTick, 256,
-                    "D:/h1z1server/yeah/H1Z1-C-Server/data/deploy.bin");
+        case 0x11: {
+            // ClientUpdateBase — check sub-opcode
+            u8 subOpcode = dataLen > 1 ? data[1] : 0;
+            printf(MESSAGE_CONCAT_INFO("Handling ClientUpdateBase sub-opcode 0x%02x (len=%u)\n"),
+                   subOpcode, dataLen);
+
+            if (subOpcode == 0x97) {
+                // 0x11 0x97 — Zone ready notification from client.
+                // Client has loaded zone geometry and is waiting for character deployment.
+                // Re-send SendSelfToClient to deploy the character into the loaded zone.
+                printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
+
+                SendSelfToClient(app, session);
+
+                Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
+                stateDelta.guid_1 = session->characterId;
+                stateDelta.guid_2 = 0x00ull;
+                stateDelta.guid_3 = 0x40000000ull;
+                stateDelta.guid_4 = 0x00ull;
+                stateDelta.game_time = timer & 0x7fffffff;
+                ZonePacketSend(app, session, &app->arenaPerTick,
+                               Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
+
+                Zone_Packet_GameTimeSync gameTimeSync = { 0 };
+                gameTimeSync.cycle_speed = 12.f;
+                gameTimeSync.time = timer;
+                gameTimeSync.unk_bool = FALSE;
+                ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync,
+                               &gameTimeSync);
+
+                Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
+                preloadDone.is_done = TRUE;
+                ZonePacketSend(app, session, &app->arenaPerTick,
+                            Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
+
+                ZonePacketSend(app, session, &app->arenaPerTick,
+                            Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+
+                ZonePacketSend(app, session, &app->arenaPerTick,
+                            Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
             } else {
-                printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x11 0x%02x\n"), dataLen > 1 ? data[1] : 0);
+                printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"), subOpcode);
             }
-            break;
+        } break;
         default: {
-            printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x\n"), packetId);
+            printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);
+            // Hex dump first few bytes for debugging
+            printf("[ZONE DUMP] ");
+            for (u32 i = 0; i < (dataLen < 16 ? dataLen : 16); i++) {
+                printf("%02x ", data[i]);
+            }
+            printf("\n");
         }
     }
 }
