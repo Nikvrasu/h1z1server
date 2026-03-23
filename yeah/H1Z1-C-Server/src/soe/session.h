@@ -216,6 +216,12 @@ struct SessionState {
     i32 nextAck;
     i32 previousAck;
 
+    // Large write resume state
+    u8*  pendingWriteData;
+    u32  pendingWriteLen;
+    u32  pendingWriteOffset;
+    b32  pendingWriteActive;
+
     // Per-channel ack tracking for channels 1, 2, 4, 5
     // (channel 0 uses nextAck/previousAck above)
     i32 nextAck1;
@@ -256,6 +262,14 @@ struct SessionState {
     FragmentPool outputPool5;
     SOEInputStream inputStream5;
     SOEOutputStream outputStream5;
+
+    // Large write resume state — persistent malloc'd buffer, drained N frags/tick
+    u8*  largeSendBuffer;      // malloc'd copy of file data (includes 4-byte length prefix)
+    u32  largeSendTotalLen;    // total bytes in largeSendBuffer
+    u32  largeSendOffset;      // current read position
+    u32  largeSendFragsPerTick;// fragments to send per tick
+    b32  largeSendActive;      // TRUE while draining
+    b32  pendingPhase2;        // TRUE while waiting for large send to complete
 
     // begin world_character struct
     b8 characterReleased;

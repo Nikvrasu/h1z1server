@@ -1,0 +1,31 @@
+# Binary and Executable files (from your screenshots)
+zone_binaries/
+login_binaries/
+*.exe
+*.dll
+*.pdb
+*.obj
+*.o
+
+<!-- # Logs (They are huge and will eat your budget)
+logs/
+*.log -->
+
+# Build scripts and temporary files
+build_and_run.bat
+build_login.bat
+build_zone.bat
+install.cmd
+run_all.bat
+run_login.bat
+run_zone.bat
+zoneModuleTemp.dll
+
+# Git and Tooling metadata
+.git/
+.rooignore
+.clang-format
+LICENSE
+
+# Patch
+patch/

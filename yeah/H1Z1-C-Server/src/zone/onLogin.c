@@ -3,19 +3,12 @@
 // to create ProxiedCharacter and transition out of WaitForZoneLoad.
 // Called from OnLogin (initial) and from the 0x11 0x97 handler (post-zone-load).
 // ============================================================================
-void DeployCharacter(AppState* app, SessionState* session) {
+void DeployCharacterPhase2(AppState* app, SessionState* session) {
     __time64_t timer;
     _time64(&timer);
 
-    printf("[DEPLOY] Deploying character 0x%llx '%.*s'\n",
-           (unsigned long long)session->characterId,
-           (int)session->characterName.size, session->characterName.data);
+    printf("[DEPLOY] Phase 2 begin for 0x%llx\n", (unsigned long long)session->characterId);
 
-    // 1. SendSelfToClient — full character data
-    SendSelfToClient(app, session);
-
-    // 2. ContainerInitEquippedContainers — client needs this to finalize character.
-    //    Even an empty container list satisfies the requirement.
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
     containers.ignore_this = 0;
     containers.character_id = session->characterId;
@@ -23,7 +16,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 3. Equipment — empty but valid
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
     setEquipment.unk_string_2 = STR8("#");
@@ -39,7 +31,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // 4. Loadout — empty but valid
     Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
     setLoadoutSlots.character_id = session->characterId;
     setLoadoutSlots.loadout_id = 3;
@@ -48,7 +39,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
-    // 5. CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_2 = 0x00ull;
@@ -58,7 +48,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 6. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 12.f;
     gameTimeSync.time = timer;
@@ -66,7 +55,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
-    // 7. Finalization signals
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick,
@@ -78,7 +66,30 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
 
-    printf("[DEPLOY] Character deployment complete\n");
+    printf("[DEPLOY] Phase 2 complete\n");
+}
+
+void DeployCharacter(AppState* app, SessionState* session) {
+    printf("[DEPLOY] Phase 1 begin for 0x%llx\n", (unsigned long long)session->characterId);
+
+    SendSelfToClient(app, session);
+
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(8),
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/Command.ItemDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(48),
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/ReferenceData.WeaponDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(8),
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/ReferenceData.ProjectileDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2),
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/ReferenceData.ProfileDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(6),
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/ReferenceData.ItemClassDefinitions.bin");
+
+    ZonePacketQueueLargeFile(app, session,
+        "D:/h1z1server/yeah/H1Z1-C-Server/data/ReferenceData.DynamicAppearance.bin", 100);
+    session->pendingPhase2 = TRUE;
+
+    printf("[DEPLOY] Phase 1 complete, DynamicAppearance queued\n");
 }
 
 void OnLogin(AppState* app, SessionState* session) {

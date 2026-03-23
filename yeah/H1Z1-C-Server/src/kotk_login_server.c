@@ -241,7 +241,7 @@ __declspec(dllexport) AppTick(serverTick) {
         if (knownSession != -1) {
             CorePacketHandle(app, &app->sessions[knownSession], app->api, incomingBuffer, receiveResult,
                              FALSE);
-
+            
             if (app->sessions[knownSession].previousAck != app->sessions[knownSession].nextAck) {
                 printf(MESSAGE_CONCAT_INFO("Syncing ack...\n"));
                 app->sessions[knownSession].previousAck = app->sessions[knownSession].nextAck;

@@ -342,6 +342,14 @@ __declspec(dllexport) AppTick(serverTick) {
         if (knownSession != -1) {
             CorePacketHandle(app, &app->sessions[knownSession], app->api, incomingBuffer, receiveResult,
                              FALSE);
+            ZonePacketDrainLargeSend(app, &app->sessions[knownSession]);
+
+            if (app->sessions[knownSession].pendingPhase2 &&
+                !app->sessions[knownSession].largeSendActive &&
+                app->sessions[knownSession].largeSendBuffer == NULL) {
+                app->sessions[knownSession].pendingPhase2 = FALSE;
+                DeployCharacterPhase2(app, &app->sessions[knownSession]);
+            }
 
             if (app->sessions[knownSession].previousAck != app->sessions[knownSession].nextAck) {
                 printf(MESSAGE_CONCAT_INFO("Syncing ack (ch0)...\n"));

@@ -1,0 +1,4 @@
+schema/output/client_protocol_1087.c
+src/schema_tool.c
+src/utils/endian.c
+data/*.bin

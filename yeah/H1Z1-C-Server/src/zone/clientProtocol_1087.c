@@ -22,6 +22,85 @@ void ZonePacketRawFileSend(AppState* app, SessionState* session, Arena* arena, u
     GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
 }
 
+void ZonePacketQueueLargeFile(AppState* app, SessionState* session, char* path, u32 fragsPerTick) {
+    if (session->largeSendActive) {
+        printf("[LARGE SEND] Already active, ignoring %s\n", path);
+        return;
+    }
+
+    // Open and measure file
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        printf("[LARGE SEND] Failed to open %s\n", path);
+        return;
+    }
+    fseek(f, 0, SEEK_END);
+    u32 fileLen = (u32)ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Allocate persistent buffer: 4-byte big-endian total length prefix + file data
+    // This matches exactly what OutputStreamWrite writes for fragmented packets
+    u32 bufLen = fileLen + 4;
+    u8* buf = (u8*)malloc(bufLen);
+    if (!buf) {
+        printf("[LARGE SEND] malloc failed for %u bytes\n", bufLen);
+        fclose(f);
+        return;
+    }
+
+    // Write 4-byte big-endian total length prefix (OutputStreamWrite does this internally)
+    endian_write_u32_big(buf, fileLen);
+    fread(buf + 4, 1, fileLen, f);
+    fclose(f);
+
+    // Encrypt the entire buffer now (RC4 is stateful — must encrypt in order)
+    if (session->outputStream.useEncryption) {
+        crypt_rc4_transform(&session->outputStream.rc4, buf, bufLen);
+    }
+
+    session->largeSendBuffer = buf;
+    session->largeSendTotalLen = bufLen;
+    session->largeSendOffset = 0;
+    session->largeSendFragsPerTick = fragsPerTick;
+    session->largeSendActive = TRUE;
+
+    printf("[LARGE SEND] Queued '%s' (%u bytes, ~%u ticks at %u frags/tick)\n",
+           path, fileLen, (bufLen / 508) / fragsPerTick + 1, fragsPerTick);
+}
+void ZonePacketDrainLargeSend(AppState* app, SessionState* session) {
+    if (!session->largeSendActive) return;
+
+    u32 packetLen = 508; // MAX_PACKET_LENGTH - DATA_HEADER_LENGTH
+    u32 sent = 0;
+
+    while (sent < session->largeSendFragsPerTick && session->largeSendOffset < session->largeSendTotalLen) {
+        u32 remaining = session->largeSendTotalLen - session->largeSendOffset;
+        u32 chunkLen = MIN(remaining, packetLen);
+
+        // Send directly via dataCallbackPtr — already encrypted, bypass OutputStreamWrite
+        session->outputStream.sequence++;
+        if (*session->outputStream.dataCallbackPtr) {
+            (*session->outputStream.dataCallbackPtr)(
+                app, session,
+                session->largeSendBuffer + session->largeSendOffset,
+                chunkLen,
+                session->outputStream.sequence,
+                TRUE  // isFragment=TRUE
+            );
+        }
+
+        session->largeSendOffset += chunkLen;
+        sent++;
+    }
+
+    if (session->largeSendOffset >= session->largeSendTotalLen) {
+        free(session->largeSendBuffer);
+        session->largeSendBuffer = NULL;
+        session->largeSendActive = FALSE;
+        printf("[LARGE SEND] Complete\n");
+    }
+}
+
 void readPositionUpdateData(AppState* app, SessionState* session, u8* data, u32 offset) {
     Zone_Packet_PlayerUpdatePosition obj = { 0 }; // init
     u32 start_offset = offset; // offset is u32 for 2bit values, other than that, will need to typecast

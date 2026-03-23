@@ -1,0 +1,1273 @@
+zone_id: 0:>
+[*] [Default] Game server socket bound to port 60000
+
+
+
+Packet Tick Begin ============================================================\\
+[*] [Default] Unknown client 127.0.0.1:59009 sent SessionRequest. Beginning session
+[CORE HANDLE] opcode=0x0001 dataLen=35 isSubPacket=0
+
+[*] [Core] Handling SessionRequest...
+
+[*] [Core] Unpacking SessionRequest...
+crcLen           3
+sessionId        97802381
+udpLength        512
+protocolName     ExternalGatewayApi_3
+
+[!] [Core] Ignoring connection args requested by client
+
+[*] [Core] Packing SessionReply...
+--- sessionId: 97802381
+--- crcSeed: 0
+--- crcLen: 0
+--- compression: 0
+--- udpLen: 512
+--- soeProtocolVersion: 3
+
+[*] [Core] Sent 21 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=79 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         0
+data             fe5d9ff5c4
+dataLen          75
+crc              0
+[STREAM] Write: seq=0 nextSeq=-1 prevAck=-1 isFragment=0 dataLen=75
+[***] FragmentInsert: sequence=0,  data=000000fe5d9ff5c4, dataLen=75, isFragment=0, index=0
+[GW] Raw byte 0x01, dataLen=75
+
+[*] [Gateway] (0) Handling LoginRequest...
+
+[*] [Gateway] Unpacking LoginRequest...
+-- characterId                  27036819140519  189700002fa7h   27036819140519.000000
+-- serverTicketLen              22
+-- clientProtocolLen            19
+-- clientBuildLen               13
+[*] Enabling encryption for session
+
+[*] [Gateway] Packing LoginReply...
+-- isLoggedIn                   1       1h      1.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 6 bytes to 127.0.0.1:59009
+
+[*] [Gateway] Packing ChannelIsRoutable...
+-- channel                      0       0h      0.000000
+-- isRoutable                   1       1h      1.000000
+-- unkBool                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 7 bytes to 127.0.0.1:59009
+[!] Character 189700002fa7h trying to login to zone server
+
+[*] [Zone] Packing InitializationParameters...
+-- STRING_LENGTH                9       9h      9.000000
+-- STRING_LENGTH                0       0h      0.000000
+-- LIST_COUNT                   0       0h      0.000000
+[ZONE SEND] kind=226 packedLen=22
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 27 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing SendZoneDetails...
+-- STRING_LENGTH                9       9h      9.000000
+-- zone_type                    4       4h      4.000000
+-- unk_bool                     0       0h      0.000000
+-- overcast                     0       0h      0.000000
+-- fogDensity                   0       0h      0.000000
+-- fogFloor                     14      eh      14.800000
+-- fogGradient                  15      fh      15.250000
+-- globalPrecipitation          0       0h      0.000000
+-- temperature                  75      4bh     75.000000
+-- skyClarity                   0       0h      0.000000
+-- cloudWeight0                 0       0h      0.160000
+-- cloudWeight1                 0       0h      0.160000
+-- cloudWeight2                 0       0h      0.130000
+-- cloudWeight3                 0       0h      0.130000
+-- transitionTime               0       0h      0.000000
+-- sunAxisX                     40      28h     40.000000
+-- sunAxisY                     0       0h      0.000000
+-- sunAxisZ                     0       0h      0.000000
+-- windDirX                     -1      ffffffffffffffffh       -1.000000
+-- windDirY                     0       0h      -0.500000
+-- windDirZ                     1       1h      1.000000
+-- wind                         3       3h      3.000000
+-- rainMinStrength              0       0h      0.000000
+-- rainRampUpTimeSeconds        1       1h      1.000000
+-- STRING_LENGTH                0       0h      0.000000
+-- stratusCloudTiling           0       0h      0.200000
+-- stratusCloudScrollU          0       0h      -0.002000
+-- stratusCloudScrollV          0       0h      0.000000
+-- stratusCloudHeight           1000    3e8h    1000.000000
+-- cumulusCloudTiling           0       0h      0.200000
+-- cumulusCloudScrollU          0       0h      0.000000
+-- cumulusCloudScrollV          0       0h      0.002000
+-- cumulusCloudHeight           8000    1f40h   8000.000000
+-- cloudAnimationSpeed          0       0h      0.000000
+-- cloudSilverLiningThickness   0       0h      0.390000
+-- cloudSilverLiningBrightness  0       0h      0.500000
+-- cloudShadows                 0       0h      0.200000
+-- zone_id                      5       5h      5.000000
+-- zone_id_2                    0       0h      0.000000
+-- name_id                      7699    1e13h   7699.000000
+-- unk_bool2                    1       1h      1.000000
+-- STRING_LENGTH                15      fh      15.000000
+-- unk_bool3                    0       0h      0.000000
+-- unk_bool4                    0       0h      0.000000
+[ZONE SEND] kind=138 packedLen=189
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 194 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ClientGameSettings...
+-- unk_u32                      0       0h      0.000000
+-- interact_glow_and_dist       16      10h     16.000000
+-- unk_bool                     1       1h      1.000000
+-- timescale                    1       1h      1.000000
+-- enable_weapons               1       1h      1.000000
+-- unk_u32_2                    1       1h      1.000000
+-- unk_float1                   0       0h      0.000000
+-- unk_float2                   15      fh      15.000000
+-- damage_multiplier            11      bh      11.000000
+[ZONE SEND] kind=212 packedLen=34
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 39 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing UpdateWeatherData...
+-- overcast                     0       0h      0.000000
+-- fogDensity                   0       0h      0.000000
+-- fogFloor                     14      eh      14.800000
+-- fogGradient                  15      fh      15.250000
+-- globalPrecipitation          0       0h      0.000000
+-- temperature                  75      4bh     75.000000
+-- skyClarity                   0       0h      0.000000
+-- cloudWeight0                 0       0h      0.160000
+-- cloudWeight1                 0       0h      0.160000
+-- cloudWeight2                 0       0h      0.130000
+-- cloudWeight3                 0       0h      0.130000
+-- transitionTime               0       0h      0.000000
+-- sunAxisX                     40      28h     40.000000
+-- sunAxisY                     0       0h      0.000000
+-- sunAxisZ                     0       0h      0.000000
+-- windDirX                     -1      ffffffffffffffffh       -1.000000
+-- windDirY                     0       0h      -0.500000
+-- windDirZ                     1       1h      1.000000
+-- wind                         3       3h      3.000000
+-- rainMinStrength              0       0h      0.000000
+-- rainRampUpTimeSeconds        1       1h      1.000000
+-- STRING_LENGTH                0       0h      0.000000
+-- stratusCloudTiling           0       0h      0.200000
+-- stratusCloudScrollU          0       0h      -0.002000
+-- stratusCloudScrollV          0       0h      0.000000
+-- stratusCloudHeight           1000    3e8h    1000.000000
+-- cumulusCloudTiling           0       0h      0.200000
+-- cumulusCloudScrollU          0       0h      0.000000
+-- cumulusCloudScrollV          0       0h      0.002000
+-- cumulusCloudHeight           8000    1f40h   8000.000000
+-- cloudAnimationSpeed          0       0h      0.000000
+-- cloudSilverLiningThickness   0       0h      0.390000
+-- cloudSilverLiningBrightness  0       0h      0.500000
+-- cloudShadows                 0       0h      0.200000
+[ZONE SEND] kind=413 packedLen=137
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 142 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ClientUpdate_UpdateLocation...
+-- position                     -32.259998      506.410004      -32.259998      1.000000
+-- rotation                     -0.110000       -0.580000       -0.110000       1.000000
+-- trigger_loading_screen       0       0h      0.000000
+-- unk_u8_1                     0       0h      0.000000
+-- unk_bool                     0       0h      0.000000
+[ZONE SEND] kind=66 packedLen=38
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 43 bytes to 127.0.0.1:59009
+[DEBUG] characterName: '' len=0
+
+[*] [Zone] Packing ClientBeginZoning...
+-- STRING_LENGTH                2       2h      2.000000
+-- zone_type                    4       4h      4.000000
+-- pos                          -297.309998     506.059998      -297.309998     1.000000
+-- rot                          0.000000        -0.707100       0.000000        0.707100
+-- overcast                     1       1h      1.000000
+-- fogDensity                   0       0h      0.000173
+-- fogFloor                     10      ah      10.000000
+-- fogGradient                  0       0h      0.014400
+-- globalPrecipitation          0       0h      0.000000
+-- temperature                  75      4bh     75.000000
+-- skyClarity                   0       0h      0.000000
+-- cloudWeight0                 0       0h      0.050000
+-- cloudWeight1                 0       0h      0.000000
+-- cloudWeight2                 0       0h      0.050000
+-- cloudWeight3                 0       0h      0.150000
+-- transitionTime               0       0h      0.000000
+-- sunAxisX                     38      26h     38.000000
+-- sunAxisY                     -15     fffffffffffffff1h       -15.000000
+-- sunAxisZ                     0       0h      0.000000
+-- windDirX                     -1      ffffffffffffffffh       -1.000000
+-- windDirY                     0       0h      -0.500000
+-- windDirZ                     -1      ffffffffffffffffh       -1.000000
+-- wind                         3       3h      3.000000
+-- rainMinStrength              0       0h      0.000000
+-- rainRampUpTimeSeconds        1       1h      1.000000
+-- STRING_LENGTH                16      10h     16.000000
+-- stratusCloudTiling           0       0h      0.300000
+-- stratusCloudScrollU          0       0h      -0.002000
+-- stratusCloudScrollV          0       0h      0.000000
+-- stratusCloudHeight           1000    3e8h    1000.000000
+-- cumulusCloudTiling           0       0h      0.200000
+-- cumulusCloudScrollU          0       0h      0.000000
+-- cumulusCloudScrollV          0       0h      0.002000
+-- cumulusCloudHeight           8000    1f40h   8000.000000
+-- cloudAnimationSpeed          0       0h      0.000000
+-- cloudSilverLiningThickness   0       0h      0.250000
+-- cloudSilverLiningBrightness  7       7h      7.000000
+-- cloudShadows                 0       0h      0.500000
+-- unk_byte_1                   4       4h      4.000000
+-- zone_id_1                    5       5h      5.000000
+-- zone_id_2                    0       0h      0.000000
+-- name_id                      61609   f0a9h   61609.000000
+-- unk_dword_1                  254478288       f2b07d0h        254478288.000000
+-- unk_bool_1                   0       0h      0.000000
+-- wait_for_zone_ready          1       1h      1.000000
+-- unk_bool_2                   0       0h      0.000000
+[ZONE SEND] kind=33 packedLen=215
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 220 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ClientInitializationDetails...
+-- unk_u32_1                    1       1h      1.000000
+[ZONE SEND] kind=244 packedLen=5
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 10 bytes to 127.0.0.1:59009
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 512 bytes to 127.0.0.1:59009
+
+[*] [Core] Packing DataFragment...
+
+[*] [Core] Sent 28 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing AddLightweightPc...
+-- character_id                 27036819140519  189700002fa7h   27036819140519.000000
+-- transient_id                 52      34h
+-- id_unknownDword1             0       0h      0.000000
+-- id_unknownDword2             0       0h      0.000000
+-- id_unknownDword3             0       0h      0.000000
+-- STRING_LENGTH                0       0h      0.000000
+-- STRING_LENGTH                4       4h      4.000000
+-- STRING_LENGTH                4       4h      4.000000
+-- STRING_LENGTH                0       0h      0.000000
+-- id_unknownQword1             0       0h      0.000000
+-- unknownByte1                 0       0h      0.000000
+-- actorModelId                 9240    2418h   9240.000000
+-- unknownDword1                0       0h      0.000000
+-- position                     -32.259998      506.410004      -32.259998
+-- rotation                     -0.110000       -0.580000       -0.110000       1.000000
+-- unknownFloat1                0       0h      0.000000
+-- mountGuid                    0       0h      0.000000
+-- mountSeatId                  0       0h      0.000000
+-- mountRelatedDword1           0       0h      0.000000
+-- movementVersion              1       1h      1.000000
+-- effectId                     0       0h      0.000000
+-- unknownDword4                0       0h      0.000000
+-- unknownQword1                0       0h      0.000000
+-- unknownDword5                0       0h      0.000000
+-- flags1                       0       0h      0.000000
+[ZONE SEND] kind=423 packedLen=133
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 138 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ClientUpdate_DoneSendingPreloadCharacters...
+-- is_done                      1       1h      1.000000
+[ZONE SEND] kind=81 packedLen=4
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 9 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ZoneDoneSendingInitialData...
+[ZONE SEND] kind=5 packedLen=1
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 6 bytes to 127.0.0.1:59009
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 33 bytes to 127.0.0.1:59009
+
+[*] [Zone] Packing ClientUpdate_NetworkProximityUpdatesComplete...
+[ZONE SEND] kind=108 packedLen=3
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 8 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 1
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 0
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 1
+[*] OutputStreamUpdateAck; previousAck=-1, sequence=1
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 2
+[*] OutputStreamUpdateAck; previousAck=1, sequence=2
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 3
+[*] OutputStreamUpdateAck; previousAck=2, sequence=3
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 4
+[*] OutputStreamUpdateAck; previousAck=3, sequence=4
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 5
+[*] OutputStreamUpdateAck; previousAck=4, sequence=5
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 6
+[*] OutputStreamUpdateAck; previousAck=5, sequence=6
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 7
+[*] OutputStreamUpdateAck; previousAck=6, sequence=7
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 9
+[*] OutputStreamUpdateAck; previousAck=7, sequence=9
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 12
+[*] OutputStreamUpdateAck; previousAck=9, sequence=12
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 15
+[*] OutputStreamUpdateAck; previousAck=12, sequence=15
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 18
+[*] OutputStreamUpdateAck; previousAck=15, sequence=18
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 21
+[*] OutputStreamUpdateAck; previousAck=18, sequence=21
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 24
+[*] OutputStreamUpdateAck; previousAck=21, sequence=24
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 27
+[*] OutputStreamUpdateAck; previousAck=24, sequence=27
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 30
+[*] OutputStreamUpdateAck; previousAck=27, sequence=30
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 33
+[*] OutputStreamUpdateAck; previousAck=30, sequence=33
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 36
+[*] OutputStreamUpdateAck; previousAck=33, sequence=36
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 39
+[*] OutputStreamUpdateAck; previousAck=36, sequence=39
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 42
+[*] OutputStreamUpdateAck; previousAck=39, sequence=42
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 45
+[*] OutputStreamUpdateAck; previousAck=42, sequence=45
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 46
+[*] OutputStreamUpdateAck; previousAck=45, sequence=46
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 48
+[*] OutputStreamUpdateAck; previousAck=46, sequence=48
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 50
+[*] OutputStreamUpdateAck; previousAck=48, sequence=50
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 51
+[*] OutputStreamUpdateAck; previousAck=50, sequence=51
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         1
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=1 nextSeq=1 prevAck=0 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=1,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0x8d (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 2
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 1
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 52
+[*] OutputStreamUpdateAck; previousAck=51, sequence=52
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         2
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=2 nextSeq=2 prevAck=1 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=2,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0x98 (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 3
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 2
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 53
+[*] OutputStreamUpdateAck; previousAck=52, sequence=53
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         3
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=3 nextSeq=3 prevAck=2 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=3,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xa3 (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 4
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 3
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 54
+[*] OutputStreamUpdateAck; previousAck=53, sequence=54
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         4
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=4 nextSeq=4 prevAck=3 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=4,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xae (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 5
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 4
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 55
+[*] OutputStreamUpdateAck; previousAck=54, sequence=55
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         5
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=5 nextSeq=5 prevAck=4 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=5,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xb9 (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 6
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 5
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 56
+[*] OutputStreamUpdateAck; previousAck=55, sequence=56
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         6
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=6 nextSeq=6 prevAck=5 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=6,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xc4 (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 7
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 6
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 57
+[*] OutputStreamUpdateAck; previousAck=56, sequence=57
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         7
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=7 nextSeq=7 prevAck=6 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=7,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xcf (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 8
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 7
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 58
+[*] OutputStreamUpdateAck; previousAck=57, sequence=58
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         8
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=8 nextSeq=8 prevAck=7 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=8,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xda (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 9
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 8
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 59
+[*] OutputStreamUpdateAck; previousAck=58, sequence=59
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0009 dataLen=19 isSubPacket=0
+
+[*] [Core] Handling Data...
+
+[*] [Core] Unpacking Data...
+sequence         9
+data             fe5d9ff5c4
+dataLen          15
+crc              0
+[STREAM] Write: seq=9 nextSeq=9 prevAck=8 isFragment=0 dataLen=15
+[***] FragmentInsert: sequence=9,  data=000000fe5d9ff5c4, dataLen=15, isFragment=0, index=0
+[GW] Raw byte 0x06, dataLen=15
+
+[*] [Gateway] (0) Handling TunnelPacketFromExternalConnection...
+
+[*] [Gateway] Unpacking TunnelPacketFromExternalConnection...
+[ZONE] Incoming packet first bytes: 0x1d 0xe5 (len=14)
+
+[*] [Zone] Handling GameTimeSync
+
+[*] [Zone] Packing GameTimeSync...
+-- time                         11      bh      11.000000
+-- cycle_speed                  10      ah      10.000000
+-- unk_bool                     1       1h      1.000000
+[ZONE SEND] kind=146 packedLen=14
+
+[*] [Gateway] Packing TunnelPacketToExternalConnection...
+-- channel                      0       0h      0.000000
+
+[*] [Core] Packing Data...
+
+[*] [Core] Sent 19 bytes to 127.0.0.1:59009
+[***] Advancing FragmentPool; New base: 10
+[*] [Default] Syncing ack (ch0)...
+
+[*] [Core] Packing Ack...
+--- channel: 0, sequence: 9
+
+[*] [Core] Sent 4 bytes to 127.0.0.1:59009
+Packet Tick End ==============================================================//
+
+
+Packet Tick Begin ============================================================\\
+[CORE HANDLE] opcode=0x0015 dataLen=4 isSubPacket=0
+
+[*] [Core] Handling Ack...
+
+[*] [Core] Unpacking Ack...
+--- sequence: 60
+[*] OutputStreamUpdateAck; previousAck=59, sequence=60
+Packet Tick End ==============================================================//
+
+
+
+"Z2" :>
