@@ -281,6 +281,7 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayChannelIsRoutable channelZeroIsRoutable = {
                 .channel = 0,
                 .isRoutable = TRUE,
+                .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
                               &channelZeroIsRoutable);
@@ -288,6 +289,7 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayChannelIsRoutable channelOneIsRoutable = {
                 .channel = 1,
                 .isRoutable = TRUE,
+                .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
                               &channelOneIsRoutable);
@@ -295,9 +297,26 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayChannelIsRoutable channelTwoIsRoutable = {
                 .channel = 2,
                 .isRoutable = TRUE,
+                .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
                               &channelTwoIsRoutable);
+
+            GatewayChannelIsRoutable channelFourIsRoutable = {
+                .channel = 4,
+                .isRoutable = TRUE,
+                .unkBool = TRUE,
+            };
+            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+                              &channelFourIsRoutable);
+
+            GatewayChannelIsRoutable channelFiveIsRoutable = {
+                .channel = 5,
+                .isRoutable = TRUE,
+                .unkBool = TRUE,
+            };
+            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
+                              &channelFiveIsRoutable);
 
             GatewayOnLogin(app, session, loginRequest.characterId);
         } break;
