@@ -277,7 +277,7 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
                 .isLoggedIn = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindLoginReply, &loginReply);
-
+            // Inside GatewayPacketHandle, under case GatewayLoginRequestId:
             GatewayChannelIsRoutable channelZeroIsRoutable = {
                 .channel = 0,
                 .isRoutable = TRUE,
@@ -310,9 +310,9 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
 
             GatewayOnTunnelDataFromClient(app, session, tunnelPacket.data, tunnelPacket.dataLen);
         } break;
+        case 0x18:
         case 0x09:
         case 0x0a:
-        case 0x18:
         case 0x19: {
             printf(MESSAGE_CONCAT_INFO("(%u) Routing alternate channel 0x%02x as tunnel data\n"), channel, packetId);
             if (dataLen > 1) {

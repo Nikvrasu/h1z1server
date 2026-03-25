@@ -7,39 +7,50 @@ void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
     _time64(&timer);
 
-    printf("[DEPLOY] Deploying character 0x%llx '%.*s'\n",
-           (unsigned long long)session->characterId,
-           (int)session->characterName.size, session->characterName.data);
+    // Step 1: AddLightweightPc FIRST — this sets HaveProxiedCharacter=1
+    Zone_Packet_AddLightweightPc addPc = { 0 };
+    addPc.character_id = session->characterId;
+    addPc.transient_id.value = 52;
+    addPc.id_characterFirstName = session->characterName;
+    addPc.id_characterLastName = STR8("");
+    addPc.id_unknownString1 = STR8("");
+    addPc.id_characterName = session->characterName;
+    addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9240;
+    addPc.position.x = -297.31f;
+    addPc.position.y = 506.06f;
+    addPc.position.z = -4894.10f;
+    addPc.rotation.x = 0.0f;
+    addPc.rotation.y = -0.7071f;
+    addPc.rotation.z = 0.0f;
+    addPc.rotation.w = 0.7071f;
+    addPc.movementVersion = 1;
+    addPc.flags1 = 1;
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
 
-    // 1. SendSelfToClient — full character data
+    // Step 2: SendSelfToClient — full character data (LightweightToFullPc equivalent)
     SendSelfToClient(app, session);
 
-    // 2. ContainerInitEquippedContainers — client needs this to finalize character.
-    //    Even an empty container list satisfies the requirement.
+    // Step 3: ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
-    containers.ignore_this = 0;
     containers.character_id = session->characterId;
     containers.container_list_count = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 3. Equipment — empty but valid
+    // Step 4: Equipment
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
     setEquipment.unk_string_2 = STR8("#");
     setEquipment.unk_bool_2 = TRUE;
-    setEquipment.length_1 = (struct length_1_s[1]){
-        [0] = {
-            .character_id = session->characterId,
-            .profile_id = 5,
-        },
-    };
+    setEquipment.length_1 = (struct length_1_s[1]){[0] = {
+        .character_id = session->characterId, .profile_id = 5,
+    }};
     setEquipment.equipment_slot_array_count = 0;
     setEquipment.attachments_data_1_count = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // 4. Loadout — empty but valid
+    // Step 5: Loadout
     Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
     setLoadoutSlots.character_id = session->characterId;
     setLoadoutSlots.loadout_id = 3;
@@ -48,7 +59,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
-    // 5. CharacterStateDelta
+    // Step 6: CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_2 = 0x00ull;
@@ -58,28 +69,57 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 6. GameTimeSync
+    // Step 7: GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 12.f;
     gameTimeSync.time = timer;
     gameTimeSync.unk_bool = FALSE;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
-    // 7. Finalization signals
+    // Step 8: DoneSendingPreloadCharacters
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
+    // Step 9: ZoneDoneSendingInitialData
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
+    // Step 10: UpdateWeatherData AFTER ZoneDoneSendingInitialData — sets WeatherDataSynced=1
+    Zone_Packet_UpdateWeatherData weather = { 0 };
+    weather.overcast = 1.0f;
+    weather.fogDensity = 0.000173f;
+    weather.fogFloor = 10.0f;
+    weather.fogGradient = 0.0144f;
+    weather.temperature = 75;
+    weather.cloudWeight0 = 0.05f;
+    weather.cloudWeight2 = 0.05f;
+    weather.cloudWeight3 = 0.15f;
+    weather.sunAxisX = 38;
+    weather.sunAxisY = -15;
+    weather.windDirX = -1.0f;
+    weather.windDirY = -0.5f;
+    weather.windDirZ = -1.0f;
+    weather.wind = 3;
+    weather.rainRampUpTimeSeconds = 1;
+    weather.cloudFile = STR8("sky_Z_clouds.dds");
+    weather.stratusCloudTiling = 0.30f;
+    weather.stratusCloudScrollU = -0.002f;
+    weather.stratusCloudHeight = 1000;
+    weather.cumulusCloudTiling = 0.20f;
+    weather.cumulusCloudScrollV = 0.002f;
+    weather.cumulusCloudHeight = 8000;
+    weather.cloudSilverLiningThickness = 0.25f;
+    weather.cloudSilverLiningBrightness = 7.0f;
+    weather.cloudShadows = 0.5f;
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData, &weather);
+
+    // Step 11: NetworkProximityUpdatesComplete — per h1emu, 5s delay, but send immediately first
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
-
-    printf("[DEPLOY] Character deployment complete\n");
 }
+
 
 void OnLogin(AppState* app, SessionState* session) {
     Zone_Packet_InitializationParameters init_params = {
@@ -263,24 +303,24 @@ void OnLogin(AppState* app, SessionState* session) {
     // Full character deployment after zone context is established
     DeployCharacter(app, session);
 
-    Zone_Packet_AddLightweightPc addPc = { 0 };
-    addPc.character_id = session->characterId;
-    addPc.transient_id.value = 52;
-    addPc.id_characterFirstName = session->characterName;
-    addPc.id_characterLastName = STR8("");
-    addPc.id_unknownString1 = STR8("");
-    addPc.id_characterName = session->characterName;
-    addPc.actorModelId = 9240;
-    addPc.position.x = -297.31f;
-    addPc.position.y = 506.06f;
-    addPc.position.z = -4894.10f;
-    addPc.rotation.x = 0.0f;
-    addPc.rotation.y = -0.7071f;
-    addPc.rotation.z = 0.0f;
-    addPc.rotation.w = 0.7071f;
-    addPc.movementVersion = 1;
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
+    // Zone_Packet_AddLightweightPc addPc = { 0 };
+    // addPc.character_id = session->characterId;
+    // addPc.transient_id.value = 52;
+    // addPc.id_characterFirstName = session->characterName;
+    // addPc.id_characterLastName = STR8("");
+    // addPc.id_unknownString1 = STR8("");
+    // addPc.id_characterName = session->characterName;
+    // addPc.actorModelId = 9240;
+    // addPc.position.x = -297.31f;
+    // addPc.position.y = 506.06f;
+    // addPc.position.z = -4894.10f;
+    // addPc.rotation.x = 0.0f;
+    // addPc.rotation.y = -0.7071f;
+    // addPc.rotation.z = 0.0f;
+    // addPc.rotation.w = 0.7071f;
+    // addPc.movementVersion = 1;
+    // ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
 
-    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 64,
-        "D:/h1z1server/yeah/H1Z1-C-Server/data/broadcast.bin");
+    // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 64,
+    //     "D:/h1z1server/yeah/H1Z1-C-Server/data/broadcast.bin");
 }
