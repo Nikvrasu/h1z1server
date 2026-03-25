@@ -278,6 +278,10 @@ struct SessionState {
     b8 hasGodMode;
     b8 hasConveys;
 
+    // Deferred NetworkProximityUpdatesComplete — set after DeployCharacter, sent ~5s later
+    u8 needsProximityComplete;
+    __time64_t proximityCompleteTime;
+
     u64 creationDate;
     u64 lastLoginDate;
 

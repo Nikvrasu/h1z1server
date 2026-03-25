@@ -55,25 +55,8 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientIsReady;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
-            Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
-
-            stateDelta.guid_1 = session->characterId;
-            stateDelta.guid_2 = 0x00ull;
-            stateDelta.guid_3 = 0x40000000ull;
-            stateDelta.guid_4 = 0x00ull;
-            stateDelta.game_time = timer & 0x7fffffff;
-
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
-
-            Zone_Packet_GameTimeSync gameTimeSync = { 0 };
-
-            gameTimeSync.cycle_speed = 12.f;
-            gameTimeSync.time = timer;
-            gameTimeSync.unk_bool = FALSE;
-
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync,
-                           &gameTimeSync);
+            // Phase 2: client has finished loading the zone — deploy the character.
+            DeployCharacter(app, session);
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
@@ -284,39 +267,11 @@ packetIdSwitch:
                    subOpcode, dataLen);
 
             if (subOpcode == 0x97) {
-                // 0x11 0x97 — Zone ready notification from client.
-                // Client has loaded zone geometry and is waiting for character deployment.
-                // Re-send SendSelfToClient to deploy the character into the loaded zone.
+                // 0x11 0x97 — Zone ready notification from client after a zone transition.
+                // Re-deploy the character following the same Phase 2 sequence.
                 printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
 
-                SendSelfToClient(app, session);
-
-                Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
-                stateDelta.guid_1 = session->characterId;
-                stateDelta.guid_2 = 0x00ull;
-                stateDelta.guid_3 = 0x40000000ull;
-                stateDelta.guid_4 = 0x00ull;
-                stateDelta.game_time = timer & 0x7fffffff;
-                ZonePacketSend(app, session, &app->arenaPerTick,
-                               Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
-
-                Zone_Packet_GameTimeSync gameTimeSync = { 0 };
-                gameTimeSync.cycle_speed = 12.f;
-                gameTimeSync.time = timer;
-                gameTimeSync.unk_bool = FALSE;
-                ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync,
-                               &gameTimeSync);
-
-                Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
-                preloadDone.is_done = TRUE;
-                ZonePacketSend(app, session, &app->arenaPerTick,
-                            Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
-
-                ZonePacketSend(app, session, &app->arenaPerTick,
-                            Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
-
-                ZonePacketSend(app, session, &app->arenaPerTick,
-                            Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
+                DeployCharacter(app, session);
             } else {
                 printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"), subOpcode);
             }
