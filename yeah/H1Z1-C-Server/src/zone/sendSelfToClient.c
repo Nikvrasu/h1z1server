@@ -421,6 +421,8 @@ void SendSelfToClient(AppState* app, SessionState* session) {
     }
 };
 
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_SendSelfToClient,
-                   &sendSelf);
+    // Use the debug version that hex-dumps the packed data
+    // This will show us the stream:u32 length prefix and verify it matches
+    ZonePacketSendSelfDebug(app, session, &app->arenaPerTick,
+                            Zone_Packet_Kind_SendSelfToClient, &sendSelf);
 }

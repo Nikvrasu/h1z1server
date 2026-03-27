@@ -197,6 +197,7 @@ struct SessionState {
 
     // gateway channel stuff & testing related
     u8 gatewayChannel;
+    b8 isLoggedIn; 
     String8 characterName;
 
     u64 characterId;

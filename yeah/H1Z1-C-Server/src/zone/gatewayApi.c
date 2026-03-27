@@ -81,6 +81,7 @@ u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
 
             printf("-- channel                 \t%lld\t%llxh\t%f\n", (i64)packet->channel,
                    (u64)packet->channel, (f64)packet->channel);
+            memcpy(buffer + offset, packet->data, packet->dataLen);
             offset += packet->dataLen;
         } break;
         case GatewayKindChannelIsRoutable: {
@@ -250,6 +251,16 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
     u8 channel  = *data >> 5;
     u8 packetId = *data & 0b00011111;
 
+    // Gateway control packets (LoginRequest, LoginReply, etc.) are ONLY on channel 0.
+    // Non-zero channels are always tunnel data.
+    if (channel != 0) {
+        printf(MESSAGE_CONCAT_INFO("(%u) Routing channel %u data as tunnel data\n"), channel, channel);
+        if (dataLen > 1) {
+            GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);
+        }
+        return;
+    }
+
     switch (packetId) {
         case GatewayLoginRequestId: {
             kind = GatewayKindLoginRequest;
@@ -258,65 +269,56 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             GatewayLoginRequest loginRequest = { 0 };
             GatewayPacketUnpack(data, dataLen, kind, &loginRequest, &app->arenaPerTick);
 
-            // Extract character name from server ticket BEFORE enabling encryption
-            // (ticket data is in per-tick arena, need to copy to arenaTotal)
             GatewayExtractCharacterName(app, session,
                                         loginRequest.serverTicket,
                                         loginRequest.serverTicketLen);
 
-            printf("[*] Enabling encryption for session\n");
+            if (!session->isLoggedIn) {
+                printf("[*] Enabling encryption for session (first login)\n");
+                session->inputStream.useEncryption = TRUE;
+                session->outputStream.useEncryption = TRUE;
+                session->inputStream1.useEncryption = TRUE;
+                session->inputStream2.useEncryption = TRUE;
+                session->inputStream4.useEncryption = TRUE;
+                session->inputStream5.useEncryption = TRUE;
+            }
 
-            session->inputStream.useEncryption = TRUE;
-            session->outputStream.useEncryption = TRUE;
-            session->inputStream1.useEncryption = TRUE;
-            session->inputStream2.useEncryption = TRUE;
-            session->inputStream4.useEncryption = TRUE;
-            session->inputStream5.useEncryption = TRUE;
+            session->isLoggedIn = TRUE;
 
             GatewayLoginReply loginReply = {
                 .isLoggedIn = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindLoginReply, &loginReply);
-            // Inside GatewayPacketHandle, under case GatewayLoginRequestId:
+
             GatewayChannelIsRoutable channelZeroIsRoutable = {
-                .channel = 0,
-                .isRoutable = TRUE,
-                .unkBool = TRUE,
+                .channel = 0, .isRoutable = TRUE, .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelZeroIsRoutable);
+                            &channelZeroIsRoutable);
 
             GatewayChannelIsRoutable channelOneIsRoutable = {
-                .channel = 1,
-                .isRoutable = TRUE,
-                .unkBool = TRUE,
+                .channel = 1, .isRoutable = TRUE, .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelOneIsRoutable);
+                            &channelOneIsRoutable);
 
             GatewayChannelIsRoutable channelTwoIsRoutable = {
-                .channel = 2,
-                .isRoutable = TRUE,
-                .unkBool = TRUE,
+                .channel = 2, .isRoutable = TRUE, .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelTwoIsRoutable);
+                            &channelTwoIsRoutable);
 
             GatewayChannelIsRoutable channelFourIsRoutable = {
-                .channel = 4,
-                .isRoutable = TRUE,
-                .unkBool = TRUE,
+                .channel = 4, .isRoutable = TRUE, .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelFourIsRoutable);
+                            &channelFourIsRoutable);
 
             GatewayChannelIsRoutable channelFiveIsRoutable = {
-                .channel = 5,
-                .isRoutable = TRUE,
-                .unkBool = TRUE,
+                .channel = 5, .isRoutable = TRUE, .unkBool = TRUE,
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                              &channelFiveIsRoutable);
+                            &channelFiveIsRoutable);
 
             GatewayOnLogin(app, session, loginRequest.characterId);
         } break;

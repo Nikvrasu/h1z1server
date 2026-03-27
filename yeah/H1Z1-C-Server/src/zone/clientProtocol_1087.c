@@ -7,7 +7,56 @@ void ZonePacketSend(AppState* app, SessionState* session, Arena* arena, Zone_Pac
     printf("[ZONE SEND] kind=%d packedLen=%u\n", kind, packedLen); 
     u32 totalLen = packedLen + TunnelDataHeaderLen;
 
-    // arena_rewind(arena, maxLen - totalLen);
+    GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
+}
+
+// ============================================================================
+// Special version of ZonePacketSend for SendSelfToClient that hex-dumps
+// the first ~128 bytes to verify the stream:u32 length prefix.
+// ============================================================================
+void ZonePacketSendSelfDebug(AppState* app, SessionState* session, Arena* arena,
+                              Zone_Packet_Kind kind, void* packetPtr) {
+    // Use a larger buffer since SendSelfToClient can be big
+    u32 maxBuf = MAX_PACKET_LENGTH * 8;
+    u8* baseBuffer = arena_push_size(arena, maxBuf);
+    u8* packedBuffer = baseBuffer + TunnelDataHeaderLen;
+
+    u32 packedLen = zone_packet_pack(kind, packetPtr, packedBuffer);
+    printf("\n[SENDSELF DEBUG] Packed %u bytes total\n", packedLen);
+
+    // The first byte should be 0x03 (SendSelfToClient opcode)
+    // Then a u32 stream length (little-endian), then the stream payload
+    printf("[SENDSELF DEBUG] Opcode byte: 0x%02x (expected 0x03)\n", packedBuffer[0]);
+
+    if (packedLen >= 5) {
+        u32 streamLen = packedBuffer[1]
+                      | (packedBuffer[2] << 8)
+                      | (packedBuffer[3] << 16)
+                      | (packedBuffer[4] << 24);
+        printf("[SENDSELF DEBUG] Stream length prefix: %u (0x%08x)\n", streamLen, streamLen);
+        printf("[SENDSELF DEBUG] Remaining bytes after opcode+length: %u\n", packedLen - 5);
+
+        if (streamLen != (packedLen - 5)) {
+            printf("[SENDSELF DEBUG] *** WARNING: Stream length mismatch! ***\n");
+            printf("[SENDSELF DEBUG]   stream says %u bytes but we packed %u bytes of payload\n",
+                   streamLen, packedLen - 5);
+            printf("[SENDSELF DEBUG]   This WILL cause InitialZoneDataComplete to stay at 0!\n");
+        } else {
+            printf("[SENDSELF DEBUG] Stream length matches packed payload. Good.\n");
+        }
+    }
+
+    // Dump first 128 bytes
+    printf("[SENDSELF DEBUG] First 128 bytes:\n");
+    u32 dumpLen = packedLen < 128 ? packedLen : 128;
+    for (u32 i = 0; i < dumpLen; i++) {
+        printf("%02x ", packedBuffer[i]);
+        if ((i + 1) % 16 == 0) printf("\n");
+    }
+    if (packedLen > 128) printf("... (%u more bytes)\n", packedLen - 128);
+    printf("\n");
+
+    u32 totalLen = packedLen + TunnelDataHeaderLen;
     GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
 }
 

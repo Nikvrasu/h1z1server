@@ -1,15 +1,47 @@
 // ============================================================================
-// Phase 2 character deployment sequence. Must be called AFTER the client
-// sends ClientIsReady (0x04), which signals it has finished loading the zone.
-// Sends everything the client needs to create ProxiedCharacter and transition
-// out of WaitForZoneLoad.
-// NOTE: SendSelfToClient is sent in OnLogin (Phase 1) before ClientBeginZoning.
+// Hex dump helper
+// ============================================================================
+void HexDumpBuffer(const char* label, u8* data, u32 len) {
+    printf("\n[HEX DUMP] %s (%u bytes):\n", label, len);
+    for (u32 i = 0; i < len && i < 64; i++) {
+        printf("%02x ", data[i]);
+        if ((i + 1) % 16 == 0) printf("\n");
+    }
+    if (len > 64) printf("... (%u more bytes)", len - 64);
+    printf("\n\n");
+}
+
+void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zone_Packet_Kind kind,
+                         void* packetPtr, const char* label) {
+    u8* baseBuffer = arena_push_size(arena, MAX_PACKET_LENGTH);
+    u8* packedBuffer = baseBuffer + TunnelDataHeaderLen;
+    u32 packedLen = zone_packet_pack(kind, packetPtr, packedBuffer);
+    printf("[ZONE SEND DEBUG] %s kind=%d packedLen=%u\n", label, kind, packedLen);
+    HexDumpBuffer(label, packedBuffer, packedLen);
+    u32 totalLen = packedLen + TunnelDataHeaderLen;
+    GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
+}
+
+
+// ============================================================================
+// Phase 2: Deploy character after client sends ClientIsReady (0x04).
+//
+// KEY FIX: SendSelfToClient is re-sent here. The Phase 1 copy was consumed
+// by the pre-zone context (main menu). After ClientBeginZoning the client
+// enters a new zone context and needs ALL initial data re-sent in that
+// context. Without this, InitialZoneDataComplete never flips to 1.
 // ============================================================================
 void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
     _time64(&timer);
 
-    // Step 1: AddLightweightPc FIRST — this sets HaveProxiedCharacter=1
+    printf("\n========== DEPLOY CHARACTER BEGIN ==========\n");
+
+    // 1. RE-SEND SendSelfToClient in post-zone context
+    printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
+    SendSelfToClient(app, session);
+
+    // 2. AddLightweightPc
     Zone_Packet_AddLightweightPc addPc = { 0 };
     addPc.character_id = session->characterId;
     addPc.transient_id.value = 52;
@@ -27,16 +59,17 @@ void DeployCharacter(AppState* app, SessionState* session) {
     addPc.rotation.w = 0.7071f;
     addPc.movementVersion = 1;
     addPc.flags1 = 1;
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
 
-    // Step 2: ContainerInitEquippedContainers
+    // 3. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
     containers.character_id = session->characterId;
     containers.container_list_count = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // Step 3: Equipment
+    // 4. Equipment
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
     setEquipment.unk_string_2 = STR8("#");
@@ -49,7 +82,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // Step 4: Loadout
+    // 5. Loadout
     Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
     setLoadoutSlots.character_id = session->characterId;
     setLoadoutSlots.loadout_id = 3;
@@ -58,7 +91,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
-    // Step 5: CharacterStateDelta
+    // 6. CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_2 = 0x00ull;
@@ -68,28 +101,33 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // Step 6: GameTimeSync
+    // 7. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 12.f;
     gameTimeSync.time = timer;
     gameTimeSync.unk_bool = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
-    // Step 7: DoneSendingPreloadCharacters
+    // 8. DoneSendingPreloadCharacters → ReceivedPreloadDonePacket=1
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
+                        "DoneSendingPreloadCharacters");
 
-    // Step 8: ZoneDoneSendingInitialData — final readiness signal
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+    // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
+                        "NetworkProximityUpdatesComplete");
 
-    // Step 9: NetworkProximityUpdatesComplete — h1emu sends this ~5s after ZoneDoneSendingInitialData.
-    // Schedule deferred send via session flag so the tick loop can send it at the right time.
-    session->needsProximityComplete = 1;
-    _time64(&session->proximityCompleteTime);
-    session->proximityCompleteTime += 5;
+    // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
+                        "ZoneDoneSendingInitialData");
+
+    session->needsProximityComplete = 0;
+
+    printf("========== DEPLOY CHARACTER END ==========\n\n");
 }
 
 
@@ -216,8 +254,8 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
-    // SendSelfToClient — full character data. Must be sent BEFORE ClientBeginZoning
-    // so the client has character state when it starts loading the zone.
+    // Phase 1: SendSelfToClient before ClientBeginZoning
+    // This will be re-sent in DeployCharacter after zone load completes.
     SendSelfToClient(app, session);
 
     // ClientBeginZoning — triggers zone load
@@ -275,7 +313,4 @@ void OnLogin(AppState* app, SessionState* session) {
     initDetails.unk_u32_1 = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                 Zone_Packet_Kind_ClientInitializationDetails, &initDetails);
-
-    // Phase 1 complete. DeployCharacter() will be called when the client
-    // sends ClientIsReady (0x04), signalling it has finished loading the zone.
 }

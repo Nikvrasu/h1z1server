@@ -191,11 +191,11 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientLog;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
-            Zone_Packet_ClientLog logPacket = { 0 };
-            zone_packet_unpack(data + 1, dataLen - 1, kind, &logPacket, &app->arenaPerTick);
-            printf("[CLIENT LOG] file: %.*s message: %.*s\n",
-                (int)logPacket.file.size, logPacket.file.data,
-                (int)logPacket.message.size, logPacket.message.data);
+            // Zone_Packet_ClientLog logPacket = { 0 };
+            // zone_packet_unpack(data + 1, dataLen - 1, kind, &logPacket, &app->arenaPerTick);
+            // printf("[CLIENT LOG] file: %.*s message: %.*s\n",
+            //     (int)logPacket.file.size, logPacket.file.data,
+            //     (int)logPacket.message.size, logPacket.message.data);
         } break;
         case ZONE_CLIENTLOGOUT_ID: {
             kind = Zone_Packet_Kind_ClientLogout;

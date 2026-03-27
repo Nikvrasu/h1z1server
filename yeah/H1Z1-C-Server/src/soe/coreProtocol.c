@@ -296,6 +296,75 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
                 session->kind = SessionKindPingResponder;
             }
 
+            // If this is a reconnect, reset all stream state
+            if (session->isLoggedIn) {
+                printf("[*] Session reconnect — resetting all stream state\n");
+                session->isLoggedIn = FALSE;
+
+                // Reset sequence counters
+                session->nextAck = 0;  session->previousAck = -1;
+                session->nextAck1 = 0; session->previousAck1 = -1;
+                session->nextAck2 = 0; session->previousAck2 = -1;
+                session->nextAck4 = 0; session->previousAck4 = -1;
+                session->nextAck5 = 0; session->previousAck5 = -1;
+
+                // Reset output streams
+                session->outputStream.sequence = 0;  session->outputStream.previousAck = -1;
+                session->outputStream1.sequence = 0; session->outputStream1.previousAck = -1;
+                session->outputStream2.sequence = 0; session->outputStream2.previousAck = -1;
+                session->outputStream4.sequence = 0; session->outputStream4.previousAck = -1;
+                session->outputStream5.sequence = 0; session->outputStream5.previousAck = -1;
+
+                // Reset input streams
+                session->inputStream.nextSequence = 0;  session->inputStream.previousAck = -1;
+                session->inputStream.nextFragment = 0;  session->inputStream.previousProcessedFragment = -1;
+                session->inputStream1.nextSequence = 0; session->inputStream1.previousAck = -1;
+                session->inputStream1.nextFragment = 0; session->inputStream1.previousProcessedFragment = -1;
+                session->inputStream2.nextSequence = 0; session->inputStream2.previousAck = -1;
+                session->inputStream2.nextFragment = 0; session->inputStream2.previousProcessedFragment = -1;
+                session->inputStream4.nextSequence = 0; session->inputStream4.previousAck = -1;
+                session->inputStream4.nextFragment = 0; session->inputStream4.previousProcessedFragment = -1;
+                session->inputStream5.nextSequence = 0; session->inputStream5.previousAck = -1;
+                session->inputStream5.nextFragment = 0; session->inputStream5.previousProcessedFragment = -1;
+
+                // Reset RC4
+                memset(&session->inputStream.rc4, 0, sizeof(Rc4_State));
+                memset(&session->outputStream.rc4, 0, sizeof(Rc4_State));
+                memset(&session->inputStream1.rc4, 0, sizeof(Rc4_State));
+                memset(&session->inputStream2.rc4, 0, sizeof(Rc4_State));
+                memset(&session->inputStream4.rc4, 0, sizeof(Rc4_State));
+                memset(&session->inputStream5.rc4, 0, sizeof(Rc4_State));
+                memset(&session->outputStream1.rc4, 0, sizeof(Rc4_State));
+                memset(&session->outputStream2.rc4, 0, sizeof(Rc4_State));
+                memset(&session->outputStream4.rc4, 0, sizeof(Rc4_State));
+                memset(&session->outputStream5.rc4, 0, sizeof(Rc4_State));
+
+                // Reset encryption flags (gateway LoginRequest will re-enable)
+                session->inputStream.useEncryption = FALSE;
+                session->outputStream.useEncryption = FALSE;
+                session->inputStream1.useEncryption = FALSE;
+                session->inputStream2.useEncryption = FALSE;
+                session->inputStream4.useEncryption = FALSE;
+                session->inputStream5.useEncryption = FALSE;
+
+                // Reset fragment pools
+                memset(&session->inputPool, 0, sizeof(FragmentPool));
+                memset(&session->outputPool, 0, sizeof(FragmentPool));
+                memset(&session->inputPool1, 0, sizeof(FragmentPool));
+                memset(&session->outputPool1, 0, sizeof(FragmentPool));
+                memset(&session->inputPool2, 0, sizeof(FragmentPool));
+                memset(&session->outputPool2, 0, sizeof(FragmentPool));
+                memset(&session->inputPool4, 0, sizeof(FragmentPool));
+                memset(&session->outputPool4, 0, sizeof(FragmentPool));
+                memset(&session->inputPool5, 0, sizeof(FragmentPool));
+                memset(&session->outputPool5, 0, sizeof(FragmentPool));
+
+                // Reset zone state
+                session->needsProximityComplete = 0;
+                session->characterReleased = FALSE;
+                session->isReady = FALSE;
+            }
+
             printf("\n");
             printf(MESSAGE_CONCAT_WARN("Ignoring connection args requested by client\n"));
 
@@ -313,13 +382,12 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
 
             if (strcmp(packet.protocolName, "LoginUdp_11") == 0) {
                 printf("[*] Enabling encryption for session\n");
-
                 session->inputStream.useEncryption = TRUE;
                 session->outputStream.useEncryption = TRUE;
             }
 
             CorePacketSend(app->socket, api, session->address.ip, session->address.port, &session->args,
-                           CoreKindSessionReply, &sessionReply);
+                        CoreKindSessionReply, &sessionReply);
         } break;
         case CoreDisconnectId: {
             kind = CoreKindDisconnect;
