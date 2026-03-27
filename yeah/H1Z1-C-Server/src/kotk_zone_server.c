@@ -39,6 +39,7 @@ typedef struct StreamFunctionTable {
     inputStreamCallbackAck* gameInputAck;
     inputStreamCallbackAck* gameInputAck1;
     inputStreamCallbackAck* gameInputAck2;
+    inputStreamCallbackAck* gameInputAck3;
     inputStreamCallbackAck* gameInputAck4;
     inputStreamCallbackAck* gameInputAck5;
     inputStreamCallbackData* gameInputData;
@@ -128,6 +129,11 @@ InputStreamCallbackAck(inputCallbackAck2) {
     sessionState->nextAck2 = ack;
 }
 
+InputStreamCallbackAck(inputCallbackAck3) {
+    SessionState* sessionState = session;
+    sessionState->nextAck3 = ack;
+}
+
 InputStreamCallbackAck(inputCallbackAck4) {
     SessionState* sessionState = session;
     sessionState->nextAck4 = ack;
@@ -182,6 +188,7 @@ __declspec(dllexport) AppTick(serverTick) {
         app->streamFunctionTable->gameInputAck = inputCallbackAck;
         app->streamFunctionTable->gameInputAck1 = inputCallbackAck1;
         app->streamFunctionTable->gameInputAck2 = inputCallbackAck2;
+        app->streamFunctionTable->gameInputAck2 = inputCallbackAck3;
         app->streamFunctionTable->gameInputAck4 = inputCallbackAck4;
         app->streamFunctionTable->gameInputAck5 = inputCallbackAck5;
         app->streamFunctionTable->gameInputData = inputCallbackData;
@@ -267,7 +274,9 @@ __declspec(dllexport) AppTick(serverTick) {
                     app->sessions[firstFreeSession].nextAck1 = -1;
                     app->sessions[firstFreeSession].previousAck1 = -1;
                     app->sessions[firstFreeSession].nextAck2 = -1;
-                    app->sessions[firstFreeSession].previousAck2 = -1;
+                    app->sessions[firstFreeSession].nextAck3 = -1;
+                    app->sessions[firstFreeSession].previousAck2 = -1;                    app->sessions[firstFreeSession].nextAck2 = -1;
+                    app->sessions[firstFreeSession].previousAck3 = -1;
                     app->sessions[firstFreeSession].nextAck4 = -1;
                     app->sessions[firstFreeSession].previousAck4 = -1;
                     app->sessions[firstFreeSession].nextAck5 = -1;
@@ -311,6 +320,18 @@ __declspec(dllexport) AppTick(serverTick) {
                         OutputStreamInit(&app->sessions[firstFreeSession].outputPool2, app->rc4Decoded, app->rc4DecodedLen, FALSE);
                     app->sessions[firstFreeSession].inputStream2.ackCallbackPtr = &app->streamFunctionTable->gameInputAck2;
                     app->sessions[firstFreeSession].inputStream2.dataCallbackPtr = &app->streamFunctionTable->gameInputData;
+
+                    // Channel 3
+                    app->sessions[firstFreeSession].inputPool3 =
+                        FragmentCreate(64, MAX_PACKET_LENGTH, &app->arenaTotal);
+                    app->sessions[firstFreeSession].outputPool3 =
+                        FragmentCreate(64, MAX_PACKET_LENGTH - DATA_HEADER_LENGTH, &app->arenaTotal);
+                    app->sessions[firstFreeSession].inputStream3 =
+                        InputStreamInit(&app->sessions[firstFreeSession].inputPool3, app->rc4Decoded, app->rc4DecodedLen, FALSE);
+                    app->sessions[firstFreeSession].outputStream3 =
+                        OutputStreamInit(&app->sessions[firstFreeSession].outputPool3, app->rc4Decoded, app->rc4DecodedLen, FALSE);
+                    app->sessions[firstFreeSession].inputStream3.ackCallbackPtr = &app->streamFunctionTable->gameInputAck3;
+                    app->sessions[firstFreeSession].inputStream3.dataCallbackPtr = &app->streamFunctionTable->gameInputData;
 
                     // Channel 4
                     app->sessions[firstFreeSession].inputPool4 =
@@ -378,6 +399,20 @@ __declspec(dllexport) AppTick(serverTick) {
                 Ack ack = {
                     .sequence = (u16)app->sessions[knownSession].nextAck2,
                     .channel = 2,
+                };
+
+                CorePacketSend(app->socket, app->api, app->sessions[knownSession].address.ip,
+                               app->sessions[knownSession].address.port,
+                               &app->sessions[knownSession].args, CoreKindAck, &ack);
+            }
+
+            if (app->sessions[knownSession].previousAck3 != app->sessions[knownSession].nextAck3) {
+                printf(MESSAGE_CONCAT_INFO("Syncing ack (ch3)...\n"));
+                app->sessions[knownSession].previousAck3 = app->sessions[knownSession].nextAck3;
+
+                Ack ack = {
+                    .sequence = (u16)app->sessions[knownSession].nextAck3,
+                    .channel = 3,
                 };
 
                 CorePacketSend(app->socket, app->api, app->sessions[knownSession].address.ip,

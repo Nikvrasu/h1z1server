@@ -223,6 +223,8 @@ struct SessionState {
     i32 previousAck1;
     i32 nextAck2;
     i32 previousAck2;
+    i32 nextAck3;
+    i32 previousAck3;
     i32 nextAck4;
     i32 previousAck4;
     i32 nextAck5;
@@ -245,6 +247,12 @@ struct SessionState {
     FragmentPool outputPool2;
     SOEInputStream inputStream2;
     SOEOutputStream outputStream2;
+
+    // Channel 3
+    FragmentPool inputPool3;
+    FragmentPool outputPool3;
+    SOEInputStream inputStream3;
+    SOEOutputStream outputStream3;
 
     // Channel 4
     FragmentPool inputPool4;

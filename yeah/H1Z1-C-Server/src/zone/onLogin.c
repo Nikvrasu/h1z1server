@@ -115,15 +115,20 @@ void DeployCharacter(AppState* app, SessionState* session) {
                         Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
                         "DoneSendingPreloadCharacters");
 
-    // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
-                        "NetworkProximityUpdatesComplete");
+    // // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
+    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
+    //                     Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
+    //                     "NetworkProximityUpdatesComplete");
 
     // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
     ZonePacketSendDebug(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
                         "ZoneDoneSendingInitialData");
+    
+    // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
+                        "NetworkProximityUpdatesComplete");
 
     session->needsProximityComplete = 0;
 
@@ -244,15 +249,15 @@ void OnLogin(AppState* app, SessionState* session) {
        (int)session->characterName.size);
     printf("[DEBUG] characterId: 0x%llx\n", (unsigned long long)session->characterId);
 
-    Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-        .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
-        .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
-        .trigger_loading_screen = FALSE,
-        .unk_u8_1 = 0,
-        .unk_bool = FALSE,
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
+    // Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
+    //     .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
+    //     .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
+    //     .trigger_loading_screen = FALSE,
+    //     .unk_u8_1 = 0,
+    //     .unk_bool = FALSE,
+    // };
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
     // Phase 1: SendSelfToClient before ClientBeginZoning
     // This will be re-sent in DeployCharacter after zone load completes.
@@ -308,6 +313,16 @@ void OnLogin(AppState* app, SessionState* session) {
     beginZoning.unk_bool_2                   = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                 Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
+
+     Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
+        .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
+        .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
+        .trigger_loading_screen = FALSE,
+        .unk_u8_1 = 0,
+        .unk_bool = FALSE,
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
     Zone_Packet_ClientInitializationDetails initDetails = { 0 };
     initDetails.unk_u32_1 = 1;

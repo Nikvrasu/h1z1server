@@ -217,7 +217,6 @@ void GatewayPacketSend(AppState* app, SessionState* session, Arena* arena, u32 m
 // ============================================================================
 void GatewayExtractCharacterName(AppState* app, SessionState* session,
                                  char* ticket, u32 ticketLen) {
-    // Find the colon separator
     u32 colonPos = 0;
     b32 found = FALSE;
     for (u32 i = 0; i < ticketLen; i++) {
@@ -275,12 +274,21 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
 
             if (!session->isLoggedIn) {
                 printf("[*] Enabling encryption for session (first login)\n");
-                session->inputStream.useEncryption = TRUE;
+
+                // Enable encryption on ch0 streams — do NOT re-init their RC4,
+                // the keystream position must be preserved from session creation.
+                session->inputStream.useEncryption  = TRUE;
                 session->outputStream.useEncryption = TRUE;
+
+                // Ch1/2/4/5 haven't been used yet so init their RC4 now.
                 session->inputStream1.useEncryption = TRUE;
+                crypt_rc4_initialize(&session->inputStream1.rc4, app->rc4Decoded, app->rc4DecodedLen);
                 session->inputStream2.useEncryption = TRUE;
+                crypt_rc4_initialize(&session->inputStream2.rc4, app->rc4Decoded, app->rc4DecodedLen);
                 session->inputStream4.useEncryption = TRUE;
+                crypt_rc4_initialize(&session->inputStream4.rc4, app->rc4Decoded, app->rc4DecodedLen);
                 session->inputStream5.useEncryption = TRUE;
+                crypt_rc4_initialize(&session->inputStream5.rc4, app->rc4Decoded, app->rc4DecodedLen);
             }
 
             session->isLoggedIn = TRUE;

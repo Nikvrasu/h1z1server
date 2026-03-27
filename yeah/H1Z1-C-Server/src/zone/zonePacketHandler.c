@@ -224,12 +224,28 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
+            // 1. Transfer bestätigen
             Zone_Packet_PlayerWorldTransferReply tranferReply = { 0 };
             tranferReply.world_id_reply = 1;
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerWorldTransferReply, 
+                        &tranferReply);
 
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerWorldTransferReply,
-                           &tranferReply);
+            // 2. Initialisierungsparameter (Wie von dir ergänzt)
+            Zone_Packet_InitializationParameters init_params = { .environment = STR8("LIVE_KOTK") };
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters, 
+                        &init_params);
 
+            // 3. Zone Details & Settings (Platzhalter für Login-Daten)
+            // Hier die gleichen Daten wie in der OnLogin-Prozedur verwenden
+            Zone_Packet_SendZoneDetails send_zone_details = { /* Gleiche Daten wie OnLogin */ };
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_SendZoneDetails, 
+                        &send_zone_details);
+
+            Zone_Packet_ClientGameSettings game_settings = { /* Gleiche Daten wie OnLogin */ };
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings, 
+                        &game_settings);
+
+            // 4. Location Update (Teilt dem Client die neuen Koordinaten mit)
             Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
                 .position = { .x = 1000.f, .y = 1000.f, .z = 1000.f, .w = 1.f },
                 .rotation = { .x = 0.f, .y = 0.f, .z = 0.f, .w = 1.f },
@@ -237,9 +253,10 @@ packetIdSwitch:
                 .unk_u8_1 = 0,
                 .unk_bool = FALSE,
             };
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
+            ZonePacketSend(app, session, &app->arenaPerTick, 
+                        Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
+            // 5. Zoning Prozess starten
             Zone_Packet_ClientBeginZoning beginZoning = {
                 .zone_name = STR8("Z2"),
                 .zone_type = 4,
@@ -255,10 +272,12 @@ packetIdSwitch:
                 .wait_for_zone_ready = FALSE,
                 .unk_bool_2 = FALSE,
             };
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientBeginZoning,
-                           &beginZoning);
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientBeginZoning, 
+                        &beginZoning);
 
+            // 6. Eigene Charakter-Daten senden
             SendSelfToClient(app, session);
+
         } break;
         case 0x11: {
             // ClientUpdateBase — check sub-opcode
