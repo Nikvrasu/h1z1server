@@ -188,7 +188,7 @@ __declspec(dllexport) AppTick(serverTick) {
         app->streamFunctionTable->gameInputAck = inputCallbackAck;
         app->streamFunctionTable->gameInputAck1 = inputCallbackAck1;
         app->streamFunctionTable->gameInputAck2 = inputCallbackAck2;
-        app->streamFunctionTable->gameInputAck2 = inputCallbackAck3;
+        app->streamFunctionTable->gameInputAck3 = inputCallbackAck3;
         app->streamFunctionTable->gameInputAck4 = inputCallbackAck4;
         app->streamFunctionTable->gameInputAck5 = inputCallbackAck5;
         app->streamFunctionTable->gameInputData = inputCallbackData;
@@ -275,7 +275,7 @@ __declspec(dllexport) AppTick(serverTick) {
                     app->sessions[firstFreeSession].previousAck1 = -1;
                     app->sessions[firstFreeSession].nextAck2 = -1;
                     app->sessions[firstFreeSession].nextAck3 = -1;
-                    app->sessions[firstFreeSession].previousAck2 = -1;                    app->sessions[firstFreeSession].nextAck2 = -1;
+                    app->sessions[firstFreeSession].previousAck2 = -1;
                     app->sessions[firstFreeSession].previousAck3 = -1;
                     app->sessions[firstFreeSession].nextAck4 = -1;
                     app->sessions[firstFreeSession].previousAck4 = -1;

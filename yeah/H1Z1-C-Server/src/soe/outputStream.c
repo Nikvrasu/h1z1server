@@ -2,6 +2,19 @@ void OutputStreamWrite(AppState* app, SessionState* session, SOEOutputStream* ou
                        u32 dataLen, b32 overrideEncryption) {
     if (output->useEncryption && !overrideEncryption) {
         crypt_rc4_transform(&output->rc4, data, dataLen);
+
+        // SOE protocol: if the first encrypted byte is 0x00, prepend an extra
+        // 0x00 so the receiver can distinguish it from the 0x00 0x19
+        // sub-packet container marker.  The receiver strips this byte when it
+        // sees two consecutive 0x00 bytes (u16LE == 0).
+        // NOTE: callers must provide a buffer with at least 1 byte of spare
+        // capacity beyond dataLen.  All current call sites use arena-backed
+        // buffers allocated at MAX_PACKET_LENGTH which satisfies this.
+        if (data[0] == 0x00) {
+            memmove(data + 1, data, dataLen);
+            data[0] = 0x00;
+            dataLen += 1;
+        }
     }
 
     if (dataLen <= output->pool->packetLen) {

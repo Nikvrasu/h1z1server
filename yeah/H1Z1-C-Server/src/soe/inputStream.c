@@ -33,7 +33,7 @@ void InputStreamChannelDataParse(AppState* app, SessionState* session, SOEInputS
             offset += InputStreamReadLen(data + offset, &chunkLen);
 
             if (input->useEncryption) {
-                if (chunkLen > 1 && *(u8*)(data + offset) == 0) {
+                if (chunkLen > 1 && endian_read_u16_little(data + offset) == 0) {
                     offset += 1;
                     chunkLen -= 1;
                 }
@@ -91,6 +91,17 @@ void InputStreamWrite(AppState* app, SessionState* session, SOEInputStream* inpu
            sequence, input->nextSequence, input->previousAck, isFragment, dataLen);
     if (input->nextSequence == -1) {
         input->nextSequence = sequence;
+    }
+
+    // Reject stale/duplicate packets that were already processed.
+    // Processing old data would advance the RC4 keystream incorrectly,
+    // permanently desyncing encryption for the rest of the session.
+    // Reference: QuentinGruber/h1z1-server soeinputstream.ts write()
+    // only accepts sequence >= nextSequence.
+    if (sequence < input->nextSequence) {
+        printf("[!] Stale/duplicate packet; sequence %d already processed (nextSeq=%d). Ignoring.\n",
+               sequence, input->nextSequence);
+        return;
     }
 
     if (sequence > input->nextSequence) {
