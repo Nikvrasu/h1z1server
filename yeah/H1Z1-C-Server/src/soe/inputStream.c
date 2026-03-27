@@ -93,6 +93,17 @@ void InputStreamWrite(AppState* app, SessionState* session, SOEInputStream* inpu
         input->nextSequence = sequence;
     }
 
+    // Reject stale/duplicate packets that were already processed.
+    // Processing old data would advance the RC4 keystream incorrectly,
+    // permanently desyncing encryption for the rest of the session.
+    // Reference: QuentinGruber/h1z1-server soeinputstream.ts write()
+    // only accepts sequence >= nextSequence.
+    if (sequence < input->nextSequence) {
+        printf("[!] Stale/duplicate packet; sequence %d already processed (nextSeq=%d). Ignoring.\n",
+               sequence, input->nextSequence);
+        return;
+    }
+
     if (sequence > input->nextSequence) {
         printf("[!] Sequence out of order; expected %d, got %d. Throwing away!\n", input->nextSequence,
                sequence);
