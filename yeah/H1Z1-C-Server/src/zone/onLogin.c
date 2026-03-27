@@ -26,10 +26,17 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
 // ============================================================================
 // Phase 2: Deploy character after client sends ClientIsReady (0x04).
 //
-// KEY FIX: SendSelfToClient is re-sent here. The Phase 1 copy was consumed
-// by the pre-zone context (main menu). After ClientBeginZoning the client
-// enters a new zone context and needs ALL initial data re-sent in that
-// context. Without this, InitialZoneDataComplete never flips to 1.
+// Packet order matches the reference h1z1-server (ZoneServer2016) implementation:
+//   1.  DoneSendingPreloadCharacters (FIRST — sets ReceivedPreloadDonePacket=1)
+//   2.  SendSelfToClient re-send (in new zone context — required for InitialZoneDataComplete)
+//   3.  AddLightweightPc
+//   4.  ContainerInitEquippedContainers
+//   5.  Equipment_SetCharacterEquipment
+//   6.  Loadout_SetLoadoutSlots
+//   7.  Character_CharacterStateDelta
+//   8.  GameTimeSync
+//   9.  ZoneDoneSendingInitialData (sets InitialZoneDataComplete=1)
+//   10. NetworkProximityUpdatesComplete (sets NetworkProximityUpdateComplete=1)
 // ============================================================================
 void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
@@ -37,11 +44,22 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
     printf("\n========== DEPLOY CHARACTER BEGIN ==========\n");
 
-    // 1. RE-SEND SendSelfToClient in post-zone context
-    printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
+    // 1. DoneSendingPreloadCharacters — send FIRST, immediately after ClientIsReady,
+    //    matching the reference implementation.  Sets ReceivedPreloadDonePacket=1.
+    Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
+    preloadDone.is_done = TRUE;
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
+                        "DoneSendingPreloadCharacters");
+
+    // 2. RE-SEND SendSelfToClient in post-zone context.
+    //    The Phase 1 copy was consumed by the pre-zone context (main menu).
+    //    After ClientBeginZoning the client enters a new zone context and needs
+    //    ALL initial data re-sent so that InitialZoneDataComplete can flip to 1.
+    printf("[DEPLOY] Step 2: Re-sending SendSelfToClient in post-zone context\n");
     SendSelfToClient(app, session);
 
-    // 2. AddLightweightPc
+    // 3. AddLightweightPc
     Zone_Packet_AddLightweightPc addPc = { 0 };
     addPc.character_id = session->characterId;
     addPc.transient_id.value = 52;
@@ -62,14 +80,14 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSendDebug(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
 
-    // 3. ContainerInitEquippedContainers
+    // 4. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
     containers.character_id = session->characterId;
     containers.container_list_count = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 4. Equipment
+    // 5. Equipment
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
     setEquipment.unk_string_2 = STR8("#");
@@ -82,7 +100,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // 5. Loadout
+    // 6. Loadout
     Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
     setLoadoutSlots.character_id = session->characterId;
     setLoadoutSlots.loadout_id = 3;
@@ -91,7 +109,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
-    // 6. CharacterStateDelta
+    // 7. CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_2 = 0x00ull;
@@ -101,31 +119,20 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 7. GameTimeSync
+    // 8. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 12.f;
     gameTimeSync.time = timer;
     gameTimeSync.unk_bool = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
-    // 8. DoneSendingPreloadCharacters → ReceivedPreloadDonePacket=1
-    Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
-    preloadDone.is_done = TRUE;
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
-                        "DoneSendingPreloadCharacters");
-
-    // // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                     Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
-    //                     "NetworkProximityUpdatesComplete");
-
-    // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
+    // 9. ZoneDoneSendingInitialData — sets InitialZoneDataComplete=1.
+    //    Must be sent AFTER all character/world data but BEFORE NetworkProximityUpdatesComplete.
     ZonePacketSendDebug(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
                         "ZoneDoneSendingInitialData");
-    
-    // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
+
+    // 10. NetworkProximityUpdatesComplete — sets NetworkProximityUpdateComplete=1 (LAST).
     ZonePacketSendDebug(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
                         "NetworkProximityUpdatesComplete");

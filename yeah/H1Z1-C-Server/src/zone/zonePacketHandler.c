@@ -279,25 +279,66 @@ packetIdSwitch:
             SendSelfToClient(app, session);
 
         } break;
-        case 0x11: {
-            // ClientUpdateBase — check sub-opcode
-            u8 subOpcode = dataLen > 1 ? data[1] : 0;
-            printf(MESSAGE_CONCAT_INFO("Handling ClientUpdateBase sub-opcode 0x%02x (len=%u)\n"),
-                   subOpcode, dataLen);
-
-            if (subOpcode == 0x97) {
-                // 0x11 0x97 — Zone ready notification from client after a zone transition.
-                // Re-deploy the character following the same Phase 2 sequence.
-                printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
-
-                DeployCharacter(app, session);
-            } else {
-                printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"), subOpcode);
-            }
+        case 0x0b: {
+            // ClientBeginZoning — client echoes the zoning packet back; no response needed.
+            printf(MESSAGE_CONCAT_INFO("Ignoring ClientBeginZoning from client (len=%u)\n"), dataLen);
+        } break;
+        case 0x13: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring GroupsBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x14: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring EncounterBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x15: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring InventoryBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x22: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring TradeBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x27: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring InGamePurchaseBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x31: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring BugSubmissionBase (len=%u)\n"), dataLen);
+        } break;
+        case 0x43: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring ShowSystemMessage (len=%u)\n"), dataLen);
+        } break;
+        case 0x50: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring TrackedEvent (len=%u)\n"), dataLen);
+        } break;
+        case 0x8d: {
+            // Synchronization — client sends its clock; respond with server time so the
+            // client can synchronise its game clock.  The schema defines 6 x u64 fields
+            // (49 bytes) but older client builds send a shorter compact form; we always
+            // reply with the full struct so the client has valid server-time values.
+            printf(MESSAGE_CONCAT_INFO("Handling Synchronization (len=%u)\n"), dataLen);
+            Zone_Packet_Synchronization syncReply = { 0 };
+            syncReply.server_time   = (u64)timer * 1000;
+            syncReply.server_time_2 = (u64)timer * 1000;
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                           Zone_Packet_Kind_Synchronization, &syncReply);
+        } break;
+        case 0x9d: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring InGamePurchase (len=%u)\n"), dataLen);
+        } break;
+        case 0xa0: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring RewardBuffsBase (len=%u)\n"), dataLen);
+        } break;
+        case 0xb0: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring ClientSettings (len=%u)\n"), dataLen);
+        } break;
+        case 0xbe: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring StaticFacilityInfoBase (len=%u)\n"), dataLen);
+        } break;
+        case 0xd0: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring CharacterStateBase (len=%u)\n"), dataLen);
+        } break;
+        case 0xeb: {
+            printf(MESSAGE_CONCAT_INFO("Ignoring ReplicationBase (len=%u)\n"), dataLen);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);
-            // Hex dump first few bytes for debugging
             printf("[ZONE DUMP] ");
             for (u32 i = 0; i < (dataLen < 16 ? dataLen : 16); i++) {
                 printf("%02x ", data[i]);
