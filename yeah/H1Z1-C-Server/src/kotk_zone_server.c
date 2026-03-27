@@ -99,6 +99,11 @@ InputStreamCallbackData(pingInputStreamData);
 void GatewayOnLogin(AppState* app, SessionState* session, u64 characterId) {
     printf("[!] Character %llxh trying to login to zone server\n", characterId);
     session->characterId = characterId;
+    // Grant admin rights to the connecting player.
+    // This development server unconditionally grants admin status (matching the
+    // is_admin = TRUE flag sent in SendSelfToClient). In a production environment
+    // this would be driven by authentication/authorization data instead.
+    session->isAdmin = TRUE;
 
     OnLogin(app, session);
 }

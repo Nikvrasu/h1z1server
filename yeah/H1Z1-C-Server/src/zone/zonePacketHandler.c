@@ -279,6 +279,22 @@ packetIdSwitch:
             SendSelfToClient(app, session);
 
         } break;
+        case 0x0a: {
+            // AdminBase — admin command from a client that has is_admin set to TRUE.
+            if (!session->isAdmin) {
+                printf(MESSAGE_CONCAT_WARN("AdminBase packet from non-admin session (len=%u) — ignored\n"),
+                       dataLen);
+                break;
+            }
+            u8 subOpcode = dataLen > 1 ? data[1] : 0;
+            printf(MESSAGE_CONCAT_INFO("Handling AdminBase sub-opcode 0x%02x (len=%u)\n"),
+                   subOpcode, dataLen);
+            printf("[ADMIN] ");
+            for (u32 i = 0; i < (dataLen < 16 ? dataLen : 16); i++) {
+                printf("%02x ", data[i]);
+            }
+            printf("\n");
+        } break;
         case 0x11: {
             // ClientUpdateBase — check sub-opcode
             u8 subOpcode = dataLen > 1 ? data[1] : 0;
