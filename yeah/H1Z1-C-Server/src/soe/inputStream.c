@@ -33,7 +33,7 @@ void InputStreamChannelDataParse(AppState* app, SessionState* session, SOEInputS
             offset += InputStreamReadLen(data + offset, &chunkLen);
 
             if (input->useEncryption) {
-                if (chunkLen > 1 && *(u8*)(data + offset) == 0) {
+                if (chunkLen > 1 && endian_read_u16_little(data + offset) == 0) {
                     offset += 1;
                     chunkLen -= 1;
                 }
