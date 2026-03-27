@@ -327,17 +327,17 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
                 session->inputStream5.nextSequence = 0; session->inputStream5.previousAck = -1;
                 session->inputStream5.nextFragment = 0; session->inputStream5.previousProcessedFragment = -1;
 
-                // Reset RC4
-                memset(&session->inputStream.rc4, 0, sizeof(Rc4_State));
-                memset(&session->outputStream.rc4, 0, sizeof(Rc4_State));
-                memset(&session->inputStream1.rc4, 0, sizeof(Rc4_State));
-                memset(&session->inputStream2.rc4, 0, sizeof(Rc4_State));
-                memset(&session->inputStream4.rc4, 0, sizeof(Rc4_State));
-                memset(&session->inputStream5.rc4, 0, sizeof(Rc4_State));
-                memset(&session->outputStream1.rc4, 0, sizeof(Rc4_State));
-                memset(&session->outputStream2.rc4, 0, sizeof(Rc4_State));
-                memset(&session->outputStream4.rc4, 0, sizeof(Rc4_State));
-                memset(&session->outputStream5.rc4, 0, sizeof(Rc4_State));
+                // Reset RC4 — must re-initialize key schedule, not just zero memory
+                crypt_rc4_initialize(&session->inputStream.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->outputStream.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->inputStream1.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->inputStream2.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->inputStream4.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->inputStream5.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->outputStream1.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->outputStream2.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->outputStream4.rc4, app->rc4Decoded, app->rc4DecodedLen);
+                crypt_rc4_initialize(&session->outputStream5.rc4, app->rc4Decoded, app->rc4DecodedLen);
 
                 // Reset encryption flags (gateway LoginRequest will re-enable)
                 session->inputStream.useEncryption = FALSE;
@@ -381,8 +381,7 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
             };
 
             if (strcmp(packet.protocolName, "LoginUdp_11") == 0) {
-                printf("[*] Enabling encryption for session\n");
-                session->inputStream.useEncryption = TRUE;
+                printf("[*] Enabling output encryption for session (input enabled after GatewayLoginRequest)\n");
                 session->outputStream.useEncryption = TRUE;
             }
 
