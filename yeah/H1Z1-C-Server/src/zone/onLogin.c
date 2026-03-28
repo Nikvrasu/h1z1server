@@ -45,26 +45,27 @@ void DeployCharacter(AppState* app, SessionState* session) {
     printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
     SendSelfToClient(app, session, TRUE);
 
-    // 2. AddLightweightPc
-    // Zone_Packet_AddLightweightPc addPc = { 0 };
-    // addPc.character_id = session->characterId;
-    // addPc.transient_id.value = 52;
-    // addPc.id_characterFirstName = session->characterName;
-    // addPc.id_characterLastName = STR8("");
-    // addPc.id_unknownString1 = STR8("");
-    // addPc.id_characterName = session->characterName;
-    // addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
-    // addPc.position.x = -297.31f;
-    // addPc.position.y = 506.06f;
-    // addPc.position.z = -4894.10f;
-    // addPc.rotation.x = 0.0f;
-    // addPc.rotation.y = -0.7071f;
-    // addPc.rotation.z = 0.0f;
-    // addPc.rotation.w = 0.7071f;
-    // addPc.movementVersion = 1;
-    // addPc.flags1 = 1;
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                     Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
+    // 2. AddLightweightPc — spawns the character entity in the world so the model is visible.
+    //    Without this packet the character is completely invisible after zone load.
+    Zone_Packet_AddLightweightPc addPc = { 0 };
+    addPc.character_id = session->characterId;
+    addPc.transient_id.value = 52;
+    addPc.id_characterFirstName = session->characterName;
+    addPc.id_characterLastName = STR8("");
+    addPc.id_unknownString1 = STR8("");
+    addPc.id_characterName = session->characterName;
+    addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
+    addPc.position.x = -297.31f;
+    addPc.position.y = 506.06f;
+    addPc.position.z = -4894.10f;
+    addPc.rotation.x = 0.0f;
+    addPc.rotation.y = -0.7071f;
+    addPc.rotation.z = 0.0f;
+    addPc.rotation.w = 0.7071f;
+    addPc.movementVersion = 1;
+    addPc.flags1 = 1;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_AddLightweightPc, &addPc);
 
     // 3. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
