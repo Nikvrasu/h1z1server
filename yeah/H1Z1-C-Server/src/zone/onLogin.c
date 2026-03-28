@@ -112,6 +112,34 @@ void DeployCharacter(AppState* app, SessionState* session) {
     gameTimeSync.unk_bool = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
+    // 11. Respawn — releases the camera and attaches it to the character
+    Zone_Packet_Character_Respawn respawn = { 0 };
+    respawn.respawn_type_1 = 1;
+    respawn.respawn_guid = session->characterId;
+    respawn.profile_id_1 = 5;
+    respawn.profile_id_2 = 5;
+    respawn.unk_dword_1_1 = 0;
+    respawn.grid_pos = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_Character_Respawn, &respawn);
+
+    Zone_Packet_Character_RespawnReply respawnReply = { 0 };
+    respawnReply.character_id_1_1 = session->characterId;
+    respawnReply.status = 1;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_Character_RespawnReply, &respawnReply);
+
+    // After RespawnReply, before DoneSendingPreloadCharacters:
+    Zone_Packet_ClientUpdate_UpdateLocation updateLoc = {
+    .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
+    .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
+    .trigger_loading_screen = TRUE,
+    .unk_u8_1 = 0,
+    .unk_bool = FALSE,
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+               Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLoc);
+
     // 8. DoneSendingPreloadCharacters → ReceivedPreloadDonePacket=1
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
@@ -138,8 +166,10 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
 void OnLogin(AppState* app, SessionState* session) {
     Zone_Packet_InitializationParameters init_params = {
-        .environment = STR8("LIVE_KOTK"),
-    };
+    .environment  = STR8("LIVE_KOTK"),
+    .unk_string_1 = STR8("SKU_Is_KotK"),  // was absent
+    .ruleset_definitions_count = 0,
+};
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
                    &init_params);
 
@@ -182,7 +212,7 @@ void OnLogin(AppState* app, SessionState* session) {
         .cloudSilverLiningBrightness = 7.0f,
         .cloudShadows = 0.5f,
         .zone_id = 5,
-        .zone_id_2 = 0,
+        .zone_id_2 = 5,
         .name_id = 61609,
         .unk_bool2 = TRUE,
         .lighting = STR8("Lighting_Z2.txt"),
@@ -299,7 +329,7 @@ void OnLogin(AppState* app, SessionState* session) {
     beginZoning.cloudShadows                 = 0.5f;
     beginZoning.unk_byte_1                   = 4;
     beginZoning.zone_id_1                    = 5;
-    beginZoning.zone_id_2                    = 0;
+    beginZoning.zone_id_2                    = 5;
     beginZoning.name_id                      = 61609;
     beginZoning.unk_dword_1                  = 0x0f2b07d0;
     beginZoning.unk_bool_1                   = FALSE;
@@ -309,9 +339,9 @@ void OnLogin(AppState* app, SessionState* session) {
                 Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
 
      Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-        .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
+        .position = { .x = -1220.0f, .y = 50.0f, .z = -1220.0f, .w = 1.f },
         .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
-        .trigger_loading_screen = FALSE,
+        .trigger_loading_screen = TRUE,
         .unk_u8_1 = 0,
         .unk_bool = FALSE,
     };
