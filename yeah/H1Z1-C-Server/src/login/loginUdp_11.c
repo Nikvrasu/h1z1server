@@ -85,8 +85,15 @@ void GetHeadTypeId(SessionState* session, void* packetPtr) {
     Login_Packet_CharacterCreateRequest* characterCreateReq = packetPtr;
     u32 headId = characterCreateReq->char_payload->head_type;
 
-    memcpy(&session->pGetPlayerActor.headType, &headId, sizeof(headId));
-
+    // Head type mapping from CharacterSelect.HeadTypes data table:
+    //   1 = Male Head 1   (SurvivorMale_Head_01.adr,   gender 1, model 9469)
+    //   2 = Male Head 2   (SurvivorMale_Head_02.adr,   gender 1, model 9469)
+    //   3 = Female Head 1 (SurvivorFemale_Head_01.adr, gender 2, model 9474)
+    //   4 = Female Head 2 (SurvivorFemale_Head_02.adr, gender 2, model 9474)
+    //   5 = Male Head 3   (SurvivorMale_Head_03.adr,   gender 1, model 9469)
+    //   6 = Female Head 3 (SurvivorFemale_Head_03.adr, gender 2, model 9474)
+    //   7 = Male Head 4   (SurvivorMale_Head_04.adr,   gender 1, model 9469)
+    //   8 = Female Head 4 (SurvivorFemale_Head_04.adr, gender 2, model 9474)
     switch (headId) {
         case 1: {
             session->pGetPlayerActor.headType = 1;
@@ -102,6 +109,20 @@ void GetHeadTypeId(SessionState* session, void* packetPtr) {
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_02.adr");
         } break;
+        case 3: {
+            session->pGetPlayerActor.headType = 3;
+            session->pGetPlayerActor.gender = 2;
+            session->pGetPlayerActor.actorModelId = 9474;
+            session->pGetPlayerActor.hairModel = STR8("SurvivorFemale_Hair_ShortBun.adr");
+            session->pGetPlayerActor.headActor = STR8("SurvivorFemale_Head_01.adr");
+        } break;
+        case 4: {
+            session->pGetPlayerActor.headType = 4;
+            session->pGetPlayerActor.gender = 2;
+            session->pGetPlayerActor.actorModelId = 9474;
+            session->pGetPlayerActor.hairModel = STR8("SurvivorFemale_Hair_ShortBun.adr");
+            session->pGetPlayerActor.headActor = STR8("SurvivorFemale_Head_02.adr");
+        } break;
         case 5: {
             session->pGetPlayerActor.headType = 5;
             session->pGetPlayerActor.gender = 1;
@@ -111,13 +132,27 @@ void GetHeadTypeId(SessionState* session, void* packetPtr) {
         } break;
         case 6: {
             session->pGetPlayerActor.headType = 6;
+            session->pGetPlayerActor.gender = 2;
+            session->pGetPlayerActor.actorModelId = 9474;
+            session->pGetPlayerActor.hairModel = STR8("SurvivorFemale_Hair_ShortBun.adr");
+            session->pGetPlayerActor.headActor = STR8("SurvivorFemale_Head_03.adr");
+        } break;
+        case 7: {
+            session->pGetPlayerActor.headType = 7;
             session->pGetPlayerActor.gender = 1;
             session->pGetPlayerActor.actorModelId = 9469;
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_04.adr");
         } break;
+        case 8: {
+            session->pGetPlayerActor.headType = 8;
+            session->pGetPlayerActor.gender = 2;
+            session->pGetPlayerActor.actorModelId = 9474;
+            session->pGetPlayerActor.hairModel = STR8("SurvivorFemale_Hair_ShortBun.adr");
+            session->pGetPlayerActor.headActor = STR8("SurvivorFemale_Head_04.adr");
+        } break;
         default: {
-            printf("Head type data is invalid!\n");
+            printf("Head type data is invalid! headId=%u\n", headId);
             return;
         }
     }
