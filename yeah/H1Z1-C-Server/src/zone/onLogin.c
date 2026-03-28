@@ -137,8 +137,14 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
 
 void OnLogin(AppState* app, SessionState* session) {
+    // InitializationParameters: environment selects the game mode, unk_string_1 is the SKU
+    // identifier ("SKU_Is_KotK" for King of the Kill). Missing the SKU causes the client to
+    // fall back to incorrect game-mode defaults. Ruleset definitions are empty here; populate
+    // from game-rules data once available (see QuentinGruber/h1z1-server gameRulesSource).
     Zone_Packet_InitializationParameters init_params = {
         .environment = STR8("LIVE_KOTK"),
+        .unk_string_1 = STR8("SKU_Is_KotK"),
+        .ruleset_definitions_count = 0,
     };
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
                    &init_params);
@@ -181,8 +187,12 @@ void OnLogin(AppState* app, SessionState* session) {
         .cloudSilverLiningThickness = 0.25f,
         .cloudSilverLiningBrightness = 7.0f,
         .cloudShadows = 0.5f,
+        // zone_id and zone_id_2 must both equal the zone's geometry ID (5 for Z2/KOTK).
+        // Sending zone_id_2 = 0 causes the client to skip loading terrain geometry,
+        // leaving the world map blank. Reference: ZoneServer2016 sendInitData(),
+        // SendZoneDetails with geometryId matching zoneId1.
         .zone_id = 5,
-        .zone_id_2 = 0,
+        .zone_id_2 = 5,
         .name_id = 61609,
         .unk_bool2 = TRUE,
         .lighting = STR8("Lighting_Z2.txt"),
@@ -204,44 +214,33 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
                    &game_settings);
 
-    Zone_Packet_UpdateWeatherData updt_weather_data = {
-        .overcast = 1.0f,
-        .fogDensity = 0.000173f,
-        .fogFloor = 10.0f,
-        .fogGradient = 0.0144f,
-        .globalPrecipitation = 0,
-        .temperature = 75,
-        .skyClarity = 0,
-        .cloudWeight0 = 0.05f,
-        .cloudWeight1 = 0.0f,
-        .cloudWeight2 = 0.05f,
-        .cloudWeight3 = 0.15f,
-        .transitionTime = 0,
-        .sunAxisX = 38,
-        .sunAxisY = -15,
-        .sunAxisZ = 0,
-        .windDirX = -1.0f,
-        .windDirY = -0.5f,
-        .windDirZ = -1.0f,
-        .wind = 3,
-        .rainMinStrength = 0,
-        .rainRampUpTimeSeconds = 1,
-        .cloudFile = STR8("sky_Z_clouds.dds"),
-        .stratusCloudTiling = 0.30f,
-        .stratusCloudScrollU = -0.002f,
-        .stratusCloudScrollV = 0,
-        .stratusCloudHeight = 1000,
-        .cumulusCloudTiling = 0.20f,
-        .cumulusCloudScrollU = 0,
-        .cumulusCloudScrollV = 0.002f,
-        .cumulusCloudHeight = 8000,
-        .cloudAnimationSpeed = 0,
-        .cloudSilverLiningThickness = 0.25f,
-        .cloudSilverLiningBrightness = 7.0f,
-        .cloudShadows = 0.5f,
+    // ReferenceDataWeaponDefinitions — weapon, fire-group, and fire-mode parameters.
+    // The reference server (ZoneServer2016) sends this packet before SendSelfToClient so
+    // that the client can resolve all weapon properties before the character data arrives.
+    // Without it, weapons appear non-functional or use fallback zero-stats on the client.
+    // TODO: Populate weapon_defs / fire_group_defs / fire_mode_defs from game data.
+    Zone_Packet_ReferenceDataWeaponDefinitions weaponDefs = { 0 };
+    weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
+        [0] = {
+            .weapon_defs_count     = 0,
+            .fire_group_defs_count = 0,
+            .fire_mode_defs_count  = 0,
+        },
     };
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData,
-                   &updt_weather_data);
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ReferenceDataWeaponDefinitions, &weaponDefs);
+
+    // ReferenceDataDynamicAppearance — item appearance and shader/texture parameter tables.
+    // Without these definitions the client cannot resolve shader parameter groups, causing
+    // characters and items to render with missing or default textures.
+    // The reference server sends a partial version (shader params only) here and the full
+    // table after SendSelfToClient. Both are sent as empty here pending data population.
+    // TODO: Populate from appearance/shader data (see ZoneServer2016 dynamicappearance JSON).
+    Zone_Packet_ReferenceDataDynamicAppearance dynAppearance = { 0 };
+    // shader_parameter_definitions, item_appearance_definitions, and
+    // shader_semantic_definitions are all empty (zero-initialised above).
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ReferenceDataDynamicAppearance, &dynAppearance);
 
     printf("[DEBUG] characterName: '%.*s' len=%d\n",
        (int)session->characterName.size,
@@ -299,7 +298,7 @@ void OnLogin(AppState* app, SessionState* session) {
     beginZoning.cloudShadows                 = 0.5f;
     beginZoning.unk_byte_1                   = 4;
     beginZoning.zone_id_1                    = 5;
-    beginZoning.zone_id_2                    = 0;
+    beginZoning.zone_id_2                    = 5;
     beginZoning.name_id                      = 61609;
     beginZoning.unk_dword_1                  = 0x0f2b07d0;
     beginZoning.unk_bool_1                   = FALSE;
