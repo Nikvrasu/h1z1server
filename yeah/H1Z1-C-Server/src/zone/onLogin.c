@@ -45,26 +45,91 @@ void DeployCharacter(AppState* app, SessionState* session) {
     printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
     SendSelfToClient(app, session, TRUE);
 
-    // 2. AddLightweightPc
-    // Zone_Packet_AddLightweightPc addPc = { 0 };
-    // addPc.character_id = session->characterId;
-    // addPc.transient_id.value = 52;
-    // addPc.id_characterFirstName = session->characterName;
-    // addPc.id_characterLastName = STR8("");
-    // addPc.id_unknownString1 = STR8("");
-    // addPc.id_characterName = session->characterName;
-    // addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
-    // addPc.position.x = -297.31f;
-    // addPc.position.y = 506.06f;
-    // addPc.position.z = -4894.10f;
-    // addPc.rotation.x = 0.0f;
-    // addPc.rotation.y = -0.7071f;
-    // addPc.rotation.z = 0.0f;
-    // addPc.rotation.w = 0.7071f;
-    // addPc.movementVersion = 1;
-    // addPc.flags1 = 1;
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                     Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
+    // 1b. ClientUpdate_ActivateProfile — bind KotK character profile (5) and fists model.
+    //     This activates the character's movement speeds and makes the model renderable.
+    //     unk_float_1/unk_float_2 correspond to the walk-speed and sprint-speed multipliers
+    //     that the client reads from the active profile (matching profile data in SendSelfToClient).
+    Zone_Packet_ClientUpdate_ActivateProfile activateProfile = { 0 };
+    activateProfile.profile_payload = (struct profile_payload_s[1]){
+        [0] = {
+            .profile_id           = 5,
+            .name_id              = 0,
+            .desc_id              = 0,
+            .type                 = 3,
+            .unk_dword_1          = 0,
+            .ability_bg_image_set = 0,
+            .badge_image_set      = 0,
+            .button_image_set     = 0,
+            .unk_byte_1           = 0,
+            .unk_byte_2           = 0,
+            .unk_dword_2          = 0,
+            .unk_list_1_count     = 0,
+            .unk_dword_6          = 0,
+            .unk_dword_7          = 0,
+            .unk_byte_3           = 0,
+            .unk_float_1          = 1.7f,   // walk speed multiplier
+            .unk_float_2          = 0.95f,  // sprint speed modifier
+            .unk_float_3          = 0.0f,
+            .unk_dword_8          = 0,
+            .unk_float_4          = 0.0f,
+            .unk_dword_9          = 0,
+            .unk_dword_10         = 0,
+            .unk_dword_11         = 0,
+            .unk_dword_12         = 0,
+            .unk_dword_13         = 0,
+        },
+    };
+    activateProfile.attachment_list_count = 1;
+    activateProfile.attachment_list = (struct attachment_list_s[1]){
+        [0] = {
+            .model_name         = STR8("Weapon_Empty.adr"),
+            .texture_alias      = STR8(""),
+            .tint_alias         = STR8("Default"),
+            .decal_alias        = STR8("#"),
+            .unk_dword_1        = 0,
+            .unk_dword_2        = 0,
+            .effect_id          = 0,
+            .slot_id            = EQUIPMENT_SLOT_RIGHT_HAND,
+            .unk_dword_3        = 0,
+            .unk_list_1337_count = 0,
+            .unk_bool_1         = FALSE,
+        },
+    };
+    activateProfile.unk_dword_1    = 0;
+    activateProfile.unk_dword_2    = 0;
+    activateProfile.actor_model_id = session->pGetPlayerActor.actorModelId
+                                         ? session->pGetPlayerActor.actorModelId
+                                         : 9469;
+    activateProfile.tint_alias  = STR8("Default");
+    activateProfile.decal_alias = STR8("#");
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_ClientUpdate_ActivateProfile, &activateProfile);
+
+    // 2. AddLightweightPc — spawn the local player's visible model in the world.
+    //     Without this packet the character has no renderable entity even though
+    //     SendSelfToClient delivered all character data correctly.
+    //     flags1 = 1  is the standard value for a spawned player character.
+    Zone_Packet_AddLightweightPc addPc = { 0 };
+    addPc.character_id           = session->characterId;
+    addPc.transient_id.value     = 52;
+    addPc.id_characterFirstName  = session->characterName;
+    addPc.id_characterLastName   = STR8("");
+    addPc.id_unknownString1      = STR8("");
+    addPc.id_characterName       = session->characterName;
+    addPc.actorModelId           = session->pGetPlayerActor.actorModelId
+                                       ? session->pGetPlayerActor.actorModelId
+                                       : 9469;
+    addPc.position.x             = -297.31f;
+    addPc.position.y             = 506.06f;
+    addPc.position.z             = -4894.10f;
+    addPc.rotation.x             = 0.0f;
+    addPc.rotation.y             = -0.7071f;
+    addPc.rotation.z             = 0.0f;
+    addPc.rotation.w             = 0.7071f;
+    addPc.movementVersion        = 1;
+    addPc.flags1                 = 1;
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
 
     // 3. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
