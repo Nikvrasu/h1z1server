@@ -3,11 +3,11 @@ u32 GetActorModelId(SessionState* session) {
 
     switch (headId) {
         case 1: {
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 2: {
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 3: {
@@ -19,7 +19,7 @@ u32 GetActorModelId(SessionState* session) {
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 5: {
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 6: {
@@ -27,7 +27,7 @@ u32 GetActorModelId(SessionState* session) {
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 7: {
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             return session->pGetPlayerActor.actorModelId;
         } break;
         case 8: {
@@ -44,7 +44,7 @@ u32 GetGender(SessionState* session) {
     u32 actorModelId = session->pGetPlayerActor.actorModelId;
 
     switch (actorModelId) {
-        case 9240: {
+        case 9469: {
             session->pGetPlayerActor.gender = 1;
             return session->pGetPlayerActor.gender;
         } break;
@@ -60,7 +60,7 @@ u32 GetGender(SessionState* session) {
 
 char* GetHairModel(u32 actorModelId) {
     switch (actorModelId) {
-        case 9240:
+        case 9469:
             printf("Male Hair Model Selected!\n");
             return "SurvivorMale_Hair_MediumMessy.adr";
         case 9474:
@@ -96,10 +96,81 @@ u32 getResourceType(u32 resourceId) {
     }
 }
 
-void SendSelfToClient(AppState* app, SessionState* session) {
+// ============================================================================
+// SendSelfToClient — Raw binary approach
+//
+// Loads sendself_patched.bin and patches guid + character_id at runtime.
+// The bin was captured from a working server and contains full equipment,
+// inventory, profiles, and loadout data that makes the character visible.
+//
+// Replace your current SendSelfToClient() function in sendSelfToClient.c
+// with this one. Keep the existing helper functions (GetActorModelId, etc.)
+// ============================================================================
+
+// The original character_id baked into sendself_patched.bin
+// Every occurrence of this value gets replaced with the session's actual character_id
+#define SENDSELF_BIN_ORIG_CHARID_HI 0x02d8022a
+#define SENDSELF_BIN_ORIG_CHARID_LO 0xff9431d1
+#define SENDSELF_BIN_ORIG_CHARID    0x02d8022aff9431d1ull
+
+// The guid that was patched in previously (at offset 5)
+#define SENDSELF_BIN_ORIG_GUID      0x0000189700002fa7ull
+
+void SendSelfToClientRaw(AppState* app, SessionState* session) {
+    // 1. Load the binary file
+    u32 maxBuf = KB(20);
+    u8* fileBuffer = arena_push_size(&app->arenaPerTick, maxBuf);
+
+    u32 fileLen = app->api->buffer_load_from_file("..\\data\\sendself_patched.bin", fileBuffer, maxBuf);
+    if (!fileLen) {
+        printf("[SENDSELF RAW] ERROR: Failed to load sendself_patched.bin!\n");
+        return;
+    }
+
+    printf("[SENDSELF RAW] Loaded %u bytes from sendself_patched.bin\n", fileLen);
+    printf("[SENDSELF RAW] Session guid=0x%llx characterId=0x%llx\n",
+           (unsigned long long)session->guid,
+           (unsigned long long)session->characterId);
+
+    // 2. Patch the guid at offset 5 (u64 LE)
+    endian_write_u64_little(fileBuffer + 5, session->characterId);
+    printf("[SENDSELF RAW] Patched guid at offset 5\n");
+
+    // 3. Find and replace ALL occurrences of the original character_id
+    //    The original char_id appears 24 times throughout the packet
+    u8 origCharIdBytes[8];
+    u8 newCharIdBytes[8];
+    endian_write_u64_little(origCharIdBytes, SENDSELF_BIN_ORIG_CHARID);
+    endian_write_u64_little(newCharIdBytes, session->characterId);
+
+    u32 replacements = 0;
+    for (u32 i = 0; i <= fileLen - 8; i++) {
+        if (memcmp(fileBuffer + i, origCharIdBytes, 8) == 0) {
+            memcpy(fileBuffer + i, newCharIdBytes, 8);
+            replacements++;
+        }
+    }
+    printf("[SENDSELF RAW] Replaced character_id %u times\n", replacements);
+
+    // 4. Recalculate stream length (u32 LE at offset 1)
+    //    Stream length = total packet length - opcode(1) - stream_length_field(4) = fileLen - 5
+    u32 streamLen = fileLen - 5;
+    endian_write_u32_little(fileBuffer + 1, streamLen);
+    printf("[SENDSELF RAW] Stream length set to %u\n", streamLen);
+
+    // 5. Send it through the gateway tunnel
+    //    We need to prepend the tunnel header, same as ZonePacketSend does
+    u8* baseBuffer = arena_push_size(&app->arenaPerTick, fileLen + TunnelDataHeaderLen);
+    memcpy(baseBuffer + TunnelDataHeaderLen, fileBuffer, fileLen);
+
+    printf("[SENDSELF RAW] Sending %u bytes (+%d header)\n", fileLen, TunnelDataHeaderLen);
+    GatewayTunnelDataSend(app, session, baseBuffer, fileLen + TunnelDataHeaderLen);
+}
+
+void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
     // Use session data if available, fallback to defaults
     u32 actorModelId = session->pGetPlayerActor.actorModelId;
-    if (actorModelId == 0) actorModelId = 9240; // default male
+    if (actorModelId == 0) actorModelId = 9469; // default male
 
     u32 gender = session->pGetPlayerActor.gender;
     if (gender == 0) gender = 1; // default male
@@ -163,6 +234,8 @@ void SendSelfToClient(AppState* app, SessionState* session) {
                 .name_id1 = 0,
                 .description_id = 0,
                 .type = 3,
+                .unk_f32 = 1.7f,
+                .unk_f32_2 = 0.95f,
                 .unk_dword_1 = 0,
                 .icon_id = 0,
                 .unk_u32 = 0,
@@ -174,8 +247,6 @@ void SendSelfToClient(AppState* app, SessionState* session) {
                 .unk_u32_5 = 0,
                 .unk_u32_6 = 0,
                 .unk_u8 = 0,
-                .unk_f32 = 0,
-                .unk_f32_2 = 0,
                 .unk_f32_3 = 0,
                 .unk_u32_7 = 0,
                 .unk_f32_4 = 0,
@@ -205,7 +276,10 @@ void SendSelfToClient(AppState* app, SessionState* session) {
         .unk_dword_26 = 0,
         .unk_byte_7 = 0,
         .unk_dword_35 = 0,
-        .character_stats1_count = 0,
+        .character_stats1_count = withStats ? 0 : 0,
+        .character_stats1 = withStats ? (struct character_stats1_s[1]){
+            { .stat_id11 = 2, .stat_id22 = 2, .variable_u8_1_case = 0, .variable_u8_1 = { .vartype_1 = { .base = 1, .modifier = 0 } } },
+        } : NULL,
         .unk_array_221_count = 0,
         .unk_dword_10 = 0,
         .is_respawning = FALSE,

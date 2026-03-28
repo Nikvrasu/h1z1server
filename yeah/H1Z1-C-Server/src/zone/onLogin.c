@@ -43,28 +43,28 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
     // 1. RE-SEND SendSelfToClient in post-zone context
     printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
-    SendSelfToClient(app, session);
+    SendSelfToClient(app, session, TRUE);
 
     // 2. AddLightweightPc
-    Zone_Packet_AddLightweightPc addPc = { 0 };
-    addPc.character_id = session->characterId;
-    addPc.transient_id.value = 52;
-    addPc.id_characterFirstName = session->characterName;
-    addPc.id_characterLastName = STR8("");
-    addPc.id_unknownString1 = STR8("");
-    addPc.id_characterName = session->characterName;
-    addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9240;
-    addPc.position.x = -297.31f;
-    addPc.position.y = 506.06f;
-    addPc.position.z = -4894.10f;
-    addPc.rotation.x = 0.0f;
-    addPc.rotation.y = -0.7071f;
-    addPc.rotation.z = 0.0f;
-    addPc.rotation.w = 0.7071f;
-    addPc.movementVersion = 1;
-    addPc.flags1 = 1;
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
+    // Zone_Packet_AddLightweightPc addPc = { 0 };
+    // addPc.character_id = session->characterId;
+    // addPc.transient_id.value = 52;
+    // addPc.id_characterFirstName = session->characterName;
+    // addPc.id_characterLastName = STR8("");
+    // addPc.id_unknownString1 = STR8("");
+    // addPc.id_characterName = session->characterName;
+    // addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
+    // addPc.position.x = -297.31f;
+    // addPc.position.y = 506.06f;
+    // addPc.position.z = -4894.10f;
+    // addPc.rotation.x = 0.0f;
+    // addPc.rotation.y = -0.7071f;
+    // addPc.rotation.z = 0.0f;
+    // addPc.rotation.w = 0.7071f;
+    // addPc.movementVersion = 1;
+    // addPc.flags1 = 1;
+    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
+    //                     Zone_Packet_Kind_AddLightweightPc, &addPc, "AddLightweightPc");
 
     // 3. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
@@ -94,6 +94,13 @@ void DeployCharacter(AppState* app, SessionState* session) {
     setLoadoutSlots.current_slot_id = 7;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
+
+    // 5b. WeaponStance — activates animation/movement controller
+    Zone_Packet_Character_WeaponStance weaponStance = { 0 };
+    weaponStance.character_id = session->characterId;
+    weaponStance.stance = 1;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
     // 6. CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
@@ -139,6 +146,13 @@ void DeployCharacter(AppState* app, SessionState* session) {
     };
     ZonePacketSend(app, session, &app->arenaPerTick,
                Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLoc);
+
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096, "data/ReferenceData_ProfileDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 8192,  "data/ReferenceData_ProjectileDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "data/ReferenceData_ItemClassDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "data/ReferenceData_ProfileDefinitions.bin");
+
+    // 8. DoneSendingPreloadCharacters
 
     // 8. DoneSendingPreloadCharacters → ReceivedPreloadDonePacket=1
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
@@ -234,6 +248,11 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
                    &game_settings);
 
+    // Reference data — must be sent before SendSelfToClient
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 8192,  "data/Command_ItemDefinitions.bin");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 65536, "data/ReferenceData_WeaponDefinitions.bin");
+
+
     Zone_Packet_UpdateWeatherData updt_weather_data = {
         .overcast = 1.0f,
         .fogDensity = 0.000173f,
@@ -281,7 +300,7 @@ void OnLogin(AppState* app, SessionState* session) {
 
     // Phase 1: SendSelfToClient before ClientBeginZoning
     // This will be re-sent in DeployCharacter after zone load completes.
-    SendSelfToClient(app, session);
+    SendSelfToClient(app, session, FALSE);
 
     // Reset loading flags before zone transition so both phases get one shot each
     session->finished_loading = FALSE;

@@ -91,28 +91,28 @@ void GetHeadTypeId(SessionState* session, void* packetPtr) {
         case 1: {
             session->pGetPlayerActor.headType = 1;
             session->pGetPlayerActor.gender = 1;
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_01.adr");
         } break;
         case 2: {
             session->pGetPlayerActor.headType = 2;
             session->pGetPlayerActor.gender = 1;
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_02.adr");
         } break;
         case 5: {
             session->pGetPlayerActor.headType = 5;
             session->pGetPlayerActor.gender = 1;
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_03.adr");
         } break;
         case 6: {
             session->pGetPlayerActor.headType = 6;
             session->pGetPlayerActor.gender = 1;
-            session->pGetPlayerActor.actorModelId = 9240;
+            session->pGetPlayerActor.actorModelId = 9469;
             session->pGetPlayerActor.hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
             session->pGetPlayerActor.headActor = STR8("SurvivorMale_Head_04.adr");
         } break;

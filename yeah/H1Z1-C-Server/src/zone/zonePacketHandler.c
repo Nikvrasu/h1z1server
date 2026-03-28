@@ -73,6 +73,10 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
+            Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
+
             Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
 
             setEquipment.unk_string_1 = STR8("Default");
@@ -167,9 +171,9 @@ packetIdSwitch:
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
             Zone_Packet_WallOfData_UIEvent uiEvent = { 0 };
-            // zone_packet_unpack(data + 2, dataLen - 2, kind, &uiEvent, &app->arenaPerTick);
+            zone_packet_unpack(data + 2, dataLen - 2, kind, &uiEvent, &app->arenaPerTick);
 
-            ZonePacketSend(app, session, &app->arenaPerTick, kind, &uiEvent);
+            // ZonePacketSend(app, session, &app->arenaPerTick, kind, &uiEvent);
         } break;
         case ZONE_WALLOFDATA_CLIENTSYSTEMINFO_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientSystemInfo;
@@ -378,7 +382,7 @@ packetIdSwitch:
                         &beginZoning);
 
             // 8. Send character data
-            SendSelfToClient(app, session);
+            SendSelfToClient(app, session, FALSE);
 
         } break;
         case 0x11: {

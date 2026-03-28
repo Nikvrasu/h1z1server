@@ -284,7 +284,7 @@ void WallOfDataBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
             zone_packet_unpack(data + offset, dataLen - offset, Zone_Packet_Kind_WallOfData_UIEvent,
                                &uiEvent, &app->arenaPerTick);
 
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_WallOfData_UIEvent, 0);
+            // ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_WallOfData_UIEvent, 0);
         } break;
         case 6: {
             Zone_Packet_WallOfData_ClientSystemInfo systemInfo = { 0 };
