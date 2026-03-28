@@ -1,3 +1,27 @@
+// ============================================================================
+// KotK Character Loadout Constants (Protocol 1087, Loadout ID 17)
+// Source: Loadouts.LoadoutSlotDefinitionDataSource.rtf
+// ============================================================================
+
+// Loadout profile ID used for KotK player characters (LoadoutId column = 17)
+#define LOADOUT_ID_KOTK_CHARACTER 17
+
+// Loadout slot IDs (SlotId column in LoadoutSlotDefinitionDataSource)
+#define LOADOUT_SLOT_PRIMARY      1
+#define LOADOUT_SLOT_SECONDARY    2
+#define LOADOUT_SLOT_TERTIARY     4
+#define LOADOUT_SLOT_BINOCULARS   5
+#define LOADOUT_SLOT_MELEE        7
+#define LOADOUT_SLOT_THROWABLES   9
+
+// Equipment slot IDs (BaseClient.EquipmentSlots: Slot 7 = Right Hand)
+#define EQUIPMENT_SLOT_RIGHT_HAND 7
+
+// Placeholder item GUIDs for the default character loadout.
+// These are server-assigned values unique to the initial spawn state.
+#define ITEM_GUID_FISTS       0x0001000000000001ULL
+#define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+
 typedef enum Items {
     // #region WEAPONS
     WEAPON_AR15 = 10,

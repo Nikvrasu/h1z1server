@@ -362,7 +362,29 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_array_291_count = 0,
         .unk_array_2112_count = 0,
         .unk_array_2122_count = 0,
-        .equipment_slots_count = 0,
+        .equipment_slots_count = 1,
+        .equipment_slots = (struct equipment_slots_s[1]){
+            [0] = {
+                // Fists held in the right-hand (active weapon) equipment slot.
+                // NOTE: These field names are auto-generated from the schema and reflect
+                // partially-reversed protocol fields. Their known semantics are:
+                //   unk_dword_7199    = outer equipment slot ID
+                //   unk_dword_890     = effect ID (0 = none)
+                //   unk_string_4      = item model path (e.g. "Weapon_Empty.adr")
+                //   unk_string_2      = texture alias
+                //   equipment_slot_id2/3 = inner slot ID (same as outer)
+                //   guid              = item instance GUID
+                .unk_dword_7199   = EQUIPMENT_SLOT_RIGHT_HAND,
+                .unk_dword_890    = 0,
+                .unk_string_4     = STR8("Weapon_Empty.adr"),
+                .unk_string_2     = STR8(""),
+                .equipment_slot_id2 = EQUIPMENT_SLOT_RIGHT_HAND,
+                .equipment_slot_id3 = EQUIPMENT_SLOT_RIGHT_HAND,
+                .guid             = ITEM_GUID_FISTS,
+                .tint_alias       = STR8("Default"),
+                .decal_alias      = STR8("#"),
+            },
+        },
         .unk_array_2135_count = 0,
         .unk_dword_8123 = 0,
         .unk_dword_264 = 0,
@@ -394,10 +416,32 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_array_2193_count = 0,
         .unk_array_2220_count = 0,
         .unk_array_36_count = 0,
-        // Loadout
-        .loadout_id = 3,
-        .loadout_slots_array_count = 0,
-        .current_slot_id = 7,
+        // Loadout — KotK character loadout (profile 17) with default melee + binoculars
+        .loadout_id = LOADOUT_ID_KOTK_CHARACTER,
+        .loadout_slots_array_count = 2,
+        .loadout_slots_array = (struct loadout_slots_array_s[2]){
+            [0] = {
+                // Fists at melee slot (slot 7)
+                .hotbar_slot_id   = LOADOUT_SLOT_MELEE,
+                .loadout_id       = LOADOUT_ID_KOTK_CHARACTER,
+                .slot_id          = LOADOUT_SLOT_MELEE,
+                .item_def_id4     = WEAPON_FISTS,
+                .loadout_item_guid = ITEM_GUID_FISTS,
+                .unk_byte_17      = 0,
+                .unk_dword_111    = 0,
+            },
+            [1] = {
+                // Binoculars at binoculars slot (slot 5)
+                .hotbar_slot_id   = LOADOUT_SLOT_BINOCULARS,
+                .loadout_id       = LOADOUT_ID_KOTK_CHARACTER,
+                .slot_id          = LOADOUT_SLOT_BINOCULARS,
+                .item_def_id4     = WEAPON_BINOCULARS,
+                .loadout_item_guid = ITEM_GUID_BINOCULARS,
+                .unk_byte_17      = 0,
+                .unk_dword_111    = 0,
+            },
+        },
+        .current_slot_id = LOADOUT_SLOT_MELEE,
         .unk_array_22537_count = 0,
         .unk_array_22645_count = 0,
         .unk_array_2275_count = 0,
