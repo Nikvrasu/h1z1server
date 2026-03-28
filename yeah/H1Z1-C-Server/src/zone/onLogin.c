@@ -101,40 +101,71 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // // 4. Equipment — fists model in the active right-hand slot
-    // Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-    // setEquipment.unk_string_1 = STR8("Default");
-    // setEquipment.unk_string_2 = STR8("#");
-    // setEquipment.unk_bool_2 = TRUE;
-    // setEquipment.length_1 = (struct length_1_s[1]){[0] = {
-    //     .character_id = session->characterId, .profile_id = 5,
-    // }};
-    // setEquipment.equipment_slot_array_count = 1;
-    // setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
-    //     [0] = {
-    //         .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
-    //         .length_2 = (struct length_2_s[1]){
-    //             [0] = {
-    //                 .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
-    //                 .guid        = ITEM_GUID_FISTS,
-    //                 .tint_alias  = STR8("Default"),
-    //                 .decal_alias = STR8("#"),
-    //             },
-    //         },
-    //     },
-    // };
-    // setEquipment.attachments_data_1_count = 1;
-    // setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
-    //     [0] = {
-    //         .model_name    = STR8("Weapon_Empty.adr"),
-    //         .texture_alias = STR8(""),
-    //         .tint_alias    = STR8("Default"),
-    //         .decal_alias   = STR8("#"),
-    //         .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
-    //     },
-    // };
-    // ZonePacketSend(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
+    // 4. Equipment — base character attachments + fists
+    Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
+    setEquipment.unk_string_1 = STR8("Default");
+    setEquipment.unk_string_2 = STR8("#");
+    setEquipment.unk_bool_2 = TRUE;
+    setEquipment.length_1 = (struct length_1_s[1]){[0] = {
+        .character_id = session->characterId,
+        .profile_id = 5,
+    }};
+    setEquipment.equipment_slot_array_count = 3;
+    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[3]){
+        [0] = {
+            .equipment_slot_id_1 = 3,
+            .length_2 = (struct length_2_s[1]){[0] = {
+                .equipment_slot_id_2 = 3,
+                .guid = 0x1001,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            }},
+        },
+        [1] = {
+            .equipment_slot_id_1 = 4,
+            .length_2 = (struct length_2_s[1]){[0] = {
+                .equipment_slot_id_2 = 4,
+                .guid = 0x1002,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            }},
+        },
+        [2] = {
+            .equipment_slot_id_1 = 7,
+            .length_2 = (struct length_2_s[1]){[0] = {
+                .equipment_slot_id_2 = 7,
+                .guid = ITEM_GUID_FISTS,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            }},
+        },
+    };
+    setEquipment.attachments_data_1_count = 3;
+    setEquipment.attachments_data_1 = (struct attachments_data_1_s[3]){
+        [0] = {
+            .model_name = STR8("SurvivorMale_Chest_Bra.adr"),
+            .texture_alias = STR8(""),
+            .tint_alias = STR8("Default"),
+            .decal_alias = STR8("#"),
+            .slot_id = 3,
+        },
+        [1] = {
+            .model_name = STR8("SurvivorMale_Legs_Pants_Underwear.adr"),
+            .texture_alias = STR8(""),
+            .tint_alias = STR8("Default"),
+            .decal_alias = STR8("#"),
+            .slot_id = 4,
+        },
+        [2] = {
+            .model_name = STR8("Weapon_Empty.adr"),
+            .texture_alias = STR8(""),
+            .tint_alias = STR8("Default"),
+            .decal_alias = STR8("#"),
+            .slot_id = 7,
+        },
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
     // // 5. Loadout — KotK profile 17 with fists + binoculars
     // Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
@@ -194,26 +225,15 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "data/ReferenceData_ItemClassDefinitions.bin");
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "data/ReferenceData_ProfileDefinitions.bin");
 
-    // 8. DoneSendingPreloadCharacters
-
-    // 8. DoneSendingPreloadCharacters → ReceivedPreloadDonePacket=1
+    // 8. DoneSendingPreloadCharacters — send immediately
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
-                        "DoneSendingPreloadCharacters");
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
-                        "NetworkProximityUpdatesComplete");
-
-    // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
-                        "ZoneDoneSendingInitialData");
-
-    session->needsProximityComplete = 0;
+    // 9+10. Defer these by ~5 seconds
+    session->needsProximityComplete = 1;
+    session->proximityCompleteTick = *app->tickCount + 450;
     session->characterReleased = TRUE;
 
     printf("========== DEPLOY CHARACTER END ==========\n\n");
