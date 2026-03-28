@@ -184,7 +184,7 @@ void readPositionUpdateData(AppState* app, SessionState* session, u8* data, u32 
         offset += v.length;
     }
 
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerUpdatePosition, &obj);
+    // ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerUpdatePosition, &obj);
 }
 
 b32 IsValid(BaseItem* baseItem, u8 flag) {

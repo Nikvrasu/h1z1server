@@ -55,12 +55,24 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientIsReady;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
+            if (session->isReady) {
+                printf("[*] Ignoring duplicate ClientIsReady\n");
+                break;
+            }
+            // session->isReady = TRUE;
+
             // Phase 2: client has finished loading the zone — deploy the character.
             DeployCharacter(app, session);
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+
+            if (session->finished_loading) {
+                printf("[*] Ignoring duplicate ClientFinishedLoading\n");
+                break;
+            }
+            session->finished_loading = TRUE;
 
             Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
 

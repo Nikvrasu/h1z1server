@@ -47,7 +47,7 @@ echo  Starting Zone Server (output in THIS window)...
 echo ============================================================
 pushd zone_binaries
 IF EXIST packets rmdir /S /Q packets
-zoneServer.exe
+zoneServer.exe > zone_log.txt 2>&1
 popd
 
 echo.

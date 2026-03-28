@@ -35,6 +35,10 @@ void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
     _time64(&timer);
 
+    // Reset loading flags for this new phase so the client can trigger them once more
+    session->finished_loading = FALSE;
+    session->isReady = FALSE;
+
     printf("\n========== DEPLOY CHARACTER BEGIN ==========\n");
 
     // 1. RE-SEND SendSelfToClient in post-zone context
@@ -115,22 +119,18 @@ void DeployCharacter(AppState* app, SessionState* session) {
                         Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone,
                         "DoneSendingPreloadCharacters");
 
-    // // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                     Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
-    //                     "NetworkProximityUpdatesComplete");
-
-    // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
-                        "ZoneDoneSendingInitialData");
-    
     // 9. NetworkProximityUpdatesComplete → NetworkProximityUpdateComplete=1
     ZonePacketSendDebug(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0,
                         "NetworkProximityUpdatesComplete");
 
+    // 10. ZoneDoneSendingInitialData → InitialZoneDataComplete=1 (LAST!)
+    ZonePacketSendDebug(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ZoneDoneSendingInitialData, 0,
+                        "ZoneDoneSendingInitialData");
+
     session->needsProximityComplete = 0;
+    session->characterReleased = TRUE;
 
     printf("========== DEPLOY CHARACTER END ==========\n\n");
 }
@@ -249,19 +249,13 @@ void OnLogin(AppState* app, SessionState* session) {
        (int)session->characterName.size);
     printf("[DEBUG] characterId: 0x%llx\n", (unsigned long long)session->characterId);
 
-    // Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-    //     .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
-    //     .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
-    //     .trigger_loading_screen = FALSE,
-    //     .unk_u8_1 = 0,
-    //     .unk_bool = FALSE,
-    // };
-    // ZonePacketSend(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
-
     // Phase 1: SendSelfToClient before ClientBeginZoning
     // This will be re-sent in DeployCharacter after zone load completes.
     SendSelfToClient(app, session);
+
+    // Reset loading flags before zone transition so both phases get one shot each
+    session->finished_loading = FALSE;
+    session->isReady = FALSE;
 
     // ClientBeginZoning — triggers zone load
     Zone_Packet_ClientBeginZoning beginZoning = { 0 };
