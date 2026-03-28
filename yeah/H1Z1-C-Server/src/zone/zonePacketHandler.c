@@ -3,8 +3,8 @@ void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataL
         printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
         return;
     }
-    printf("[ZONE] Incoming packet first bytes: 0x%02x 0x%02x 0x%02x (len=%u)\n",
-           data[0], dataLen > 1 ? data[1] : 0, dataLen > 2 ? data[2] : 0, dataLen);
+    printf("[ZONE] Incoming packet first bytes: 0x%02x 0x%02x 0x%02x (len=%u)\n", data[0],
+           dataLen > 1 ? data[1] : 0, dataLen > 2 ? data[2] : 0, dataLen);
     Zone_Packet_Kind kind;
     printf("\n");
 
@@ -64,7 +64,7 @@ packetIdSwitch:
             DeployCharacter(app, session);
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
-                kind = Zone_Packet_Kind_ClientFinishedLoading;
+            kind = Zone_Packet_Kind_ClientFinishedLoading;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
             if (session->finished_loading) {
@@ -73,81 +73,102 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
-            Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
+            Zone_Packet_AddLightweightPc addPc = { 0 };
+            addPc.character_id = session->characterId;
+            addPc.transient_id.value = 52;
+            addPc.id_characterFirstName = session->characterName;
+            addPc.id_characterLastName = STR8("");
+            addPc.id_unknownString1 = STR8("");
+            addPc.id_characterName = session->characterName;
+            addPc.actorModelId =
+                session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
+            addPc.position.x = -297.31f;
+            addPc.position.y = 506.06f;
+            addPc.position.z = -4894.10f;
+            addPc.rotation.x = 0.0f;
+            addPc.rotation.y = -0.7071f;
+            addPc.rotation.z = 0.0f;
+            addPc.rotation.w = 0.7071f;
+            addPc.movementVersion = 1;
+            addPc.flags1 = 1;
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_AddLightweightPc, &addPc);
 
+            // 4. Equipment — fists model in the active right-hand slot
             Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-
             setEquipment.unk_string_1 = STR8("Default");
             setEquipment.unk_string_2 = STR8("#");
             setEquipment.unk_bool_2 = TRUE;
-
-            setEquipment.length_1 = (struct length_1_s[1]){
-            [0] = {
-                .character_id = session->characterId,
-                .profile_id = 5,
-            },
-        };
-
+            setEquipment.length_1 = (struct length_1_s[1]){ [0] = {
+                                                                .character_id = session->characterId,
+                                                                .profile_id = 5,
+                                                            } };
             setEquipment.equipment_slot_array_count = 1;
             setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
-            [0] = {
-                .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
-                .length_2 = (struct length_2_s[1]){
-                    [0] = {
-                        .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
-                        .guid        = ITEM_GUID_FISTS,
-                        .tint_alias  = STR8("Default"),
-                        .decal_alias = STR8("#"),
+                [0] = {
+                    .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .length_2 = (struct length_2_s[1]){
+                        [0] = {
+                            .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
+                            .guid        = ITEM_GUID_FISTS,
+                            .tint_alias  = STR8("Default"),
+                            .decal_alias = STR8("#"),
+                        },
                     },
                 },
-            },
-        };
-
+            };
             setEquipment.attachments_data_1_count = 1;
             setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
-            [0] = {
-                .model_name    = STR8("Weapon_Empty.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8("Default"),
-                .decal_alias   = STR8("#"),
-                .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
-            },
-        };
-
+                [0] = {
+                    .model_name    = STR8("Weapon_Empty.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8("Default"),
+                    .decal_alias   = STR8("#"),
+                    .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
+                },
+            };
             ZonePacketSend(app, session, &app->arenaPerTick,
                            Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
+            // 5. Loadout — KotK profile 17 with fists + binoculars
             Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
-
             setLoadoutSlots.character_id = session->characterId;
             setLoadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
             setLoadoutSlots.loadout_slot_data_count = 2;
             setLoadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
-            [0] = {
-                .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
-                .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-                .slot_id           = LOADOUT_SLOT_MELEE,
-                .item_def_id1      = WEAPON_FISTS,
-                .loadout_item_guid = ITEM_GUID_FISTS,
-                .unk_byte_1        = 0,
-                .unk_dword_1       = 0,
-            },
-            [1] = {
-                .hotbar_slot_id    = LOADOUT_SLOT_BINOCULARS,
-                .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-                .slot_id           = LOADOUT_SLOT_BINOCULARS,
-                .item_def_id1      = WEAPON_BINOCULARS,
-                .loadout_item_guid = ITEM_GUID_BINOCULARS,
-                .unk_byte_1        = 0,
-                .unk_dword_1       = 0,
-            },
-        };
+                [0] = {
+                    .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
+                    .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+                    .slot_id           = LOADOUT_SLOT_MELEE,
+                    .item_def_id1      = WEAPON_FISTS,
+                    .loadout_item_guid = ITEM_GUID_FISTS,
+                    .unk_byte_1        = 0,
+                    .unk_dword_1       = 0,
+                },
+                [1] = {
+                    .hotbar_slot_id    = LOADOUT_SLOT_BINOCULARS,
+                    .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+                    .slot_id           = LOADOUT_SLOT_BINOCULARS,
+                    .item_def_id1      = WEAPON_BINOCULARS,
+                    .loadout_item_guid = ITEM_GUID_BINOCULARS,
+                    .unk_byte_1        = 0,
+                    .unk_dword_1       = 0,
+                },
+            };
             setLoadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
-
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_Loadout_SetLoadoutSlots,
                            &setLoadoutSlots);
+
+            // In ClientFinishedLoading handler, after the duplicate guard:
+            Zone_Packet_Character_WeaponStance weaponStance = { 0 };
+            weaponStance.character_id = session->characterId;
+            weaponStance.stance = 1;
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_Character_WeaponStance,
+                           &weaponStance);
+
+            Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_Command_RunSpeed,
+                           &runSpeed);
+
         } break;
         case ZONE_GAMETIMESYNC_ID: {
             kind = Zone_Packet_Kind_GameTimeSync;
@@ -264,14 +285,14 @@ packetIdSwitch:
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
             transferReply.world_id_reply = 1;
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerWorldTransferReply,
-                        &transferReply);
+                           &transferReply);
 
             // 2. Initialization parameters
             Zone_Packet_InitializationParameters init_params = {
                 .environment = STR8("LIVE_KOTK"),
             };
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
-                        &init_params);
+                           &init_params);
 
             // 3. Zone Details
             Zone_Packet_SendZoneDetails send_zone_details = {
@@ -321,7 +342,7 @@ packetIdSwitch:
                 .unk_bool4 = FALSE,
             };
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_SendZoneDetails,
-                        &send_zone_details);
+                           &send_zone_details);
 
             // 4. Game Settings
             Zone_Packet_ClientGameSettings game_settings = {
@@ -334,7 +355,7 @@ packetIdSwitch:
                 .damage_multiplier = 11.,
             };
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
-                        &game_settings);
+                           &game_settings);
 
             // 5. Location Update
             Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
@@ -345,7 +366,7 @@ packetIdSwitch:
                 .unk_bool = FALSE,
             };
             ZonePacketSend(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
+                           Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
             // 6. Reset loading flags for the new zone transition
             session->finished_loading = FALSE;
@@ -353,54 +374,54 @@ packetIdSwitch:
 
             // 7. Begin Zoning
             Zone_Packet_ClientBeginZoning beginZoning = { 0 };
-            beginZoning.zone_name                    = STR8("Z2");
-            beginZoning.zone_type                    = 4;
-            beginZoning.pos                          = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-            beginZoning.rot                          = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
-            beginZoning.overcast                     = 1.0f;
-            beginZoning.fogDensity                   = 0.000173f;
-            beginZoning.fogFloor                     = 10.0f;
-            beginZoning.fogGradient                  = 0.0144f;
-            beginZoning.globalPrecipitation          = 0.0f;
-            beginZoning.temperature                  = 75.0f;
-            beginZoning.skyClarity                   = 0.0f;
-            beginZoning.cloudWeight0                 = 0.05f;
-            beginZoning.cloudWeight1                 = 0.0f;
-            beginZoning.cloudWeight2                 = 0.05f;
-            beginZoning.cloudWeight3                 = 0.15f;
-            beginZoning.transitionTime               = 0.0f;
-            beginZoning.sunAxisX                     = 38.0f;
-            beginZoning.sunAxisY                     = -15.0f;
-            beginZoning.sunAxisZ                     = 0.0f;
-            beginZoning.windDirX                     = -1.0f;
-            beginZoning.windDirY                     = -0.5f;
-            beginZoning.windDirZ                     = -1.0f;
-            beginZoning.wind                         = 3.0f;
-            beginZoning.rainMinStrength              = 0.0f;
-            beginZoning.rainRampUpTimeSeconds        = 1.0f;
-            beginZoning.cloudFile                    = STR8("sky_Z_clouds.dds");
-            beginZoning.stratusCloudTiling           = 0.30f;
-            beginZoning.stratusCloudScrollU          = -0.002f;
-            beginZoning.stratusCloudScrollV          = 0.0f;
-            beginZoning.stratusCloudHeight           = 1000.0f;
-            beginZoning.cumulusCloudTiling           = 0.20f;
-            beginZoning.cumulusCloudScrollU          = 0.0f;
-            beginZoning.cumulusCloudScrollV          = 0.002f;
-            beginZoning.cumulusCloudHeight           = 8000.0f;
-            beginZoning.cloudAnimationSpeed          = 0.0f;
-            beginZoning.cloudSilverLiningThickness   = 0.25f;
-            beginZoning.cloudSilverLiningBrightness  = 7.0f;
-            beginZoning.cloudShadows                 = 0.5f;
-            beginZoning.unk_byte_1                   = 4;
-            beginZoning.zone_id_1                    = 5;
-            beginZoning.zone_id_2                    = 5;
-            beginZoning.name_id                      = 61609;
-            beginZoning.unk_dword_1                  = 0x0f2b07d0;
-            beginZoning.unk_bool_1                   = FALSE;
-            beginZoning.wait_for_zone_ready          = FALSE;
-            beginZoning.unk_bool_2                   = FALSE;
+            beginZoning.zone_name = STR8("Z2");
+            beginZoning.zone_type = 4;
+            beginZoning.pos = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+            beginZoning.rot = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+            beginZoning.overcast = 1.0f;
+            beginZoning.fogDensity = 0.000173f;
+            beginZoning.fogFloor = 10.0f;
+            beginZoning.fogGradient = 0.0144f;
+            beginZoning.globalPrecipitation = 0.0f;
+            beginZoning.temperature = 75.0f;
+            beginZoning.skyClarity = 0.0f;
+            beginZoning.cloudWeight0 = 0.05f;
+            beginZoning.cloudWeight1 = 0.0f;
+            beginZoning.cloudWeight2 = 0.05f;
+            beginZoning.cloudWeight3 = 0.15f;
+            beginZoning.transitionTime = 0.0f;
+            beginZoning.sunAxisX = 38.0f;
+            beginZoning.sunAxisY = -15.0f;
+            beginZoning.sunAxisZ = 0.0f;
+            beginZoning.windDirX = -1.0f;
+            beginZoning.windDirY = -0.5f;
+            beginZoning.windDirZ = -1.0f;
+            beginZoning.wind = 3.0f;
+            beginZoning.rainMinStrength = 0.0f;
+            beginZoning.rainRampUpTimeSeconds = 1.0f;
+            beginZoning.cloudFile = STR8("sky_Z_clouds.dds");
+            beginZoning.stratusCloudTiling = 0.30f;
+            beginZoning.stratusCloudScrollU = -0.002f;
+            beginZoning.stratusCloudScrollV = 0.0f;
+            beginZoning.stratusCloudHeight = 1000.0f;
+            beginZoning.cumulusCloudTiling = 0.20f;
+            beginZoning.cumulusCloudScrollU = 0.0f;
+            beginZoning.cumulusCloudScrollV = 0.002f;
+            beginZoning.cumulusCloudHeight = 8000.0f;
+            beginZoning.cloudAnimationSpeed = 0.0f;
+            beginZoning.cloudSilverLiningThickness = 0.25f;
+            beginZoning.cloudSilverLiningBrightness = 7.0f;
+            beginZoning.cloudShadows = 0.5f;
+            beginZoning.unk_byte_1 = 4;
+            beginZoning.zone_id_1 = 5;
+            beginZoning.zone_id_2 = 5;
+            beginZoning.name_id = 61609;
+            beginZoning.unk_dword_1 = 0x0f2b07d0;
+            beginZoning.unk_bool_1 = FALSE;
+            beginZoning.wait_for_zone_ready = FALSE;
+            beginZoning.unk_bool_2 = FALSE;
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientBeginZoning,
-                        &beginZoning);
+                           &beginZoning);
 
             // 8. Send character data
             SendSelfToClient(app, session, FALSE);
@@ -419,7 +440,8 @@ packetIdSwitch:
 
                 DeployCharacter(app, session);
             } else {
-                printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"), subOpcode);
+                printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"),
+                       subOpcode);
             }
         } break;
         default: {

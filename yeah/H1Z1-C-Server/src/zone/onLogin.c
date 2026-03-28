@@ -45,27 +45,54 @@ void DeployCharacter(AppState* app, SessionState* session) {
     printf("[DEPLOY] Step 1: Re-sending SendSelfToClient in post-zone context\n");
     SendSelfToClient(app, session, TRUE);
 
+    // 11. Respawn — releases the camera and attaches it to the character
+    // Zone_Packet_Character_Respawn respawn = { 0 };
+    // respawn.respawn_type_1 = 1;
+    // respawn.respawn_guid = session->characterId;
+    // respawn.profile_id_1 = 5;
+    // respawn.profile_id_2 = 5;
+    // respawn.unk_dword_1_1 = 0;
+    // respawn.grid_pos = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    // Zone_Packet_Kind_Character_Respawn, &respawn);
+
+    // Zone_Packet_Character_RespawnReply respawnReply = { 0 };
+    // respawnReply.character_id_1_1 = session->characterId;
+    // respawnReply.status = 1;
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    // Zone_Packet_Kind_Character_RespawnReply, &respawnReply);
+
+    Zone_Packet_ClientUpdate_UpdateLocation updateLoc = {
+    .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
+    .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
+    .trigger_loading_screen = FALSE,
+    .unk_u8_1 = 0,
+    .unk_bool = FALSE,
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+               Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLoc);
+
     // 2. AddLightweightPc — spawns the character entity in the world so the model is visible.
     //    Without this packet the character is completely invisible after zone load.
-    Zone_Packet_AddLightweightPc addPc = { 0 };
-    addPc.character_id = session->characterId;
-    addPc.transient_id.value = 52;
-    addPc.id_characterFirstName = session->characterName;
-    addPc.id_characterLastName = STR8("");
-    addPc.id_unknownString1 = STR8("");
-    addPc.id_characterName = session->characterName;
-    addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
-    addPc.position.x = -297.31f;
-    addPc.position.y = 506.06f;
-    addPc.position.z = -4894.10f;
-    addPc.rotation.x = 0.0f;
-    addPc.rotation.y = -0.7071f;
-    addPc.rotation.z = 0.0f;
-    addPc.rotation.w = 0.7071f;
-    addPc.movementVersion = 1;
-    addPc.flags1 = 1;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_AddLightweightPc, &addPc);
+    // Zone_Packet_AddLightweightPc addPc = { 0 };
+    // addPc.character_id = session->characterId;
+    // addPc.transient_id.value = 52;
+    // addPc.id_characterFirstName = session->characterName;
+    // addPc.id_characterLastName = STR8("");
+    // addPc.id_unknownString1 = STR8("");
+    // addPc.id_characterName = session->characterName;
+    // addPc.actorModelId = session->pGetPlayerActor.actorModelId ? session->pGetPlayerActor.actorModelId : 9469;
+    // addPc.position.x = -297.31f;
+    // addPc.position.y = 506.06f;
+    // addPc.position.z = -4894.10f;
+    // addPc.rotation.x = 0.0f;
+    // addPc.rotation.y = -0.7071f;
+    // addPc.rotation.z = 0.0f;
+    // addPc.rotation.w = 0.7071f;
+    // addPc.movementVersion = 1;
+    // addPc.flags1 = 1;
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_AddLightweightPc, &addPc);
 
     // 3. ContainerInitEquippedContainers
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
@@ -74,76 +101,76 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 4. Equipment — fists model in the active right-hand slot
-    Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-    setEquipment.unk_string_1 = STR8("Default");
-    setEquipment.unk_string_2 = STR8("#");
-    setEquipment.unk_bool_2 = TRUE;
-    setEquipment.length_1 = (struct length_1_s[1]){[0] = {
-        .character_id = session->characterId, .profile_id = 5,
-    }};
-    setEquipment.equipment_slot_array_count = 1;
-    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
-        [0] = {
-            .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
-            .length_2 = (struct length_2_s[1]){
-                [0] = {
-                    .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
-                    .guid        = ITEM_GUID_FISTS,
-                    .tint_alias  = STR8("Default"),
-                    .decal_alias = STR8("#"),
-                },
-            },
-        },
-    };
-    setEquipment.attachments_data_1_count = 1;
-    setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
-        [0] = {
-            .model_name    = STR8("Weapon_Empty.adr"),
-            .texture_alias = STR8(""),
-            .tint_alias    = STR8("Default"),
-            .decal_alias   = STR8("#"),
-            .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
-        },
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
+    // // 4. Equipment — fists model in the active right-hand slot
+    // Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
+    // setEquipment.unk_string_1 = STR8("Default");
+    // setEquipment.unk_string_2 = STR8("#");
+    // setEquipment.unk_bool_2 = TRUE;
+    // setEquipment.length_1 = (struct length_1_s[1]){[0] = {
+    //     .character_id = session->characterId, .profile_id = 5,
+    // }};
+    // setEquipment.equipment_slot_array_count = 1;
+    // setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
+    //     [0] = {
+    //         .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
+    //         .length_2 = (struct length_2_s[1]){
+    //             [0] = {
+    //                 .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
+    //                 .guid        = ITEM_GUID_FISTS,
+    //                 .tint_alias  = STR8("Default"),
+    //                 .decal_alias = STR8("#"),
+    //             },
+    //         },
+    //     },
+    // };
+    // setEquipment.attachments_data_1_count = 1;
+    // setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
+    //     [0] = {
+    //         .model_name    = STR8("Weapon_Empty.adr"),
+    //         .texture_alias = STR8(""),
+    //         .tint_alias    = STR8("Default"),
+    //         .decal_alias   = STR8("#"),
+    //         .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
+    //     },
+    // };
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // 5. Loadout — KotK profile 17 with fists + binoculars
-    Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
-    setLoadoutSlots.character_id = session->characterId;
-    setLoadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
-    setLoadoutSlots.loadout_slot_data_count = 2;
-    setLoadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
-        [0] = {
-            .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
-            .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id           = LOADOUT_SLOT_MELEE,
-            .item_def_id1      = WEAPON_FISTS,
-            .loadout_item_guid = ITEM_GUID_FISTS,
-            .unk_byte_1        = 0,
-            .unk_dword_1       = 0,
-        },
-        [1] = {
-            .hotbar_slot_id    = LOADOUT_SLOT_BINOCULARS,
-            .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id           = LOADOUT_SLOT_BINOCULARS,
-            .item_def_id1      = WEAPON_BINOCULARS,
-            .loadout_item_guid = ITEM_GUID_BINOCULARS,
-            .unk_byte_1        = 0,
-            .unk_dword_1       = 0,
-        },
-    };
-    setLoadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
+    // // 5. Loadout — KotK profile 17 with fists + binoculars
+    // Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
+    // setLoadoutSlots.character_id = session->characterId;
+    // setLoadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
+    // setLoadoutSlots.loadout_slot_data_count = 2;
+    // setLoadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
+    //     [0] = {
+    //         .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
+    //         .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+    //         .slot_id           = LOADOUT_SLOT_MELEE,
+    //         .item_def_id1      = WEAPON_FISTS,
+    //         .loadout_item_guid = ITEM_GUID_FISTS,
+    //         .unk_byte_1        = 0,
+    //         .unk_dword_1       = 0,
+    //     },
+    //     [1] = {
+    //         .hotbar_slot_id    = LOADOUT_SLOT_BINOCULARS,
+    //         .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+    //         .slot_id           = LOADOUT_SLOT_BINOCULARS,
+    //         .item_def_id1      = WEAPON_BINOCULARS,
+    //         .loadout_item_guid = ITEM_GUID_BINOCULARS,
+    //         .unk_byte_1        = 0,
+    //         .unk_dword_1       = 0,
+    //     },
+    // };
+    // setLoadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
     // 5b. WeaponStance — activates animation/movement controller
-    Zone_Packet_Character_WeaponStance weaponStance = { 0 };
-    weaponStance.character_id = session->characterId;
-    weaponStance.stance = 1;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
+    // Zone_Packet_Character_WeaponStance weaponStance = { 0 };
+    // weaponStance.character_id = session->characterId;
+    // weaponStance.stance = 1;
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
     // 6. CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
@@ -161,34 +188,6 @@ void DeployCharacter(AppState* app, SessionState* session) {
     gameTimeSync.time = timer;
     gameTimeSync.unk_bool = FALSE;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
-
-    // 11. Respawn — releases the camera and attaches it to the character
-    Zone_Packet_Character_Respawn respawn = { 0 };
-    respawn.respawn_type_1 = 1;
-    respawn.respawn_guid = session->characterId;
-    respawn.profile_id_1 = 5;
-    respawn.profile_id_2 = 5;
-    respawn.unk_dword_1_1 = 0;
-    respawn.grid_pos = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                Zone_Packet_Kind_Character_Respawn, &respawn);
-
-    Zone_Packet_Character_RespawnReply respawnReply = { 0 };
-    respawnReply.character_id_1_1 = session->characterId;
-    respawnReply.status = 1;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                Zone_Packet_Kind_Character_RespawnReply, &respawnReply);
-
-    // After RespawnReply, before DoneSendingPreloadCharacters:
-    Zone_Packet_ClientUpdate_UpdateLocation updateLoc = {
-    .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
-    .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
-    .trigger_loading_screen = TRUE,
-    .unk_u8_1 = 0,
-    .unk_bool = FALSE,
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-               Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLoc);
 
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096, "data/ReferenceData_ProfileDefinitions.bin");
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, 8192,  "data/ReferenceData_ProjectileDefinitions.bin");
