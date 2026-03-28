@@ -73,7 +73,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 4. Equipment
+    // 4. Equipment — fists model in the active right-hand slot
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
     setEquipment.unk_string_2 = STR8("#");
@@ -81,17 +81,59 @@ void DeployCharacter(AppState* app, SessionState* session) {
     setEquipment.length_1 = (struct length_1_s[1]){[0] = {
         .character_id = session->characterId, .profile_id = 5,
     }};
-    setEquipment.equipment_slot_array_count = 0;
-    setEquipment.attachments_data_1_count = 0;
+    setEquipment.equipment_slot_array_count = 1;
+    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[1]){
+        [0] = {
+            .equipment_slot_id_1 = EQUIPMENT_SLOT_RIGHT_HAND,
+            .length_2 = (struct length_2_s[1]){
+                [0] = {
+                    .equipment_slot_id_2 = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .guid        = ITEM_GUID_FISTS,
+                    .tint_alias  = STR8("Default"),
+                    .decal_alias = STR8("#"),
+                },
+            },
+        },
+    };
+    setEquipment.attachments_data_1_count = 1;
+    setEquipment.attachments_data_1 = (struct attachments_data_1_s[1]){
+        [0] = {
+            .model_name    = STR8("Weapon_Empty.adr"),
+            .texture_alias = STR8(""),
+            .tint_alias    = STR8("Default"),
+            .decal_alias   = STR8("#"),
+            .slot_id       = EQUIPMENT_SLOT_RIGHT_HAND,
+        },
+    };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
 
-    // 5. Loadout
+    // 5. Loadout — KotK profile 17 with fists + binoculars
     Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
     setLoadoutSlots.character_id = session->characterId;
-    setLoadoutSlots.loadout_id = 3;
-    setLoadoutSlots.loadout_slot_data_count = 0;
-    setLoadoutSlots.current_slot_id = 7;
+    setLoadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
+    setLoadoutSlots.loadout_slot_data_count = 2;
+    setLoadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
+        [0] = {
+            .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
+            .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id           = LOADOUT_SLOT_MELEE,
+            .item_def_id1      = WEAPON_FISTS,
+            .loadout_item_guid = ITEM_GUID_FISTS,
+            .unk_byte_1        = 0,
+            .unk_dword_1       = 0,
+        },
+        [1] = {
+            .hotbar_slot_id    = LOADOUT_SLOT_BINOCULARS,
+            .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id           = LOADOUT_SLOT_BINOCULARS,
+            .item_def_id1      = WEAPON_BINOCULARS,
+            .loadout_item_guid = ITEM_GUID_BINOCULARS,
+            .unk_byte_1        = 0,
+            .unk_dword_1       = 0,
+        },
+    };
+    setLoadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
