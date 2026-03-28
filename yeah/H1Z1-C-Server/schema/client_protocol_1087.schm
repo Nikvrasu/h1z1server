@@ -2304,6 +2304,102 @@ stream:u32 weapon_byteswithlength
 	}
 }
 
+// ReferenceData.ProjectileDefinitions — projectile flight/damage parameters
+// Sent before SendSelfToClient so the client can resolve projectile effects.
+packet 0x17 0x5:u8 ReferenceDataProjectileDefinitions
+stream:u32 projectile_byteswithlength
+{
+	list:u32 projectile_defs
+	{
+	u32 id
+	u8 flags1
+	u8 flags2
+	string:u32 model_file_name
+	string:u32 fp_model_file_name
+	u32 audio_game_object
+	f32 speed
+	f32 velocity_inherit_scaler
+	f32 acceleration
+	u8 flight_type
+	u32 projectile_effect_id
+	u32 land_effect_id
+	u32 indirect_damage_effect_id
+	f32 lifespan
+	f32 max_speed
+	f32 turn_rate
+	string:u32 bone_attachment_override
+	f32 drag
+	f32 gravity
+	f32 damage
+	u32 tracer_frequency
+	u32 tracer_effect_id
+	u32 fp_tracer_frequency
+	u32 fp_tracer_effect_id
+	f32 fp_tracer_hide_range
+	u32 npc_definition_id
+	u32 max_count
+	f32 damage_radius
+	f32 drop_off_radius
+	f32 drop_off_modifier
+	u8 trigger_detonate_requirement
+	u32 arm_distance
+	u32 detonate_distance
+	f32 tether_distance
+	f32 lockon_acceleration
+	f32 lockon_lifespan
+	f32 scale
+	u32 lose_lockon_angle
+	list:u32 player_bullet_radius_list
+	{
+	u32 player_bullet_radius
+	}
+	u32 item_pickup_id
+	u32 bounce_model_id
+	f32 angular_velocity_x_min
+	f32 angular_velocity_x_max
+	f32 angular_velocity_y_min
+	f32 angular_velocity_y_max
+	f32 angular_velocity_z_min
+	f32 angular_velocity_z_max
+	}
+}
+
+// ReferenceData.DynamicAppearance — item appearance and shader parameter definitions.
+// The client uses these to map item IDs to shader parameter groups (material/texture sets).
+// Without these, characters and items render with default/incorrect textures.
+// Send before SendSelfToClient; partial data (shader params only) may be sent first,
+// followed by the full packet after character data, matching the reference server pattern.
+packet 0x17 0x6:u8 ReferenceDataDynamicAppearance
+list:u32 item_appearance_definitions
+{
+	u32 id
+	u32 item_id
+	u32 model_id
+	u32 gender_id
+	u32 shader_parameter_group_id
+}
+list:u32 shader_semantic_definitions
+{
+	u32 shader_parameter_group_id
+	list:u32 shader_parameter_group
+	{
+	u32 shader_semantic_id
+	}
+}
+list:u32 shader_parameter_definitions
+{
+	u32 id
+	string:u32 semantic
+	f32 float1_default
+	f32 float2_default
+	f32 float3_default
+	f32 float4_default
+	u32 unk_u32_1
+	u8 boolean_default
+	string:u32 texture_default
+	u32 shader_value_type_id
+}
+
 packet 0x18 ObjectiveBase
 packet 0x19 DebugBase
 packet 0x1a UiBase
