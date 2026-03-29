@@ -73,10 +73,6 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
-            Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
-
             printf("[*] ClientFinishedLoading acknowledged\n");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
