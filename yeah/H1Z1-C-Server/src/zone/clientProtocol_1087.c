@@ -2,11 +2,10 @@ void ZonePacketSend(AppState* app, SessionState* session, Arena* arena, Zone_Pac
                     void* packetPtr) {
     u8* baseBuffer = arena_push_size(arena, MAX_PACKET_LENGTH);
     u8* packedBuffer = baseBuffer + TunnelDataHeaderLen;
-
     u32 packedLen = zone_packet_pack(kind, packetPtr, packedBuffer);
-    printf("[ZONE SEND] kind=%d packedLen=%u\n", kind, packedLen); 
+    printf("[SEND #%u] kind=%d (%s) packedLen=%u\n", 
+           session->sendSeqDebug++, kind, zone_packet_names[kind], packedLen);
     u32 totalLen = packedLen + TunnelDataHeaderLen;
-
     GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
 }
 
@@ -26,6 +25,7 @@ void ZonePacketSendSelfDebug(AppState* app, SessionState* session, Arena* arena,
 
     // The first byte should be 0x03 (SendSelfToClient opcode)
     // Then a u32 stream length (little-endian), then the stream payload
+    printf("[SEND #%u] kind=%d (SendSelfToClient) packedLen=", session->sendSeqDebug++, kind);
     printf("[SENDSELF DEBUG] Opcode byte: 0x%02x (expected 0x03)\n", packedBuffer[0]);
 
     if (packedLen >= 5) {

@@ -455,16 +455,18 @@ __declspec(dllexport) AppTick(serverTick) {
     // Deferred done signals
     for (i32 i = 0; i < app->sessionCapacity; i++) {
         if (app->sessions[i].address.full
-            && app->sessions[i].needsProximityComplete
-            && *app->tickCount >= app->sessions[i].proximityCompleteTick) {
+            && app->sessions[i].needsProximityComplete) {
             
-            ZonePacketSend(app, &app->sessions[i], &app->arenaPerTick,
-                        Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
-            ZonePacketSend(app, &app->sessions[i], &app->arenaPerTick,
-                        Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
+            __time64_t now;
+            _time64(&now);
             
-            app->sessions[i].needsProximityComplete = 0;
-            printf("[*] Sent deferred done signals\n");
+            if (now >= app->sessions[i].proximityCompleteTime) {
+                ZonePacketSend(app, &app->sessions[i], &app->arenaPerTick,
+                            Zone_Packet_Kind_ClientUpdate_NetworkProximityUpdatesComplete, 0);
+                
+                app->sessions[i].needsProximityComplete = 0;
+                printf("[*] Sent deferred NetworkProximityUpdatesComplete\n");
+            }
         }
     }
 

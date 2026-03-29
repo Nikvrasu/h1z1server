@@ -195,6 +195,8 @@ struct SessionState {
     // zoneClient client;
     pGetPlayerActorData pGetPlayerActor;
 
+    u32 sendSeqDebug;
+
     // gateway channel stuff & testing related
     u8 gatewayChannel;
     b8 isLoggedIn; 
