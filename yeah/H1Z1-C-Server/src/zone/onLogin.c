@@ -133,6 +133,13 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
+    // 8b. UpdateCharacterState — marks character as alive/renderable (all states = 0 = alive)
+    Zone_Packet_Character_UpdateCharacterState stateUpdate = { 0 };
+    stateUpdate.character_id = session->characterId;
+    stateUpdate.game_time = timer & 0x7fffffff;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Character_UpdateCharacterState, &stateUpdate);
+
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_3 = 0x40000000ull;
