@@ -362,27 +362,40 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_array_291_count = 0,
         .unk_array_2112_count = 0,
         .unk_array_2122_count = 0,
-        .equipment_slots_count = 1,
-        .equipment_slots = (struct equipment_slots_s[1]){
+        .equipment_slots_count = 3,
+        .equipment_slots = (struct equipment_slots_s[3]){
             [0] = {
-                // Fists held in the right-hand (active weapon) equipment slot.
-                // NOTE: These field names are auto-generated from the schema and reflect
-                // partially-reversed protocol fields. Their known semantics are:
-                //   unk_dword_7199    = outer equipment slot ID
-                //   unk_dword_890     = effect ID (0 = none)
-                //   unk_string_4      = item model path (e.g. "Weapon_Empty.adr")
-                //   unk_string_2      = texture alias
-                //   equipment_slot_id2/3 = inner slot ID (same as outer)
-                //   guid              = item instance GUID
-                .unk_dword_7199   = EQUIPMENT_SLOT_RIGHT_HAND,
-                .unk_dword_890    = 0,
-                .unk_string_4     = STR8("Weapon_Empty.adr"),
-                .unk_string_2     = STR8(""),
-                .equipment_slot_id2 = EQUIPMENT_SLOT_RIGHT_HAND,
-                .equipment_slot_id3 = EQUIPMENT_SLOT_RIGHT_HAND,
-                .guid             = ITEM_GUID_FISTS,
-                .tint_alias       = STR8("Default"),
-                .decal_alias      = STR8("#"),
+                .unk_dword_7199 = 0,
+                .unk_dword_890 = 0,
+                .unk_string_4 = STR8("SurvivorMale_Chest_Bra.adr"),
+                .unk_string_2 = STR8(""),
+                .equipment_slot_id2 = 3,
+                .equipment_slot_id3 = 3,
+                .guid = 0x1001,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            },
+            [1] = {
+                .unk_dword_7199 = 0,
+                .unk_dword_890 = 0,
+                .unk_string_4 = STR8("SurvivorMale_Legs_Pants_Underwear.adr"),
+                .unk_string_2 = STR8(""),
+                .equipment_slot_id2 = 4,
+                .equipment_slot_id3 = 4,
+                .guid = 0x1002,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            },
+            [2] = {
+                .unk_dword_7199 = 0,
+                .unk_dword_890 = 0,
+                .unk_string_4 = STR8("Weapon_Empty.adr"),
+                .unk_string_2 = STR8(""),
+                .equipment_slot_id2 = 7,
+                .equipment_slot_id3 = 7,
+                .guid = ITEM_GUID_FISTS,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
             },
         },
         .unk_array_2135_count = 0,
