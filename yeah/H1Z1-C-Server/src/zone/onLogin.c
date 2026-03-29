@@ -126,12 +126,20 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
 
-    // 8. Weapon Stance & State Delta
+    // 8. Weapon Stance, UpdateCharacterState & State Delta
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
     weaponStance.stance = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
+
+    // UpdateCharacterState must follow WeaponStance — without it the client
+    // leaves the entity in an unrendered state (h1emu reference behaviour).
+    Zone_Packet_Character_UpdateCharacterState updateState = { 0 };
+    updateState.character_id = session->characterId;
+    updateState.game_time = (u32)(timer & 0x7fffffff);
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Character_UpdateCharacterState, &updateState);
 
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
