@@ -73,6 +73,91 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
+            // 1. UpdateWeatherData (moved from OnLogin)
+            Zone_Packet_UpdateWeatherData updt_weather_data = {
+                .overcast = 1.0f,
+                .fogDensity = 0.000173f,
+                .fogFloor = 10.0f,
+                .fogGradient = 0.0144f,
+                .globalPrecipitation = 0,
+                .temperature = 75,
+                .skyClarity = 0,
+                .cloudWeight0 = 0.05f,
+                .cloudWeight1 = 0.0f,
+                .cloudWeight2 = 0.05f,
+                .cloudWeight3 = 0.15f,
+                .transitionTime = 0,
+                .sunAxisX = 38,
+                .sunAxisY = -15,
+                .sunAxisZ = 0,
+                .windDirX = -1.0f,
+                .windDirY = -0.5f,
+                .windDirZ = -1.0f,
+                .wind = 3,
+                .rainMinStrength = 0,
+                .rainRampUpTimeSeconds = 1,
+                .cloudFile = STR8("sky_Z_clouds.dds"),
+                .stratusCloudTiling = 0.30f,
+                .stratusCloudScrollU = -0.002f,
+                .stratusCloudScrollV = 0,
+                .stratusCloudHeight = 1000,
+                .cumulusCloudTiling = 0.20f,
+                .cumulusCloudScrollU = 0,
+                .cumulusCloudScrollV = 0.002f,
+                .cumulusCloudHeight = 8000,
+                .cloudAnimationSpeed = 0,
+                .cloudSilverLiningThickness = 0.25f,
+                .cloudSilverLiningBrightness = 7.0f,
+                .cloudShadows = 0.5f,
+            };
+            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData,
+                           &updt_weather_data);
+
+            // 2. Character.WeaponStance (moved from DeployCharacter)
+            Zone_Packet_Character_WeaponStance weaponStance = { 0 };
+            weaponStance.character_id = session->characterId;
+            weaponStance.stance = 1;
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                           Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
+
+            // 3. Equipment.SetCharacterEquipment — Chest + Legs + Fists (moved from DeployCharacter)
+            Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
+            setEquipment.unk_string_1 = STR8("Default");
+            setEquipment.unk_string_2 = STR8("#");
+            setEquipment.unk_bool_2 = TRUE;
+            setEquipment.length_1 = (struct length_1_s[1]){[0] = {
+                .character_id = session->characterId,
+                .profile_id = 5,
+            }};
+            setEquipment.equipment_slot_array_count = 3;
+            setEquipment.equipment_slot_array = (struct equipment_slot_array_s[3]){
+                [0] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = 0x1001, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+                [1] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = 0x1002, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+                [2] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+            };
+            setEquipment.attachments_data_1_count = 3;
+            setEquipment.attachments_data_1 = (struct attachments_data_1_s[3]){
+                [0] = { .model_name = STR8("SurvivorMale_Chest_Bra.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3 },
+                [1] = { .model_name = STR8("SurvivorMale_Legs_Pants_Underwear.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4 },
+                [2] = { .model_name = STR8("Weapon_Empty.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7 },
+            };
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                           Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
+
+            // 4. Loadout.SetLoadoutSlots — Fists + Binoculars (moved from DeployCharacter)
+            Zone_Packet_Loadout_SetLoadoutSlots setLoadoutSlots = { 0 };
+            setLoadoutSlots.character_id = session->characterId;
+            setLoadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
+            setLoadoutSlots.loadout_slot_data_count = 2;
+            setLoadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
+                [0] = { .hotbar_slot_id = LOADOUT_SLOT_MELEE, .loadout_id_1 = LOADOUT_ID_KOTK_CHARACTER, .slot_id = LOADOUT_SLOT_MELEE, .item_def_id1 = WEAPON_FISTS, .loadout_item_guid = ITEM_GUID_FISTS },
+                [1] = { .hotbar_slot_id = LOADOUT_SLOT_BINOCULARS, .loadout_id_1 = LOADOUT_ID_KOTK_CHARACTER, .slot_id = LOADOUT_SLOT_BINOCULARS, .item_def_id1 = WEAPON_BINOCULARS, .loadout_item_guid = ITEM_GUID_BINOCULARS },
+            };
+            setLoadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                           Zone_Packet_Kind_Loadout_SetLoadoutSlots, &setLoadoutSlots);
+
+            // 5. Command.RunSpeed
             Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
             ZonePacketSend(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
