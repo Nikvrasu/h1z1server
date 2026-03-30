@@ -73,11 +73,11 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
-            Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                        Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
+            // h1emu sends Equipment, WeaponStance, RunSpeed, ModifyMovementSpeed
+            // in ClientFinishedLoading — NOT in DeployCharacter/ClientIsReady
+            SendEquipmentAndMovement(app, session);
 
-            printf("[*] ClientFinishedLoading acknowledged\n");
+            printf("[*] ClientFinishedLoading acknowledged — equipment & movement sent\n");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
             kind = Zone_Packet_Kind_GameTimeSync;
@@ -123,8 +123,6 @@ packetIdSwitch:
 
             Zone_Packet_WallOfData_UIEvent uiEvent = { 0 };
             zone_packet_unpack(data + 2, dataLen - 2, kind, &uiEvent, &app->arenaPerTick);
-
-            // ZonePacketSend(app, session, &app->arenaPerTick, kind, &uiEvent);
         } break;
         case ZONE_WALLOFDATA_CLIENTSYSTEMINFO_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientSystemInfo;
@@ -156,12 +154,6 @@ packetIdSwitch:
         case ZONE_CLIENTLOG_ID: {
             kind = Zone_Packet_Kind_ClientLog;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-
-            // Zone_Packet_ClientLog logPacket = { 0 };
-            // zone_packet_unpack(data + 1, dataLen - 1, kind, &logPacket, &app->arenaPerTick);
-            // printf("[CLIENT LOG] file: %.*s message: %.*s\n",
-            //     (int)logPacket.file.size, logPacket.file.data,
-            //     (int)logPacket.message.size, logPacket.message.data);
         } break;
         case ZONE_CLIENTLOGOUT_ID: {
             kind = Zone_Packet_Kind_ClientLogout;
@@ -344,9 +336,7 @@ packetIdSwitch:
 
             if (subOpcode == 0x97) {
                 // 0x11 0x97 — Zone ready notification from client after a zone transition.
-                // Re-deploy the character following the same Phase 2 sequence.
                 printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
-
                 DeployCharacter(app, session);
             } else {
                 printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"),
@@ -356,8 +346,9 @@ packetIdSwitch:
         case 0x0f: {
             if (dataLen > 1 && data[1] == 0x45) {
                 printf("[*] Handling Character.FullCharacterDataRequest\n");
+                // h1emu responds with LightweightToFullNpc (0xdb), not LightweightToFullPc (0xda)
                 u8* baseBuffer = arena_push_size(&app->arenaPerTick, 1 + TunnelDataHeaderLen);
-                baseBuffer[TunnelDataHeaderLen] = 0xda;
+                baseBuffer[TunnelDataHeaderLen] = 0xdb;
                 GatewayTunnelDataSend(app, session, baseBuffer, 1 + TunnelDataHeaderLen);
             }
         } break;
