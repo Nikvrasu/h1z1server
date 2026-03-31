@@ -89,8 +89,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     }};
     setEquipment.equipment_slot_array_count = 3;
     setEquipment.equipment_slot_array = (struct equipment_slot_array_s[3]){
-        [0] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = 0x1001, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [1] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = 0x1002, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [0] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = ITEM_GUID_CHEST_CLOTHING, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [1] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = ITEM_GUID_LEGS_CLOTHING, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [2] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
     setEquipment.attachments_data_1_count = 3;
