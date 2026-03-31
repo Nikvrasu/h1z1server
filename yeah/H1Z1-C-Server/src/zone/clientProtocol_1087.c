@@ -281,8 +281,8 @@ void WallOfDataBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
     switch (subPacketId) {
         case 5: {
             Zone_Packet_WallOfData_UIEvent uiEvent = { 0 };
-            zone_packet_unpack(data + offset, dataLen - offset, Zone_Packet_Kind_WallOfData_UIEvent,
-                               &uiEvent, &app->arenaPerTick);
+            // zone_packet_unpack(data + offset, dataLen - offset, Zone_Packet_Kind_WallOfData_UIEvent,
+            //                    &uiEvent, &app->arenaPerTick);
 
             // ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_WallOfData_UIEvent, 0);
         } break;
