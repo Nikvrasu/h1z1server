@@ -19,8 +19,12 @@
 
 // Placeholder item GUIDs for the default character loadout.
 // These are server-assigned values unique to the initial spawn state.
-#define ITEM_GUID_FISTS       0x0001000000000001ULL
-#define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+// Each equipped item (hotbar weapons + visible clothing) needs a unique GUID
+// that is referenced by both the items1 array and equipment_slots / loadout_slots.
+#define ITEM_GUID_FISTS           0x0001000000000001ULL
+#define ITEM_GUID_BINOCULARS      0x0001000000000002ULL
+#define ITEM_GUID_CHEST_CLOTHING  0x0001000000000003ULL
+#define ITEM_GUID_LEGS_CLOTHING   0x0001000000000004ULL
 
 typedef enum Items {
     // #region WEAPONS

@@ -260,8 +260,105 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .current_profile = 5,
         .unk_list_count = 0,
         .collections_count = 0,
-        // Inventory
-        .items1_count = 0,
+        // Inventory — items1 array
+        //
+        // h1emu populates this via pGetInventoryItems() which iterates
+        // all items in _loadout (hotbar) and _containers (backpack).
+        // Each item the client knows about MUST appear here.  The
+        // loadout_slots_array (further below) references items by GUID,
+        // and the client resolves those GUIDs against items1 to display
+        // icons, durability, and stack counts in the hotbar UI.
+        //
+        // For clothing, equipment_slots supplies the 3D model while
+        // items1 supplies the backing item data the client tracks
+        // internally.  Without matching entries here the client ignores
+        // the equipment or marks the hotbar slot as empty.
+        //
+        // Minimum items for a working spawn:
+        //   1) Fists        — item_def_id 85  (WEAPON_FISTS)
+        //   2) Binoculars   — item_def_id 1542 (WEAPON_BINOCULARS)
+        //   3) Chest bra    — visual-only clothing, backs equipment slot 3
+        //   4) Underwear    — visual-only clothing, backs equipment slot 4
+        //
+        .items1_count = 4,
+        .items1 = (struct items1_s[4]){
+            [0] = {
+                // Fists — weapon that sits in loadout slot MELEE (7)
+                .item_def_id1          = WEAPON_FISTS,
+                .tint_id               = 0,
+                .guid                  = ITEM_GUID_FISTS,
+                .count                 = 1,
+                .unk_qword_21          = 0,
+                .unk_dword_53          = 0,
+                .unk_dword_24          = 0,
+                .container_guid        = 0xFFFFFFFFFFFFFFFFULL,
+                .container_def_id      = 4,
+                .container_slot_id     = LOADOUT_SLOT_MELEE,
+                .base_durability       = 2000,
+                .current_durability    = 2000,
+                .max_durability_from_def = 2000,
+                .unk_bool_13           = FALSE,
+                .owner_character_id    = session->characterId,
+                .unk_dword_9           = 0,
+            },
+            [1] = {
+                // Binoculars — weapon that sits in loadout slot BINOCULARS (5)
+                .item_def_id1          = WEAPON_BINOCULARS,
+                .tint_id               = 0,
+                .guid                  = ITEM_GUID_BINOCULARS,
+                .count                 = 1,
+                .unk_qword_21          = 0,
+                .unk_dword_53          = 0,
+                .unk_dword_24          = 0,
+                .container_guid        = 0xFFFFFFFFFFFFFFFFULL,
+                .container_def_id      = 4,
+                .container_slot_id     = LOADOUT_SLOT_BINOCULARS,
+                .base_durability       = 2000,
+                .current_durability    = 2000,
+                .max_durability_from_def = 2000,
+                .unk_bool_13           = FALSE,
+                .owner_character_id    = session->characterId,
+                .unk_dword_9           = 0,
+            },
+            [2] = {
+                // Chest clothing (bra) — backs equipment slot 3
+                .item_def_id1          = SHIRT_DEFAULT,
+                .tint_id               = 0,
+                .guid                  = ITEM_GUID_CHEST_CLOTHING,
+                .count                 = 1,
+                .unk_qword_21          = 0,
+                .unk_dword_53          = 0,
+                .unk_dword_24          = 0,
+                .container_guid        = 0xFFFFFFFFFFFFFFFFULL,
+                .container_def_id      = 4,
+                .container_slot_id     = 3,
+                .base_durability       = 1000,
+                .current_durability    = 1000,
+                .max_durability_from_def = 1000,
+                .unk_bool_13           = FALSE,
+                .owner_character_id    = session->characterId,
+                .unk_dword_9           = 0,
+            },
+            [3] = {
+                // Legs clothing (underwear) — backs equipment slot 4
+                .item_def_id1          = PANTS_DEFAULT,
+                .tint_id               = 0,
+                .guid                  = ITEM_GUID_LEGS_CLOTHING,
+                .count                 = 1,
+                .unk_qword_21          = 0,
+                .unk_dword_53          = 0,
+                .unk_dword_24          = 0,
+                .container_guid        = 0xFFFFFFFFFFFFFFFFULL,
+                .container_def_id      = 4,
+                .container_slot_id     = 4,
+                .base_durability       = 1000,
+                .current_durability    = 1000,
+                .max_durability_from_def = 1000,
+                .unk_bool_13           = FALSE,
+                .owner_character_id    = session->characterId,
+                .unk_dword_9           = 0,
+            },
+        },
         .unk_bool_14 = FALSE,
         .ammo_slots1_count = 0,
         .fire_groups1_count = 0,
@@ -371,7 +468,7 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
                 .unk_string_2 = STR8(""),
                 .equipment_slot_id2 = 3,
                 .equipment_slot_id3 = 3,
-                .guid = 0x1001,
+                .guid = ITEM_GUID_CHEST_CLOTHING,
                 .tint_alias = STR8("Default"),
                 .decal_alias = STR8("#"),
             },
@@ -382,7 +479,7 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
                 .unk_string_2 = STR8(""),
                 .equipment_slot_id2 = 4,
                 .equipment_slot_id3 = 4,
-                .guid = 0x1002,
+                .guid = ITEM_GUID_LEGS_CLOTHING,
                 .tint_alias = STR8("Default"),
                 .decal_alias = STR8("#"),
             },
