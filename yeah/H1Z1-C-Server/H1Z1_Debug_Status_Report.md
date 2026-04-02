@@ -1,158 +1,213 @@
-# H1Z1 KotK C Server — Character Rendering & Speed Debug Status
+# H1Z1 KotK C Server Emulator — Complete Project Status
 
-## Project
-C server emulator for H1Z1: King of the Kill, Preseason 3, protocol 1087.
-Path: `D:\h1z1server\yeah\H1Z1-C-Server\`
-
----
-
-## What Works (100% confirmed)
-
-- **Login flow**: Login server → zone server handoff works
-- **Zone loading**: Client loads Z2 map, terrain renders, sky/weather works
-- **Camera**: Attached to character position, can look around with mouse
-- **Movement input**: WASD moves the character, jumping works
-- **Packet pipeline**: SOE protocol with RC4 encryption, multi-channel reliable UDP, fragment reassembly — all working
-- **Schema tool**: Generates C packers/unpackers from `.schm` file, packs SendSelfToClient correctly
-- **Two-phase login flow**: Phase 1 (OnLogin) → Phase 2 (DeployCharacter on ClientIsReady) → Phase 3 (ClientFinishedLoading)
-- **PlayerWorldTransferRequest**: Lobby → game transition works
-- **actorModelId = 9469**: Confirmed correct for male survivor (matches h1emu and reference binary)
-- **Packet format**: `u64 last_login_date` is correct for protocol 1087 (changing to u32 breaks everything)
-- **KeepAlive**: Client sends keepalives, server responds
-- **0x1144 values**: With actorModelId=9469, client reports normal-looking values (~1.67, 1.42, 1.26) instead of the old constant 0.58
-
-## What Doesn't Work (the 3 problems)
-
-### 1. Character Model Invisible (PARTIALLY FIXED — intermittent)
-- First person: no hands/arms visible
-- Third person: character appeared ONCE — naked male with underpants, correct model
-- The model appeared briefly then disappeared when pressing T (third-person toggle)
-- Visibility seems RANDOM — same code sometimes shows the model, sometimes doesn't
-- This points to a **timing/race condition**, not a data problem
-
-### 2. Movement Is Too Slow
-- Feels like crouch-walking speed
-- Cannot sprint (Shift+W does nothing different)
-- The slowness persists regardless of all fixes attempted
-- The 0x1144 packet values changed from 0.58 (with wrong actorModelId) to ~1.67 (with correct actorModelId), suggesting the client's internal speed DID change, but it still feels slow
-
-### 3. Inventory Empty
-- No fists, no binoculars in hotbar
-- Red empty squares visible in hotbar UI
-- Loadout and equipment packets are being sent but items don't appear
+**Date:** March 30, 2026  
+**Project Path:** `D:\h1z1server\yeah\H1Z1-C-Server\`  
+**Target:** H1Z1: King of the Kill, Preseason 3, Protocol 1087  
+**Author/Developer:** Nick (with Z2Doggo as original repo author)
 
 ---
 
-## What We Tried — Detailed List
+## What This Project Is
 
-### For Character Visibility:
+A from-scratch C server emulator for H1Z1 King of the Kill (Preseason 3). The client is the retail KotK executable using protocol version 1087. The server handles the full connection lifecycle: login server on port 20042, zone server on port 60000, SOE protocol layer (session management, fragmentation, RC4 encryption, multi-channel reliable delivery), gateway protocol (login, tunnel, channel routing), and the zone protocol (game packets).
 
-| # | What we tried | Result |
-|---|---------------|--------|
-| 1 | Changed actorModelId from 9240 to 9469 | No visible change (but 0x1144 values improved) |
-| 2 | Added Character.WeaponStance { stance: 1 } in DeployCharacter | No visible change |
-| 3 | Moved WeaponStance to ClientFinishedLoading | Model appeared ONCE then became intermittent |
-| 4 | Set WeaponStance stance = 0 (unarmed) | Made character invisible |
-| 5 | Removed AddLightweightPc from DeployCharacter | No change (neither helped nor broke) |
-| 6 | Added AddLightweightPc back in DeployCharacter | Model appeared once |
-| 7 | Moved AddLightweightPc to ClientFinishedLoading | Intermittent — same random behavior |
-| 8 | Sent Equipment.SetCharacterEquipment in ClientFinishedLoading (h1emu says "needed or 3rd person invisible") | No consistent change |
-| 9 | Populated equipment_slots with fists at slot 7 (Weapon_Empty.adr) | No consistent change |
-| 10 | Removed Respawn + RespawnReply packets | Model appeared once after this |
-| 11 | Set trigger_loading_screen = FALSE on UpdateLocation in Deploy | No clear change |
-| 12 | Set head_id=5, unk_u32_3=5, faction_id=662 (matching reference binary) | No change |
+The codebase uses a custom schema tool (`src/schema_tool.c`) that reads `.schm` files and auto-generates C packet packers/unpackers. The two schema files are `kotk_login_udp_11.schm` (login protocol) and `client_protocol_1087.schm` (zone protocol). Generated output lands in `schema/output/`.
 
-### For Movement Speed:
-
-| # | What we tried | Result |
-|---|---------------|--------|
-| 1 | Changed actorModelId from 9240 to 9469 | 0x1144 values changed from 0.58 to ~1.67 but subjectively still slow |
-| 2 | Sent Command.RunSpeed { runSpeed: 0 } in ClientFinishedLoading | No change |
-| 3 | Built and sent ReferenceData.ProfileDefinitions (0x1703) with 7 profiles, profile 5 having unknownFloat1=1.7 | No change |
-| 4 | Added 32 character_stats1 entries (movement stats from h1emu's stats.json) | CRASHES the protocol 1087 client |
-| 5 | Sent all reference data .bin files (ItemDefinitions, WeaponDefinitions, ProjectileDefinitions, ItemClassDefinitions, ProfileDefinitions) | No change |
-| 6 | Sent Command.ItemDefinitions and ReferenceData.WeaponDefinitions in OnLogin before SendSelfToClient | No change |
-
-### For Packet Format:
-
-| # | What we tried | Result |
-|---|---------------|--------|
-| 1 | Changed last_login_date from u64 to u32 in schema | BROKE EVERYTHING — infinite loading, HaveProxiedCharacter=0 |
-| 2 | Reverted back to u64 | Restored working state |
-| 3 | Byte-by-byte comparison with Z1BR reference binary | Confirmed reference uses different protocol version — cannot compare directly |
+The server architecture is DLL hot-reload based: `win32_zone_server.c` loads `zoneModule.dll` (compiled from `kotk_zone_server.c`) and calls `serverTick()` at 45Hz. Same pattern for the login server.
 
 ---
 
-## What We Know 100% For Sure It ISN'T
+## Current State (What Works)
 
-1. **NOT a wrong actorModelId** — 9469 is confirmed correct, and the model DID render once
-2. **NOT a packet format/alignment issue in SendSelfToClient** — the client parses it correctly (gets position, name, loads into game)
-3. **NOT missing reference data** — we send ItemDefinitions, WeaponDefinitions, ProjectileDefinitions, ItemClassDefinitions, ProfileDefinitions
-4. **NOT a wrong schema for last_login_date** — u64 is correct for protocol 1087
-5. **NOT character_stats1** — adding stats crashes the 1087 client; the KotK client doesn't want them in SendSelfToClient
-6. **NOT Command.RunSpeed** — sending { runSpeed: 0 } doesn't change anything
-7. **NOT a fundamentally broken pipeline** — the character model DID appear once (naked male in underpants, correct third-person rendering)
+The character **loads into the game world**. Terrain renders (Z2 map), weather works, UI is functional, WASD movement works, and the camera is properly attached to the character. The character model **does render** — a naked male survivor with underpants is visible in third person. First-person arms/hands appear when the model renders. Equipment attachments (head, hair, chest, legs, eyes, first-person arms) are confirmed processing by client logs.
+
+The most recent test showed the character loading successfully with the restructured h1emu-matching packet sequence. Movement was functional but had a speed-stacking bug (documented below under "Last Known Bug").
 
 ---
 
-## What We Suspect It MIGHT Be
+## The Three Original Problems & Their Status
 
-### For Visibility (most likely → least likely):
+**1. Invisible Character Model — MOSTLY FIXED (intermittent)**  
+The character now renders. It appeared once as a naked male in third person during earlier testing, and loaded again in the most recent test after the h1emu sequence restructure. The intermittency appears to be caused by the deploy loop bug (26× repeated DeployCharacter calls) — fixing that should make rendering consistent.
 
-1. **Race condition / packet ordering** — The model appeared once and then inconsistently. All packets arrive in one burst within a single tick. The client may process them in unpredictable order. H1emu sends NetworkProximityUpdatesComplete with a 5-second delay; we send it immediately.
+**2. Slow Movement / No Sprint — ADDRESSED**  
+The h1emu restructure moved `Command.RunSpeed` and `ClientUpdate.ModifyMovementSpeed` to `ClientFinishedLoading` (matching h1emu's sequence). However, the deploy loop bug caused `ModifyMovementSpeed` to be sent 48 times, stacking speed until the character flew across the map. Once the loop is fixed, speed should normalize.
 
-2. **Missing or wrong packet that kills the entity after creation** — Something in our flow might be destroying/hiding the entity shortly after AddLightweightPc creates it. The Respawn packets were suspected (removing them coincided with the model appearing once, but couldn't reproduce).
-
-3. **The character needs to be in a specific "alive" state** — There might be a Character.UpdateCharacterState or similar packet that marks the character as alive/renderable. Without it, the client may garbage-collect the entity after a frame or two.
-
-4. **SendSelfToClient alone should render the self-character (no AddLightweightPc needed)** — h1emu explicitly says AddLightweightPc is for OTHER players, not self. But without it, we never see anything. The self-rendering from SendSelfToClient might require specific field values we're not setting (is_respawning, some unknown byte, etc.).
-
-### For Speed:
-
-1. **The loadout/weapon stance is throttling movement** — The character appeared to be "holding something" (like a knife animation). Weapon-drawn state reduces movement speed in H1Z1. Without proper fists initialization, the character might be in a bugged weapon state.
-
-2. **Profile definitions aren't being parsed correctly** — The ProfileDefinitions binary we built manually might have wrong field ordering for protocol 1087 (we guessed the format from h1emu's TypeScript schema).
-
-3. **Sprint requires stamina resource to be properly initialized** — We send stamina=10000 but maybe the sprint system needs additional flags or a different resource type.
-
-4. **The base speed IS correct and what we're seeing is walk speed** — The ~1.67 value matches the 1.7 profile run speed. Sprint might need a completely different activation mechanism in KotK PS3.
+**3. Empty Inventory — NOT YET FIXED**  
+Fists and binoculars are sent in `Loadout.SetLoadoutSlots` and `equipment_slots` inside `SendSelfToClient`, but the inventory UI still shows nothing. This likely requires populated `items1` array in `SendSelfToClient` or `ClientUpdate.ItemAdd` packets, which h1emu sends later in the flow.
 
 ---
 
-## What We Haven't Tried Yet
+## Last Known Bug (Must Fix First)
 
-1. **Adding a deliberate delay** between packets (especially before AddLightweightPc and after ZoneDoneSendingInitialData) to avoid race conditions
+**DeployCharacter infinite loop.** The `DeployCharacter()` function resets `session->isReady = FALSE` and `session->finished_loading = FALSE` at its top. This means every subsequent `ClientIsReady` packet from the client passes the guard check and triggers another full deploy cycle. In the last test, this caused **26 deploy cycles** and **48 equipment/movement sends**, explaining the "few minutes to load" and the speed-stacking flyaway.
 
-2. **Sending ClientUpdate.ActivateProfile** — commented out in h1emu but might be needed for protocol 1087. Contains actorModelId, profileId, tintAlias, decalAlias
+**The fix:** Remove these two lines from the top of `DeployCharacter()`:
+```c
+// REMOVE THESE:
+session->finished_loading = FALSE;
+session->isReady = FALSE;
+```
 
-3. **Sending Loadout.SetCurrentLoadout** — also commented out in h1emu
-
-4. **Capturing packets from a working h1emu server** (the main `QuentinGruber/h1z1-server` repo, not the abandoned kotk-server) and comparing them against ours
-
-5. **Setting `is_respawning = TRUE`** in SendSelfToClient (instead of FALSE) — might affect character state initialization
-
-6. **Trying different values for `unk_byte_2`, `unk_byte_31`, `unk_byte_4`, `unk_byte_5`** in SendSelfToClient — these unknown bytes between equipment and stats might control rendering flags
-
-7. **Sending the character as an NPC first** (AddSimpleNpc or similar) to test if the rendering issue is specific to the PC entity type
-
-8. **Dumping the client's internal state** via the dev console (F1) to see what the client thinks the character state is
-
-9. **Testing with a female character** (actorModelId=9474) to rule out male-specific model issues
-
-10. **Sending Equipment.SetCharacterEquipment with 0 equipment slots** (completely empty, no fists) to see if the equipment data is confusing the renderer
-
-11. **Investigating the `shaderGroupId` field** mentioned by Copilot — might need to be set to 122 for Head_01
+These flags are already correctly reset in `OnLogin()` before `ClientBeginZoning` (which is the right place — when a genuine new zone starts). They should NOT be reset inside `DeployCharacter`.
 
 ---
 
-## Current Code State
+## Authoritative Packet Sequence (from h1emu debug logging)
 
-- **DeployCharacter**: Sends SendSelfToClient → UpdateLocation(trigger=FALSE) → ContainerInit → CharacterStateDelta → GameTimeSync → ReferenceData files → DoneSendingPreloadCharacters → NetworkProximityUpdatesComplete → ZoneDoneSendingInitialData
+This was captured by running h1emu's Just Survive server (protocol 1080) with `$env:DEBUG="ZoneServer"` and extracting every `send data` and `Receive Data` line. This is the proven working sequence.
 
-- **ClientFinishedLoading**: Sends AddLightweightPc → Equipment (fists) → Loadout (fists+binoculars) → WeaponStance(stance=1) → RunSpeed(0)
+### Phase 1 — OnLogin (sendInitData, before ClientIsReady):
 
-- **AddLightweightPc and Equipment/Loadout are currently in ClientFinishedLoading**, removed from DeployCharacter
+| # | Packet | Notes |
+|---|--------|-------|
+| 1 | `InitializationParameters` | environment="LIVE_KOTK" |
+| 2 | `SendZoneDetails` | zone="Z2", zoneType=4 |
+| 3 | `ClientGameSettings` | timescale=1.0, enableWeapons=1 |
+| 4 | `ReferenceData.DynamicAppearance` | Skin tones only (3 entries, opcode 0x1706) |
+| 5 | `SendSelfToClient` | **Sent ONCE here only — never re-sent** |
+| 6 | `Container.InitEquippedContainers` | Empty (0 containers) |
+| 7 | *(raw cached data)* | ItemDefinitions, WeaponDefinitions, ProfileDefinitions, ProjectileDefinitions, ItemClassDefinitions — sent as raw binary blobs |
+| 8 | `ClientBeginZoning` | Triggers zone load |
+| 9 | `ClientUpdate.UpdateLocation` | trigger_loading_screen=TRUE |
+| 10 | `ClientInitializationDetails` | unk_u32_1=1 |
 
-- **Respawn + RespawnReply are currently commented out**
+The client then sends: `WallOfData.UIEvent`, `SetLocale`, `ClientInitializationDetails`, `GetContinentBattleInfo`, `GetRewardBuffInfo`, `GameTimeSync` (multiple).
 
-- **character_stats1 is disabled** (count = 0 regardless of withStats flag)
+### Phase 2 — DeployCharacter (on ClientIsReady):
+
+| # | Packet | Notes |
+|---|--------|-------|
+| 1 | `AddSimpleNpc` × many | World objects + Replication data (we skip — no world objects yet) |
+| 2 | `POIChangeMessage` | Empty/no fields |
+| 3 | `Character.UpdateCharacterState` | 8 state bytes (all 0) + game_time |
+| 4 | `ClientUpdate.DoneSendingPreloadCharacters` | is_done=TRUE |
+| 5 | `DtoObjectInitialData` | **TODO — opcode unknown, not implemented yet** |
+| 6 | `Character.CharacterStateDelta` | guid_1=characterId, guid_3=0x40000000 |
+| 7 | `ZoneDoneSendingInitialData` | **IMMEDIATE** — client exits loading screen |
+| 8 | *(5 second gap)* | |
+| 9 | `ClientUpdate.NetworkProximityUpdatesComplete` | **DEFERRED 5 seconds** |
+
+**Critical: h1emu does NOT send `AddLightweightPc` for self, does NOT re-send `SendSelfToClient`, and does NOT send Equipment/Loadout here.**
+
+### Phase 3 — ClientFinishedLoading:
+
+| # | Packet | Notes |
+|---|--------|-------|
+| 1 | `UpdateWeatherData` | Same weather params |
+| 2 | `Character.WeaponStance` | stance=1 |
+| 3 | `Equipment.SetCharacterEquipment` | Chest + Legs + Fists with .adr models |
+| 4 | `Command.RunSpeed` | runSpeed=0.0 |
+| 5 | `ClientUpdate.ModifyMovementSpeed` | speed=2.0, movementVersion=1 |
+
+### Phase 4 — Later (client-initiated):
+
+The client sends `Character.FullCharacterDataRequest` (~3s after loading). H1emu responds with `LightweightToFullNpc` (opcode 0xdb), **not** `LightweightToFullPc` (0xda).
+
+---
+
+## Key Functions (The Big Three)
+
+### `OnLogin()` — `src/zone/onLogin.c`
+
+Called when the gateway receives a login request and the character ID is resolved. Sends the entire Phase 1 sequence: initialization params, zone details, game settings, reference data, `SendSelfToClient`, container init, all raw `.bin` reference files, then `ClientBeginZoning` to trigger the zone load. This is the entry point for everything.
+
+### `DeployCharacter()` — `src/zone/onLogin.c`
+
+Called when the client sends `ClientIsReady` (opcode 0x04) after finishing zone load. Sends Phase 2: `POIChangeMessage`, `Character.UpdateCharacterState`, `DoneSendingPreloadCharacters`, `CharacterStateDelta`, `ZoneDoneSendingInitialData` (immediate), and schedules `NetworkProximityUpdatesComplete` for 5 seconds later. Does NOT send equipment, loadout, or movement — those moved to `SendEquipmentAndMovement()`.
+
+### `SendSelfToClient()` — `src/zone/sendSelfToClient.c`
+
+Dynamically builds the massive `SendSelfToClient` packet (opcode 0x03) with a `stream:u32` length prefix. Contains: character GUID, actorModelId (9469=male, 9474=female), head/hair models, position, rotation, identity (name), profile (id=5, type=3), loadout (id=17 for KotK, fists slot 7 + binoculars slot 5), 3 equipment slots (chest/legs/fists with .adr models), 9 resources (health/hunger/hydration/stamina etc.), and dozens of empty arrays for quests/achievements/recipes/etc. Uses the schema-generated packer, then sends via `ZonePacketSendSelfDebug()` which hex-dumps the first 128 bytes for verification.
+
+---
+
+## Key Discoveries Made Across Sessions
+
+### Reference Data Files Were Not Loading
+All `ZonePacketRawFileSend` calls with relative paths (`"data/..."`) were failing silently with Error 3 because the DLL runs from a different working directory than the project root. **Fixed by using paths relative to the DLL's location** (the current code uses `"data/..."` which works when CWD is correct). If paths break again, use absolute paths like `"D:\\h1z1server\\yeah\\H1Z1-C-Server\\data\\..."`.
+
+### DynamicAppearance Packet Built from Scratch
+`ReferenceData_DynamicAppearance.bin` (162 bytes, opcode 0x1706) was hand-built with 3 shader parameter entries: CharSkinTone (ID 122), CharHairColor (ID 125), CharEyeColor (ID 129). Sent before `SendSelfToClient` in OnLogin matching h1emu's order.
+
+### Protocol 1087 Uses u64 for last_login_date
+The Z1BR reference binary uses u32 for this field (different protocol version). Changing to u32 broke everything (`HaveProxiedCharacter=0`). **u64 is confirmed correct for protocol 1087.**
+
+### character_stats1 Crashes the 1087 Client
+Populating the `character_stats1` array in `SendSelfToClient` with movement stats causes the KotK client to crash. The array is currently sent empty (count=0). H1emu's Just Survive server also works with empty stats.
+
+### KotK Uses Loadout ID 17, Not 3
+Just Survive uses loadout ID 3. KotK Preseason 3 uses loadout ID 17, sourced from `Loadouts.LoadoutSlotDefinitionDataSource.rtf`. Constants defined in `core_base_full_character.h`.
+
+### Deferred NetworkProximityUpdatesComplete
+Uses `__time64_t` wall-clock time (not tick count, which was a high-frequency counter making delays instant). `ZoneDoneSendingInitialData` sent immediately, only `NetworkProximityUpdatesComplete` deferred by 5 seconds. Implemented in the `serverTick()` loop in `kotk_zone_server.c`.
+
+### FullCharacterDataRequest Response
+Client sends `Character.FullCharacterDataRequest` (opcode 0x0f45) ~3 seconds after `ClientFinishedLoading`. H1emu responds with `LightweightToFullNpc` (0xdb), not `LightweightToFullPc` (0xda). Our server now sends 0xdb.
+
+### SOE Multi-Channel Support
+The server supports SOE channels 0-5 with independent fragment pools, input/output streams, RC4 state, and ack tracking per channel. Channel 0 is the main data channel. Channel 1 carries some client packets (like `LobbyGameDefinition.DefinitionsRequest`). Channels are identified by the SOE packet ID: `CoreDataId + channel * 0x10`.
+
+### Gateway Channel Routing
+The gateway byte format is `(channel << 5) | packetId`. Channel 0 carries control packets (LoginRequest/Reply) and tunnel data. Non-zero channels route directly as tunnel data. The character name is extracted from the server ticket (`"7y3Bh44sKWZCYZH:CharacterName"`) during gateway login.
+
+---
+
+## File Layout
+
+| File | Purpose |
+|------|---------|
+| `src/zone/onLogin.c` | `OnLogin()`, `DeployCharacter()`, `SendEquipmentAndMovement()` |
+| `src/zone/sendSelfToClient.c` | `SendSelfToClient()` dynamic packer + helpers |
+| `src/zone/zonePacketHandler.c` | All incoming zone packet handlers |
+| `src/zone/clientProtocol_1087.c` | `ZonePacketSend()`, `ZonePacketRawFileSend()`, position parsing, static view |
+| `src/zone/clientProtocol_1087.h` | Item/weapon data structures |
+| `src/zone/gatewayApi.c` | Gateway pack/unpack, tunnel routing, channel routing |
+| `src/zone/gatewayApi.h` | Gateway packet IDs and structures |
+| `src/kotk_zone_server.c` | Main server loop, session init, deferred tick logic |
+| `src/kotk_login_server.c` | Login server main loop |
+| `src/login/loginPacketHandler.c` | Login packet dispatch |
+| `src/login/loginUdp_11.c` | Login send helpers, name validation, character create/select |
+| `src/soe/coreProtocol.c` | SOE session/data/ack/fragment handling, all 6 channels |
+| `src/soe/inputStream.c` | Reliable ordered delivery, RC4 decrypt, fragment assembly |
+| `src/soe/outputStream.c` | Reliable send, RC4 encrypt, fragmentation |
+| `src/core/entities/core_base_full_character.h` | KotK constants (loadout IDs, item enums, equipment slots) |
+| `schema/client_protocol_1087.schm` | Zone protocol schema |
+| `data/*.bin` | Raw reference data packets (ItemDefinitions, WeaponDefinitions, etc.) |
+
+---
+
+## What's Been Tried and Confirmed NOT the Problem
+
+| Thing Tried | Result |
+|-------------|--------|
+| Wrong actorModelId (9240 vs 9469) | 9469 confirmed correct — model DID render |
+| Wrong last_login_date size (u32 vs u64) | u64 confirmed for protocol 1087 |
+| character_stats1 with movement stats | Crashes KotK 1087 client |
+| Command.RunSpeed alone | Doesn't fix speed by itself |
+| ActivateProfile packet | No visible effect |
+| ModifyMovementSpeed alone | No effect without proper sequence |
+| Missing equipment attachments | Client now processes them correctly |
+| Wrong loadout ID (3 vs 17) | 17 is correct for KotK |
+| AddLightweightPc for self | H1emu doesn't send it — removing had no negative effect |
+| Re-sending SendSelfToClient in DeployCharacter | H1emu doesn't do this — removing is correct |
+
+---
+
+## Remaining TODO (Priority Order)
+
+1. **Fix DeployCharacter loop** — Remove `isReady`/`finished_loading` reset from `DeployCharacter()`. This should make character loading consistent and fast, and fix the speed stacking.
+
+2. **Test with loop fix** — Verify character renders consistently, movement is normal speed, no more flyaway.
+
+3. **Investigate DtoObjectInitialData** — H1emu sends this in ClientIsReady but we don't. Need to find the opcode and packet format.
+
+4. **Inventory items** — Populate `items1` array in `SendSelfToClient` or send `ClientUpdate.ItemAdd` packets to give the player fists and binoculars in inventory.
+
+5. **Sprint** — May require correct `Command.RunSpeed` value (currently 0.0) or a specific resource/stat configuration.
+
+6. **ModifyMovementSpeed tuning** — Currently sending speed=2.0, movementVersion=1. May need adjustment for KotK 1087.
+
+7. **World objects** — `AddSimpleNpc` + `Replication.CreateRepData` + `Replication.CreateComponent` for Fort Destiny props, vehicles, etc.
+
+8. **Items.AccountItemManagerStateChanged** — H1emu sends this after `ZoneDoneSendingInitialData`. Unknown format.

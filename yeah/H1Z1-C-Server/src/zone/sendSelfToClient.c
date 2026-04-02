@@ -168,6 +168,12 @@ void SendSelfToClientRaw(AppState* app, SessionState* session) {
 }
 
 void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
+    static int sstcCount = 0;
+    sstcCount++;
+    printf("[SSTC] SendSelfToClient called %d time(s) total [withStats=%d] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d\n",
+           sstcCount, withStats,
+           (unsigned long long)session->characterId,
+           session->isReady, session->finished_loading, session->characterReleased);
     // Use session data if available, fallback to defaults
     u32 actorModelId = session->pGetPlayerActor.actorModelId;
     if (actorModelId == 0) actorModelId = 9469; // default male

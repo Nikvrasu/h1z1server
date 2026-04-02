@@ -53,7 +53,10 @@ packetIdSwitch:
     switch (packetId) {
         case ZONE_CLIENTISREADY_ID: {
             kind = Zone_Packet_Kind_ClientIsReady;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t t1; _time64(&t1);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+                   zone_packet_names[kind], t1,
+                   session->isReady, session->finished_loading, session->characterReleased);
 
             if (session->isReady) {
                 printf("[*] Ignoring duplicate ClientIsReady\n");
@@ -65,7 +68,10 @@ packetIdSwitch:
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t t2; _time64(&t2);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+                   zone_packet_names[kind], t2,
+                   session->isReady, session->finished_loading, session->characterReleased);
 
             if (session->finished_loading) {
                 printf("[*] Ignoring duplicate ClientFinishedLoading\n");
@@ -180,7 +186,11 @@ packetIdSwitch:
         } break;
         case ZONE_PLAYERWORLDTRANSFERREQUEST_ID: {
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t tNow;
+            _time64(&tNow);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+                   zone_packet_names[kind], tNow,
+                   session->isReady, session->finished_loading, session->characterReleased);
 
             // 1. Transfer confirm
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };

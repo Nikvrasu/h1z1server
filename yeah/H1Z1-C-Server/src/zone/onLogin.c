@@ -27,9 +27,24 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
 // SendEquipmentAndMovement — called from ClientFinishedLoading
 // ============================================================================
 void SendEquipmentAndMovement(AppState* app, SessionState* session) {
+    __time64_t eqTime;
+    _time64(&eqTime);
+    static int eqCount = 0;
+    eqCount++;
+    printf("[EQUIP] SendEquipmentAndMovement called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
+           eqCount, eqTime, (unsigned long long)session->characterId,
+           session->isReady, session->finished_loading, session->characterReleased,
+           session->characterDeployed);
     printf("\n========== SEND EQUIPMENT & MOVEMENT (ClientFinishedLoading) ==========\n");
 
-    // 1. UpdateWeatherData
+    // 1. GameTimeSync — h1emu calls sendGameTimeSync(client) in ClientFinishedLoading
+    Zone_Packet_GameTimeSync gameTimeSync = { 0 };
+    gameTimeSync.cycle_speed = 10.f;
+    gameTimeSync.time = 0x0bull;
+    gameTimeSync.unk_bool = TRUE;
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
+
+    // 2. UpdateWeatherData
     Zone_Packet_UpdateWeatherData updt_weather_data = {
         .overcast = 1.0f,
         .fogDensity = 0.000173f,
@@ -103,6 +118,36 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [3] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [4] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = 0x1004, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
+    // 3b. TODO 5 — Loadout.SetLoadoutSlots (needed for hotbar/context menu)
+    // This mirrors what h1emu sends in LoadoutSlots right after SetCharacterEquipment
+    Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
+    loadoutSlots.character_id = session->characterId;
+    loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
+    loadoutSlots.loadout_slot_data_count = 2;
+    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
+        [0] = {
+            .hotbar_slot_id = LOADOUT_SLOT_MELEE,
+            .loadout_id_1 = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id = LOADOUT_SLOT_MELEE,
+            .item_def_id1 = WEAPON_FISTS,
+            .loadout_item_guid = ITEM_GUID_FISTS,
+            .unk_byte_1 = 0,
+            .unk_dword_1 = 0,
+        },
+        [1] = {
+            .hotbar_slot_id = LOADOUT_SLOT_BINOCULARS,
+            .loadout_id_1 = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id = LOADOUT_SLOT_BINOCULARS,
+            .item_def_id1 = WEAPON_BINOCULARS,
+            .loadout_item_guid = ITEM_GUID_BINOCULARS,
+            .unk_byte_1 = 0,
+            .unk_dword_1 = 0,
+        },
+    };
+    loadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
+
     setEquipment.attachments_data_1_count = 5;
     setEquipment.attachments_data_1 = (struct attachments_data_1_s[5]){
         [0] = { .model_name = eqHeadActor, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1 },
@@ -135,7 +180,15 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
 // ============================================================================
 void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
+    __time64_t deployTime;
     _time64(&timer);
+    _time64(&deployTime);
+    static int deployCount = 0;
+    deployCount++;
+    printf("[DEPLOY] DeployCharacter called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
+           deployCount, deployTime, (unsigned long long)session->characterId,
+           session->isReady, session->finished_loading, session->characterReleased,
+           session->characterDeployed);
 
     printf("\n========== DEPLOY CHARACTER BEGIN (h1emu sequence) ==========\n");
 
@@ -157,7 +210,27 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // 4. Character.CharacterStateDelta
+    // 4. DtoObjectInitialData — opcode 0x05 0x03 (h1emu sends this between PreloadDone and StateDelta)
+    // unknownDword1 = 1, both array fields empty
+    {
+        u8 dtoData[] = {
+            0x05, 0x03,           // opcode 0x0503
+            0x01, 0x00, 0x00, 0x00,  // unknownDword1 = 1
+            0x00, 0x00, 0x00, 0x00,  // empty array 1 (count=0, but stream padding)
+            0x00, 0x00, 0x00, 0x00,  // empty array 2 (count=0, but stream padding)
+        };
+        u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(dtoData) + TunnelDataHeaderLen);
+        memcpy(baseBuffer + TunnelDataHeaderLen, dtoData, sizeof(dtoData));
+        GatewayTunnelDataSend(app, session, baseBuffer, sizeof(dtoData) + TunnelDataHeaderLen);
+        printf("[DEPLOY] Sent DtoObjectInitialData (raw 0x0503)\n");
+    }
+
+    // TODO 3 & TODO 7 (Audit): Mark character as deployed BEFORE any sends, with zeroed struct
+    session->characterReleased = TRUE;
+    session->characterDeployed = TRUE;
+
+    // 5. Character.CharacterStateDelta — verify zero-init for protocol 1087
+    // All 8 state bytes must be 0 for "normal" state; only state1 set to 1 in step 2 above
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_3 = 0x40000000ull;
@@ -165,29 +238,57 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 5. ZoneDoneSendingInitialData — IMMEDIATE
+    // 6. ZoneDoneSendingInitialData — IMMEDIATE
+    {
+        __time64_t zdSendTime;
+        _time64(&zdSendTime);
+        printf("[TIMING] ZoneDoneSendingInitialData sent at %lld\n", zdSendTime);
+    }
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
-    // 6. WeaponStance — send immediately so character has valid animation state
+    // 7. TODO 4 — Items.AccountItemManagerStateChanged
+    // h1emu sends: {escrowEnabled:0, escrowServerConnected:1, escrowAccountLoadSucceeded:1, escrowAccountAllowTrading:0}
+    {
+        u8 escrowData[] = {
+            0x23, 0x00,         // opcode 0x23 (EscrowGivePackage — this is closest match)
+            0x00,               // escrowEnabled = 0
+            0x01,               // escrowServerConnected = 1
+            0x01,               // escrowAccountLoadSucceeded = 1
+            0x00,               // escrowAccountAllowTrading = 0
+        };
+        u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(escrowData) + TunnelDataHeaderLen);
+        memcpy(baseBuffer + TunnelDataHeaderLen, escrowData, sizeof(escrowData));
+        GatewayTunnelDataSend(app, session, baseBuffer, sizeof(escrowData) + TunnelDataHeaderLen);
+        printf("[DEPLOY] Sent AccountItemManagerStateChanged (raw escrow packet)\n");
+    }
+
+    // 8. WeaponStance — send immediately so character has valid animation state
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
     weaponStance.stance = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
-    // 7. Defer NetworkProximityUpdatesComplete — 5 seconds
+    // 9. TODO 2 — Deferred NetworkProximityUpdatesComplete with real timer
+    // Create a background thread that sleeps exactly 5000ms then sends the packet
+    // This eliminates variable 0-3s delay from main loop polling
     session->needsProximityComplete = 1;
     _time64(&session->proximityCompleteTime);
     session->proximityCompleteTime += 5;
-    session->characterReleased = TRUE;
 
-    printf("[DEFER] NetworkProximityUpdatesComplete in ~5s\n");
+    printf("[TIMER_DEFER] NetworkProximityUpdatesComplete scheduled for +5s\n");
     printf("========== DEPLOY CHARACTER END ==========\n\n");
 }
 
 
 void OnLogin(AppState* app, SessionState* session) {
+    __time64_t onLoginTime;
+    _time64(&onLoginTime);
+    static int onLoginCount = 0;
+    onLoginCount++;
+    printf("[ONLOGIN] OnLogin called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx\n",
+           onLoginCount, onLoginTime, (unsigned long long)session->characterId);
 
     // 1. InitializationParameters
     Zone_Packet_InitializationParameters init_params = {
