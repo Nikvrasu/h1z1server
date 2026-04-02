@@ -26,6 +26,8 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
 static void TraceLoginPacket(SessionState* session, const char* phase, const char* packetName) {
     __time64_t now;
     _time64(&now);
+    // Log the next send sequence before the actual send call mutates it so packet ordering can be
+    // correlated with the subsequent [SEND #N] line in the same phase.
     printf("[LOGIN TRACE] phase=%s packet=%s queued_send_seq=%u time=%lld character=0x%llx\n",
            phase, packetName, session->sendSeqDebug, (long long)now,
            (unsigned long long)session->characterId);
@@ -67,6 +69,7 @@ static void SendDtoObjectInitialData(AppState* app, SessionState* session) {
 }
 
 static void SendDynamicAppearanceData(AppState* app, SessionState* session) {
+    static b8 warnedMissingDynamicAppearance = FALSE;
     u32 maxLen = 4096;
     u8* fileBuffer = arena_push_size(&app->arenaPerTick, maxLen);
     u32 packetLen = app->api->buffer_load_from_file("data/ReferenceData_DynamicAppearance.bin",
@@ -93,7 +96,10 @@ static void SendDynamicAppearanceData(AppState* app, SessionState* session) {
     endian_write_u32_little(packet + offset, 0);
     offset += 4;
 
-    printf("[WARN] data/ReferenceData_DynamicAppearance.bin missing, using minimal fallback packet\n");
+    if (!warnedMissingDynamicAppearance) {
+        warnedMissingDynamicAppearance = TRUE;
+        printf("[WARN] data/ReferenceData_DynamicAppearance.bin not found; using minimal fallback. Place the file in the data/ directory for full appearance support.\n");
+    }
     TraceLoginPacket(session, "OnLogin", "ReferenceData.DynamicAppearance(fallback)");
     SendRawZonePacket(app, session, &app->arenaPerTick, packet, offset,
                       "ReferenceData.DynamicAppearance(fallback)");

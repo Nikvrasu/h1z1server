@@ -234,6 +234,8 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
                 .name_id1 = 0,
                 .description_id = 0,
                 .type = 3,
+                // h1emu's current self packet leaves these movement-profile floats at 0.0f.
+                // Sending the old 1.7f/0.95f values here has been tied to incorrect movement state.
                 .unk_f32 = 0.0f,
                 .unk_f32_2 = 0.0f,
                 .unk_dword_1 = 0,
