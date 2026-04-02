@@ -21,6 +21,8 @@
 // These are server-assigned values unique to the initial spawn state.
 #define ITEM_GUID_FISTS       0x0001000000000001ULL
 #define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+#define ITEM_GUID_CHEST_CLOTHING 0x0001000000000003ULL
+#define ITEM_GUID_LEGS_CLOTHING  0x0001000000000004ULL
 
 typedef enum Items {
     // #region WEAPONS

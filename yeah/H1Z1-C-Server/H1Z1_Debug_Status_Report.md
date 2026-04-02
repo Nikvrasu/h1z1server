@@ -95,11 +95,23 @@ Path: `D:\h1z1server\yeah\H1Z1-C-Server\`
 
 ---
 
+## Current Source-of-Truth Sequence
+
+- `OnLogin`: `InitializationParameters` → `SendZoneDetails` → `ClientGameSettings` → `ReferenceData.DynamicAppearance` → `SendSelfToClient` → `Container.InitEquippedContainers` → raw reference blobs → `ClientBeginZoning`
+- `DeployCharacter` on `ClientIsReady`: `POIChangeMessage` → `Character.UpdateCharacterState` → `ClientUpdate.DoneSendingPreloadCharacters` → `DtoObjectInitialData` → `Character.CharacterStateDelta` → `ZoneDoneSendingInitialData` → deferred `ClientUpdate.NetworkProximityUpdatesComplete`
+- `SendEquipmentAndMovement` on `ClientFinishedLoading`: `UpdateWeatherData` → `Character.WeaponStance` → `Equipment.SetCharacterEquipment` → `Command.RunSpeed` → `ClientUpdate.ModifyMovementSpeed`
+
+Implementation notes:
+
+- `DtoObjectInitialData` is now treated as opcode `0xbb0300` with the minimal H1emu-shaped payload.
+- `ReferenceData.DynamicAppearance` now has a runtime fallback packet if the cached binary file is missing.
+- Login/deploy now trace packet order with queued send sequence numbers to make race conditions visible in logs.
+
 ## What We Suspect It MIGHT Be
 
 ### For Visibility (most likely → least likely):
 
-1. **Race condition / packet ordering** — The model appeared once and then inconsistently. All packets arrive in one burst within a single tick. The client may process them in unpredictable order. H1emu sends NetworkProximityUpdatesComplete with a 5-second delay; we send it immediately.
+1. **Race condition / packet ordering** — The model appeared once and then inconsistently. All packets arrive in one burst within a single tick. The client may process them in unpredictable order. `NetworkProximityUpdatesComplete` is currently deferred, but the `ClientIsReady` burst still needs trace verification around `UpdateCharacterState` → `DoneSendingPreloadCharacters` → `DtoObjectInitialData` → `CharacterStateDelta`.
 
 2. **Missing or wrong packet that kills the entity after creation** — Something in our flow might be destroying/hiding the entity shortly after AddLightweightPc creates it. The Respawn packets were suspected (removing them coincided with the model appearing once, but couldn't reproduce).
 

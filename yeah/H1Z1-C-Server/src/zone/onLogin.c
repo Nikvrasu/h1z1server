@@ -23,6 +23,82 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
 }
 
 
+static void TraceLoginPacket(SessionState* session, const char* phase, const char* packetName) {
+    __time64_t now;
+    _time64(&now);
+    printf("[LOGIN TRACE] phase=%s packet=%s queued_send_seq=%u time=%lld character=0x%llx\n",
+           phase, packetName, session->sendSeqDebug, (long long)now,
+           (unsigned long long)session->characterId);
+}
+
+static void SendRawZonePacket(AppState* app, SessionState* session, Arena* arena, u8* packetData,
+                              u32 packetLen, const char* label) {
+    u8* baseBuffer = arena_push_size(arena, TunnelDataHeaderLen + packetLen);
+    memcpy(baseBuffer + TunnelDataHeaderLen, packetData, packetLen);
+    printf("[SEND #%u] raw=%s packedLen=%u\n", session->sendSeqDebug++, label, packetLen);
+    GatewayTunnelDataSend(app, session, baseBuffer, TunnelDataHeaderLen + packetLen);
+}
+
+static void SendDtoObjectInitialData(AppState* app, SessionState* session) {
+    u8 packet[19] = { 0 };
+    u32 offset = 0;
+
+    // H1emu ClientProtocol_1080 dto.ts defines DtoObjectInitialData as opcode 0xbb0300
+    // with: u32 unknownDword1, array unknownArray1, array unknownArray2.
+    // We send the smallest known-good shape: unknownDword1=1, no DTO replacements,
+    // one empty trailing entry in unknownArray2.
+    endian_write_u8_little(packet + offset, 0xbb);
+    offset += 1;
+    endian_write_u16_little(packet + offset, 0x0003);
+    offset += 2;
+    endian_write_u32_little(packet + offset, 1);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 1);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+
+    TraceLoginPacket(session, "DeployCharacter", "DtoObjectInitialData");
+    SendRawZonePacket(app, session, &app->arenaPerTick, packet, offset, "DtoObjectInitialData");
+}
+
+static void SendDynamicAppearanceData(AppState* app, SessionState* session) {
+    u32 maxLen = 4096;
+    u8* fileBuffer = arena_push_size(&app->arenaPerTick, maxLen);
+    u32 packetLen = app->api->buffer_load_from_file("data/ReferenceData_DynamicAppearance.bin",
+                                                    fileBuffer, maxLen);
+    if (packetLen) {
+        TraceLoginPacket(session, "OnLogin", "ReferenceData.DynamicAppearance");
+        SendRawZonePacket(app, session, &app->arenaPerTick, fileBuffer, packetLen,
+                          "ReferenceData.DynamicAppearance(file)");
+        return;
+    }
+
+    // Fallback minimal packet using H1emu's reference schema:
+    // opcode 0x1706 and three empty arrays.
+    u8 packet[15] = { 0 };
+    u32 offset = 0;
+    endian_write_u8_little(packet + offset, 0x17);
+    offset += 1;
+    endian_write_u16_little(packet + offset, 0x0006);
+    offset += 2;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+    endian_write_u32_little(packet + offset, 0);
+    offset += 4;
+
+    printf("[WARN] data/ReferenceData_DynamicAppearance.bin missing, using minimal fallback packet\n");
+    TraceLoginPacket(session, "OnLogin", "ReferenceData.DynamicAppearance(fallback)");
+    SendRawZonePacket(app, session, &app->arenaPerTick, packet, offset,
+                      "ReferenceData.DynamicAppearance(fallback)");
+}
+
 // ============================================================================
 // SendEquipmentAndMovement — called from ClientFinishedLoading
 // This matches h1emu which sends Equipment, WeaponStance, RunSpeed,
@@ -89,8 +165,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     }};
     setEquipment.equipment_slot_array_count = 3;
     setEquipment.equipment_slot_array = (struct equipment_slot_array_s[3]){
-        [0] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = 0x1001, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [1] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = 0x1002, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [0] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = ITEM_GUID_CHEST_CLOTHING, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [1] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = ITEM_GUID_LEGS_CLOTHING, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [2] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
     setEquipment.attachments_data_1_count = 3;
@@ -142,6 +218,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
     // 1. POIChangeMessage — h1emu sends this (we send empty/0)
     // Opcode 0x44 with no fields = just the opcode byte
+    TraceLoginPacket(session, "DeployCharacter", "POIChangeMessage");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_POIChangeMessage, 0);
 
@@ -150,27 +227,31 @@ void DeployCharacter(AppState* app, SessionState* session) {
     charState.character_id = session->characterId;
     charState.game_time = timer & 0x7fffffff;
     // All state bytes default to 0
+    TraceLoginPacket(session, "DeployCharacter", "Character.UpdateCharacterState");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_UpdateCharacterState, &charState);
 
     // 3. DoneSendingPreloadCharacters — immediate
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
+    TraceLoginPacket(session, "DeployCharacter", "ClientUpdate.DoneSendingPreloadCharacters");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // 4. DtoObjectInitialData — h1emu sends this (opcode unknown, skip for now)
-    // TODO: find opcode and implement DtoObjectInitialData
+    // 4. DtoObjectInitialData — h1emu sends this before CharacterStateDelta.
+    SendDtoObjectInitialData(app, session);
 
     // 5. Character.CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_3 = 0x40000000ull;
     stateDelta.game_time = timer & 0x7fffffff;
+    TraceLoginPacket(session, "DeployCharacter", "Character.CharacterStateDelta");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
     // 6. ZoneDoneSendingInitialData — IMMEDIATE (client needs this to exit loading)
+    TraceLoginPacket(session, "DeployCharacter", "ZoneDoneSendingInitialData");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
@@ -270,7 +351,7 @@ void OnLogin(AppState* app, SessionState* session) {
                    &game_settings);
 
     // 4. ReferenceData.DynamicAppearance (skin tones — sent before SendSelfToClient)
-    ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096, "data/ReferenceData_DynamicAppearance.bin");
+    SendDynamicAppearanceData(app, session);
 
     // 5. SendSelfToClient — THE ONLY TIME we send this (h1emu sends it once here)
     printf("[DEBUG] characterName: '%.*s' len=%d\n",
@@ -279,6 +360,7 @@ void OnLogin(AppState* app, SessionState* session) {
        (int)session->characterName.size);
     printf("[DEBUG] characterId: 0x%llx\n", (unsigned long long)session->characterId);
 
+    TraceLoginPacket(session, "OnLogin", "SendSelfToClient");
     SendSelfToClient(app, session, FALSE);
 
     // 6. Container.InitEquippedContainers (empty)
