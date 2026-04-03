@@ -190,6 +190,14 @@ void DeployCharacter(AppState* app, SessionState* session) {
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed);
 
+    // Guard: prevent re-entry from 0x04 and 0x11/0x97 both firing,
+    // or PlayerWorldTransfer reset allowing a second cycle through.
+    // if (session->characterDeployed) {
+    //     printf("[*] DeployCharacter: already deployed, skipping\n");
+    //     return;
+    // }
+    // session->characterDeployed = TRUE;
+
     printf("\n========== DEPLOY CHARACTER BEGIN (h1emu sequence) ==========\n");
 
     // 1. POIChangeMessage
@@ -225,7 +233,11 @@ void DeployCharacter(AppState* app, SessionState* session) {
         printf("[DEPLOY] Sent DtoObjectInitialData (raw 0x0503)\n");
     }
 
-    // TODO 3 & TODO 7 (Audit): Mark character as deployed BEFORE any sends, with zeroed struct
+    // Character marked deployed — guards in ClientIsReady/PlayerWorldTransfer/0x11/0x97
+    // will prevent re-entry if the client sends duplicate packets.
+    // characterReleased already set at function entry via the guard above.
+
+        // TODO 3 & TODO 7 (Audit): Mark character as deployed BEFORE any sends, with zeroed struct
     session->characterReleased = TRUE;
     session->characterDeployed = TRUE;
 

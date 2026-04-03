@@ -124,11 +124,7 @@ packetIdSwitch:
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
         } break;
         case ZONE_WALLOFDATA_UIEVENT_ID: {
-            kind = Zone_Packet_Kind_WallOfData_UIEvent;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-
-            // Zone_Packet_WallOfData_UIEvent uiEvent = { 0 };
-            // zone_packet_unpack(data + 2, dataLen - 2, kind, &uiEvent, &app->arenaPerTick);
+            // No-op — client spam, nothing to handle
         } break;
         case ZONE_WALLOFDATA_CLIENTSYSTEMINFO_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientSystemInfo;
@@ -188,9 +184,10 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
             __time64_t tNow;
             _time64(&tNow);
-            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n"),
                    zone_packet_names[kind], tNow,
-                   session->isReady, session->finished_loading, session->characterReleased);
+                   session->isReady, session->finished_loading, session->characterReleased,
+                   session->characterDeployed);
 
             // 1. Transfer confirm
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
@@ -282,9 +279,11 @@ packetIdSwitch:
             // 6. Reset loading flags for the new zone transition
             session->finished_loading = FALSE;
             session->isReady = FALSE;
+            session->characterDeployed = FALSE;
 
                 // ADD THESE before ClientBeginZoning:
             // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_DynamicAppearance.bin");
+            printf("[TRANSFER] Sending empty DynamicAppearance ref data\n");
             {
             u8 emptyDynAppearance[] = {
                     0x17, 0x06,
@@ -295,6 +294,7 @@ packetIdSwitch:
                 memcpy(baseBuffer + TunnelDataHeaderLen, emptyDynAppearance, sizeof(emptyDynAppearance));
                 GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
             }
+            printf("[TRANSFER] Sending empty ItemDefinitions ref data\n");
             {
                 u8 emptyItemDefs[] = {
                     0x09, 0x47, 0x00,  // opcode: CommandItemDefinitions (0x09 0x4700)
@@ -310,6 +310,7 @@ packetIdSwitch:
                 memcpy(baseBuffer + TunnelDataHeaderLen, emptyItemDefs2, sizeof(emptyItemDefs2));
                 GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
             }
+            printf("[TRANSFER] Sending empty WeaponDefinitions ref data\n");
             // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 65536, "..\\data\\ReferenceData_WeaponDefinitions.bin");
             {
                 u8 emptyWeaponDefs[] = {
