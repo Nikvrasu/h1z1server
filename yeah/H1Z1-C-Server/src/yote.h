@@ -80,6 +80,24 @@ typedef double f64;
 #define MESSAGE_CONCAT_FATAL(msg)                                                                      \
     "[X] [" MESSAGE_NAMESPACE "] <" __FILE__ "(" STRINGIFY(__LINE__) ")> " msg
 
+#include <time.h>
+
+static inline void _yote_print_timestamp(void) {
+    time_t _ts_now = time(NULL);
+    struct tm* _ts_t = localtime(&_ts_now);
+    printf("[%02d:%02d:%02d] ", _ts_t->tm_hour, _ts_t->tm_min, _ts_t->tm_sec);
+}
+
+#define PRINT_TIMESTAMP() _yote_print_timestamp()
+
+#define YOTE_TS_PRINTF(...) do { \
+    _yote_print_timestamp(); \
+    printf(__VA_ARGS__); \
+} while(0)
+
+#define LOG_INFO(fmt, ...) do { PRINT_TIMESTAMP(); printf("[*] [" MESSAGE_NAMESPACE "] " fmt, ##__VA_ARGS__); } while(0)
+#define LOG_WARN(fmt, ...) do { PRINT_TIMESTAMP(); printf("[!] [" MESSAGE_NAMESPACE "] " fmt, ##__VA_ARGS__); } while(0)
+
 #define EVAL_PRINT_I32(x) printf("%s = %d:%x\n", #x, x, x)
 #define EVAL_PRINT_U32(x) printf("%s = %u:%x\n", #x, x, x)
 #define EVAL_PRINT_I64(x) printf("%s = %lld:%llx\n", #x, x, x)

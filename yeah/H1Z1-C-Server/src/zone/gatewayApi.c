@@ -250,9 +250,11 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
     u8 channel  = *data >> 5;
     u8 packetId = *data & 0b00011111;
 
-    // Gateway control packets (LoginRequest, LoginReply, etc.) are ONLY on channel 0.
-    // Non-zero channels are always tunnel data.
     if (channel != 0) {
+        if (channel == 2) {
+            // Channel 2 = position updates, silently drop for now
+            return;
+        }
         printf(MESSAGE_CONCAT_INFO("(%u) Routing channel %u data as tunnel data\n"), channel, channel);
         if (dataLen > 1) {
             GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);

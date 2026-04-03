@@ -53,6 +53,7 @@ packetIdSwitch:
     switch (packetId) {
         case ZONE_CLIENTISREADY_ID: {
             kind = Zone_Packet_Kind_ClientIsReady;
+            PRINT_TIMESTAMP(); printf("[*] ClientIsReady received\n");
             __time64_t t1; _time64(&t1);
             printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
                    zone_packet_names[kind], t1,
@@ -68,6 +69,7 @@ packetIdSwitch:
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
+            PRINT_TIMESTAMP(); printf("[*] ClientFinishedLoading received\n");
             __time64_t t2; _time64(&t2);
             printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
                    zone_packet_names[kind], t2,
@@ -182,207 +184,68 @@ packetIdSwitch:
         } break;
         case ZONE_PLAYERWORLDTRANSFERREQUEST_ID: {
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
-            __time64_t tNow;
-            _time64(&tNow);
-            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n"),
-                   zone_packet_names[kind], tNow,
-                   session->isReady, session->finished_loading, session->characterReleased,
-                   session->characterDeployed);
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
-            // 1. Transfer confirm
+            // 1. Transfer reply
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
             transferReply.world_id_reply = 1;
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_PlayerWorldTransferReply,
-                           &transferReply);
-
-            // 2. Initialization parameters
-            Zone_Packet_InitializationParameters init_params = {
-                .environment = STR8("LIVE_KOTK"),
-            };
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
-                           &init_params);
-
-            // 3. Zone Details
-            Zone_Packet_SendZoneDetails send_zone_details = {
-                .zone_name = STR8("Z2"),
-                .zone_type = 4,
-                .unk_bool = FALSE,
-                .overcast = 1.0f,
-                .fogDensity = 0.000173f,
-                .fogFloor = 10.0f,
-                .fogGradient = 0.0144f,
-                .globalPrecipitation = 0,
-                .temperature = 75,
-                .skyClarity = 0,
-                .cloudWeight0 = 0.05f,
-                .cloudWeight1 = 0.0f,
-                .cloudWeight2 = 0.05f,
-                .cloudWeight3 = 0.15f,
-                .transitionTime = 0,
-                .sunAxisX = 38,
-                .sunAxisY = -15,
-                .sunAxisZ = 0,
-                .windDirX = -1.0f,
-                .windDirY = -0.5f,
-                .windDirZ = -1.0f,
-                .wind = 3,
-                .rainMinStrength = 0,
-                .rainRampUpTimeSeconds = 1,
-                .cloudFile = STR8("sky_Z_clouds.dds"),
-                .stratusCloudTiling = 0.30f,
-                .stratusCloudScrollU = -0.002f,
-                .stratusCloudScrollV = 0,
-                .stratusCloudHeight = 1000,
-                .cumulusCloudTiling = 0.20f,
-                .cumulusCloudScrollU = 0,
-                .cumulusCloudScrollV = 0.002f,
-                .cumulusCloudHeight = 8000,
-                .cloudAnimationSpeed = 0,
-                .cloudSilverLiningThickness = 0.25f,
-                .cloudSilverLiningBrightness = 7.0f,
-                .cloudShadows = 0.5f,
-                .zone_id = 5,
-                .zone_id_2 = 5,
-                .name_id = 61609,
-                .unk_bool2 = TRUE,
-                .lighting = STR8("Lighting_Z2.txt"),
-                .unk_bool3 = FALSE,
-                .unk_bool4 = FALSE,
-            };
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_SendZoneDetails,
-                           &send_zone_details);
-
-            // 4. Game Settings
-            Zone_Packet_ClientGameSettings game_settings = {
-                .interact_glow_and_dist = 16,
-                .unk_bool = TRUE,
-                .timescale = 1.0,
-                .enable_weapons = 1,
-                .unk_u32_2 = 1,
-                .unk_float2 = 15.,
-                .damage_multiplier = 11.,
-            };
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
-                           &game_settings);
-
-            // 5. Location Update
-            Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-                .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
-                .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
-                .trigger_loading_screen = TRUE,
-                .unk_u8_1 = 0,
-                .unk_bool = FALSE,
-            };
             ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
+                        Zone_Packet_Kind_PlayerWorldTransferReply, &transferReply);
 
-            // 6. Reset loading flags for the new zone transition
-            session->finished_loading = FALSE;
-            session->isReady = FALSE;
-            session->characterDeployed = FALSE;
-
-                // ADD THESE before ClientBeginZoning:
-            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_DynamicAppearance.bin");
-            printf("[TRANSFER] Sending empty DynamicAppearance ref data\n");
-            {
-            u8 emptyDynAppearance[] = {
-                    0x17, 0x06,
-                    0x04, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                };
-                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
-                memcpy(baseBuffer + TunnelDataHeaderLen, emptyDynAppearance, sizeof(emptyDynAppearance));
-                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
-            }
-            printf("[TRANSFER] Sending empty ItemDefinitions ref data\n");
-            {
-                u8 emptyItemDefs[] = {
-                    0x09, 0x47, 0x00,  // opcode: CommandItemDefinitions (0x09 0x4700)
-                    0x00, 0x00, 0x00, 0x00,  // stream length = 0 (empty stream)
-                };
-                // Actually we need stream length to include the list count:
-                u8 emptyItemDefs2[] = {
-                    0x09, 0x47, 0x00,           // opcode
-                    0x04, 0x00, 0x00, 0x00,     // stream length = 4
-                    0x00, 0x00, 0x00, 0x00,     // list count = 0 (no item defs)
-                };
-                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
-                memcpy(baseBuffer + TunnelDataHeaderLen, emptyItemDefs2, sizeof(emptyItemDefs2));
-                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
-            }
-            printf("[TRANSFER] Sending empty WeaponDefinitions ref data\n");
-            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 65536, "..\\data\\ReferenceData_WeaponDefinitions.bin");
-            {
-                u8 emptyWeaponDefs[] = {
-                    0x17, 0x04,
-                    0x10, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x00,
-                };
-                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyWeaponDefs) + TunnelDataHeaderLen);
-                memcpy(baseBuffer + TunnelDataHeaderLen, emptyWeaponDefs, sizeof(emptyWeaponDefs));
-                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyWeaponDefs) + TunnelDataHeaderLen);
-            }
-            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_ProfileDefinitions.bin");
-            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 8192,  "..\\data\\ReferenceData_ProjectileDefinitions.bin");
-            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_ItemClassDefinitions.bin");
-
-            // 7. Begin Zoning
+            // 2. ClientBeginZoning — triggers the zone load
             Zone_Packet_ClientBeginZoning beginZoning = { 0 };
-            beginZoning.zone_name = STR8("Z2");
-            beginZoning.zone_type = 4;
-            beginZoning.pos = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-            beginZoning.rot = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
-            beginZoning.overcast = 1.0f;
-            beginZoning.fogDensity = 0.000173f;
-            beginZoning.fogFloor = 10.0f;
-            beginZoning.fogGradient = 0.0144f;
-            beginZoning.globalPrecipitation = 0.0f;
-            beginZoning.temperature = 75.0f;
-            beginZoning.skyClarity = 0.0f;
-            beginZoning.cloudWeight0 = 0.05f;
-            beginZoning.cloudWeight1 = 0.0f;
-            beginZoning.cloudWeight2 = 0.05f;
-            beginZoning.cloudWeight3 = 0.15f;
-            beginZoning.transitionTime = 0.0f;
-            beginZoning.sunAxisX = 38.0f;
-            beginZoning.sunAxisY = -15.0f;
-            beginZoning.sunAxisZ = 0.0f;
-            beginZoning.windDirX = -1.0f;
-            beginZoning.windDirY = -0.5f;
-            beginZoning.windDirZ = -1.0f;
-            beginZoning.wind = 3.0f;
-            beginZoning.rainMinStrength = 0.0f;
-            beginZoning.rainRampUpTimeSeconds = 1.0f;
-            beginZoning.cloudFile = STR8("sky_Z_clouds.dds");
-            beginZoning.stratusCloudTiling = 0.30f;
-            beginZoning.stratusCloudScrollU = -0.002f;
-            beginZoning.stratusCloudScrollV = 0.0f;
-            beginZoning.stratusCloudHeight = 1000.0f;
-            beginZoning.cumulusCloudTiling = 0.20f;
-            beginZoning.cumulusCloudScrollU = 0.0f;
-            beginZoning.cumulusCloudScrollV = 0.002f;
-            beginZoning.cumulusCloudHeight = 8000.0f;
-            beginZoning.cloudAnimationSpeed = 0.0f;
+            beginZoning.zone_name                  = STR8("Z2");
+            beginZoning.zone_type                  = 4;
+            beginZoning.pos                        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+            beginZoning.rot                        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+            beginZoning.overcast                   = 1.0f;
+            beginZoning.fogDensity                 = 0.000173f;
+            beginZoning.fogFloor                   = 10.0f;
+            beginZoning.fogGradient                = 0.0144f;
+            beginZoning.globalPrecipitation        = 0.0f;
+            beginZoning.temperature                = 75.0f;
+            beginZoning.skyClarity                 = 0.0f;
+            beginZoning.cloudWeight0               = 0.05f;
+            beginZoning.cloudWeight1               = 0.0f;
+            beginZoning.cloudWeight2               = 0.05f;
+            beginZoning.cloudWeight3               = 0.15f;
+            beginZoning.transitionTime             = 0.0f;
+            beginZoning.sunAxisX                   = 38.0f;
+            beginZoning.sunAxisY                   = -15.0f;
+            beginZoning.sunAxisZ                   = 0.0f;
+            beginZoning.windDirX                   = -1.0f;
+            beginZoning.windDirY                   = -0.5f;
+            beginZoning.windDirZ                   = -1.0f;
+            beginZoning.wind                       = 3.0f;
+            beginZoning.rainMinStrength            = 0.0f;
+            beginZoning.rainRampUpTimeSeconds      = 1.0f;
+            beginZoning.cloudFile                  = STR8("sky_Z_clouds.dds");
+            beginZoning.stratusCloudTiling         = 0.30f;
+            beginZoning.stratusCloudScrollU        = -0.002f;
+            beginZoning.stratusCloudScrollV        = 0.0f;
+            beginZoning.stratusCloudHeight         = 1000.0f;
+            beginZoning.cumulusCloudTiling         = 0.20f;
+            beginZoning.cumulusCloudScrollU        = 0.0f;
+            beginZoning.cumulusCloudScrollV        = 0.002f;
+            beginZoning.cumulusCloudHeight         = 8000.0f;
+            beginZoning.cloudAnimationSpeed        = 0.0f;
             beginZoning.cloudSilverLiningThickness = 0.25f;
             beginZoning.cloudSilverLiningBrightness = 7.0f;
-            beginZoning.cloudShadows = 0.5f;
-            beginZoning.unk_byte_1 = 4;
-            beginZoning.zone_id_1 = 5;
-            beginZoning.zone_id_2 = 5;
-            beginZoning.name_id = 61609;
-            beginZoning.unk_dword_1 = 0x0f2b07d0;
-            beginZoning.unk_bool_1 = FALSE;
-            beginZoning.wait_for_zone_ready = FALSE;
-            beginZoning.unk_bool_2 = FALSE;
-            ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientBeginZoning,
-                           &beginZoning);
+            beginZoning.cloudShadows               = 0.5f;
+            beginZoning.unk_byte_1                 = 4;
+            beginZoning.zone_id_1                  = 5;
+            beginZoning.zone_id_2                  = 5;
+            beginZoning.name_id                    = 61609;
+            beginZoning.unk_dword_1                = 0x0f2b07d0;
+            beginZoning.unk_bool_1                 = FALSE;
+            beginZoning.wait_for_zone_ready        = FALSE;
+            beginZoning.unk_bool_2                 = FALSE;
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
 
-            // 8. Send character data
-            SendSelfToClient(app, session, FALSE);
-
+            // 3. Reset loading flags
+            session->finished_loading = FALSE;
+            session->isReady = FALSE;
         } break;
         case 0x11: {
             // ClientUpdateBase — check sub-opcode
@@ -415,6 +278,21 @@ packetIdSwitch:
         case 0x1144: {
             kind = Zone_Packet_Kind_ClientUpdate_MonitorTimeDrift;
             printf(MESSAGE_CONCAT_INFO("Handling %s (ignored)\n"), zone_packet_names[kind]);
+        } break;
+        case ZONE_COMMAND_INTERACTREQUEST_ID: {
+            kind = Zone_Packet_Kind_Command_InteractRequest;
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_Command_InteractCancel, 0);
+        } break;
+
+        case ZONE_COMMAND_INTERACTCANCEL_ID: {
+            kind = Zone_Packet_Kind_Command_InteractCancel;
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+        } break;
+        case ZONE_COMMAND_INTERACTIONLIST_ID: {
+            kind = Zone_Packet_Kind_Command_InteractionList;
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);

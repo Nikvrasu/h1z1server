@@ -31,11 +31,11 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     _time64(&eqTime);
     static int eqCount = 0;
     eqCount++;
+    PRINT_TIMESTAMP(); printf("========== SEND EQUIPMENT & MOVEMENT (ClientFinishedLoading) ==========\n");
     printf("[EQUIP] SendEquipmentAndMovement called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
            eqCount, eqTime, (unsigned long long)session->characterId,
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed);
-    printf("\n========== SEND EQUIPMENT & MOVEMENT (ClientFinishedLoading) ==========\n");
 
     // 1. GameTimeSync — h1emu calls sendGameTimeSync(client) in ClientFinishedLoading
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
@@ -108,7 +108,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     setEquipment.unk_bool_2 = TRUE;
     setEquipment.length_1 = (struct length_1_s[1]){[0] = {
         .character_id = session->characterId, 
-        .profile_id = 5,
+        .profile_id = 3,
     }};
     setEquipment.equipment_slot_array_count = 5;
     setEquipment.equipment_slot_array = (struct equipment_slot_array_s[5]){
@@ -189,6 +189,11 @@ void DeployCharacter(AppState* app, SessionState* session) {
            deployCount, deployTime, (unsigned long long)session->characterId,
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed);
+    printf("[DEPLOY] Session actor: model=%u gender=%u head=%u hair='%.*s' headActor='%.*s'\n",
+           session->pGetPlayerActor.actorModelId, session->pGetPlayerActor.gender,
+           session->pGetPlayerActor.headType,
+           (int)session->pGetPlayerActor.hairModel.size, session->pGetPlayerActor.hairModel.data,
+           (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
 
     // Guard: prevent re-entry from 0x04 and 0x11/0x97 both firing,
     // or PlayerWorldTransfer reset allowing a second cycle through.
@@ -198,7 +203,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     // }
     // session->characterDeployed = TRUE;
 
-    printf("\n========== DEPLOY CHARACTER BEGIN (h1emu sequence) ==========\n");
+    PRINT_TIMESTAMP(); printf("========== DEPLOY CHARACTER BEGIN ==========\n");
 
     // 1. POIChangeMessage
     ZonePacketSend(app, session, &app->arenaPerTick,
@@ -302,6 +307,7 @@ void OnLogin(AppState* app, SessionState* session) {
     printf("[ONLOGIN] OnLogin called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx\n",
            onLoginCount, onLoginTime, (unsigned long long)session->characterId);
 
+    PRINT_TIMESTAMP(); printf("[*] [TIMING] OnLogin BEGIN: 1. InitializationParameters\n");
     // 1. InitializationParameters
     Zone_Packet_InitializationParameters init_params = {
         .environment  = STR8("LIVE_KOTK"),
@@ -311,6 +317,7 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
                    &init_params);
 
+    PRINT_TIMESTAMP(); printf("[*] [TIMING] 2. SendZoneDetails\n");
     // 2. SendZoneDetails
     Zone_Packet_SendZoneDetails send_zone_details = {
         .zone_name = STR8("Z2"),
@@ -412,7 +419,7 @@ void OnLogin(AppState* app, SessionState* session) {
         setEquipment.unk_bool_2 = TRUE;
         setEquipment.length_1 = (struct length_1_s[1]){[0] = {
             .character_id = session->characterId,
-            .profile_id = 5,
+            .profile_id = 3,
         }};
         setEquipment.equipment_slot_array_count = 5;
         setEquipment.equipment_slot_array = (struct equipment_slot_array_s[5]){
@@ -453,7 +460,7 @@ void OnLogin(AppState* app, SessionState* session) {
         GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
     }
 
-  {
+    {
         u8 emptyWeaponDefs[] = {
             0x17, 0x04,
             0x18, 0x00, 0x00, 0x00,
@@ -472,6 +479,14 @@ void OnLogin(AppState* app, SessionState* session) {
     // Reset loading flags before zone transition
     session->finished_loading = FALSE;
     session->isReady = FALSE;
+
+    __time64_t tzStart; _time64(&tzStart);
+    printf("[ONLOGIN] Flags: finished_loading=%d isReady=%d characterReleased=%d\n",
+           session->finished_loading, session->isReady, session->characterReleased);
+    printf("[ONLOGIN] Session actorModelId=%u gender=%u headType=%u headActor='%.*s'\n",
+           session->pGetPlayerActor.actorModelId, session->pGetPlayerActor.gender,
+           session->pGetPlayerActor.headType,
+           (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
 
     // 8. ClientBeginZoning
     Zone_Packet_ClientBeginZoning beginZoning = { 0 };
@@ -540,4 +555,9 @@ void OnLogin(AppState* app, SessionState* session) {
     initDetails.unk_u32_1 = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                 Zone_Packet_Kind_ClientInitializationDetails, &initDetails);
+
+    __time64_t tzEnd; _time64(&tzEnd);
+    printf("[ONLOGIN] All init packets sent in %lld seconds, waiting for ClientIsReady\n", tzEnd - tzStart);
+    printf("[ONLOGIN] Post-init flags: finished_loading=%d isReady=%d characterReleased=%d\n",
+           session->finished_loading, session->isReady, session->characterReleased);
 }

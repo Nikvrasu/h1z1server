@@ -6,11 +6,24 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
-#include <time.h>
+#include <stdarg.h>
 
 #define YOTE_USE_ARENA 1
 #define YOTE_USE_STRING 1
 #define YOTE_PLATFORM_USE_SOCKETS 1
+
+/* Redirect ALL printf to timestamped version */
+static inline int _yote_printf_ts(const char* fmt, ...) {
+    time_t _ts = time(NULL);
+    struct tm* _tm = localtime(&_ts);
+    int r = printf("[%02d:%02d:%02d] ", _tm->tm_hour, _tm->tm_min, _tm->tm_sec);
+    va_list args;
+    va_start(args, fmt);
+    r += vprintf(fmt, args);
+    va_end(args);
+    return r;
+}
+#define printf _yote_printf_ts
 
 #include "yote.h"
 #include "yote_platform.h"
