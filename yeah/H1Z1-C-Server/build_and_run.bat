@@ -3,6 +3,13 @@ title H1Z1 Server - Build and Run
 cd /d "D:\h1z1server\yeah\H1Z1-C-Server"
 
 echo ============================================================
+echo  Cleaning old zone binaries...
+echo ============================================================
+if exist "zone_binaries\zoneModule.dll" del /f /q "zone_binaries\zoneModule.dll"
+if exist "zone_binaries\zoneModuleTemp.dll" del /f /q "zone_binaries\zoneModuleTemp.dll"
+if exist "zone_binaries\zoneServer.exe" del /f /q "zone_binaries\zoneServer.exe"
+
+echo ============================================================
 echo  Building Login Server...
 echo ============================================================
 

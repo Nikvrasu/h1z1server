@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <time.h>
 
 #define YOTE_USE_ARENA 1
 #define YOTE_USE_STRING 1
@@ -281,6 +282,12 @@ __declspec(dllexport) AppTick(serverTick) {
                     app->sessions[firstFreeSession].previousAck4 = -1;
                     app->sessions[firstFreeSession].nextAck5 = -1;
                     app->sessions[firstFreeSession].previousAck5 = -1;
+
+                    // Initialize character data flags
+                    app->sessions[firstFreeSession].characterDataSent = FALSE;
+                    app->sessions[firstFreeSession].equipmentDataSent = FALSE;
+                    app->sessions[firstFreeSession].characterAppearanceSent = FALSE;
+                    app->sessions[firstFreeSession].resourcesSent = FALSE;
 
                     memcpy(&app->sessions[firstFreeSession].args, &app->args, sizeof(app->args));
 

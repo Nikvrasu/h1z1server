@@ -168,6 +168,12 @@ void SendSelfToClientRaw(AppState* app, SessionState* session) {
 }
 
 void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
+    static int sstcCount = 0;
+    sstcCount++;
+    printf("[SSTC] SendSelfToClient called %d time(s) total [withStats=%d] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d\n",
+           sstcCount, withStats,
+           (unsigned long long)session->characterId,
+           session->isReady, session->finished_loading, session->characterReleased);
     // Use session data if available, fallback to defaults
     u32 actorModelId = session->pGetPlayerActor.actorModelId;
     if (actorModelId == 0) actorModelId = 9469; // default male
@@ -183,6 +189,10 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
 
     String8 hairModel = session->pGetPlayerActor.hairModel;
     if (hairModel.size == 0) hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
+
+    String8 eyesModel = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
+    String8 chestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
+    String8 legsModel = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
 
     String8 charName = session->characterName;
     if (charName.size == 0) charName = STR8("Unknown");
@@ -362,38 +372,60 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_array_291_count = 0,
         .unk_array_2112_count = 0,
         .unk_array_2122_count = 0,
-        .equipment_slots_count = 3,
-        .equipment_slots = (struct equipment_slots_s[3]){
+        .equipment_slots_count = 5,
+        .equipment_slots = (struct equipment_slots_s[5]){
             [0] = {
-                .unk_dword_7199 = 0,
-                .unk_dword_890 = 0,
-                .unk_string_4 = STR8("SurvivorMale_Chest_Bra.adr"),
-                .unk_string_2 = STR8(""),
+                .unk_dword_7199 = 1,
+                .unk_dword_890 = 1,
+                .unk_string_4 = headActor,
+                .unk_string_2 = STR8("Default"),
+                .equipment_slot_id2 = 1,
+                .equipment_slot_id3 = 1,
+                .guid = 0x1003,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            },
+            [1] = {
+                .unk_dword_7199 = 3,
+                .unk_dword_890 = 3,
+                .unk_string_4 = chestModel,
+                .unk_string_2 = STR8("Default"),
                 .equipment_slot_id2 = 3,
                 .equipment_slot_id3 = 3,
                 .guid = 0x1001,
                 .tint_alias = STR8("Default"),
                 .decal_alias = STR8("#"),
             },
-            [1] = {
-                .unk_dword_7199 = 0,
-                .unk_dword_890 = 0,
-                .unk_string_4 = STR8("SurvivorMale_Legs_Pants_Underwear.adr"),
-                .unk_string_2 = STR8(""),
+            [2] = {
+                .unk_dword_7199 = 4,
+                .unk_dword_890 = 4,
+                .unk_string_4 = legsModel,
+                .unk_string_2 = STR8("Default"),
                 .equipment_slot_id2 = 4,
                 .equipment_slot_id3 = 4,
                 .guid = 0x1002,
                 .tint_alias = STR8("Default"),
                 .decal_alias = STR8("#"),
             },
-            [2] = {
-                .unk_dword_7199 = 0,
-                .unk_dword_890 = 0,
+            [3] = {
+                .unk_dword_7199 = 7,
+                .unk_dword_890 = 7,
                 .unk_string_4 = STR8("Weapon_Empty.adr"),
-                .unk_string_2 = STR8(""),
+                .unk_string_2 = STR8("Default"),
                 .equipment_slot_id2 = 7,
                 .equipment_slot_id3 = 7,
                 .guid = ITEM_GUID_FISTS,
+                .tint_alias = STR8("Default"),
+                .decal_alias = STR8("#"),
+            },
+            [4] = {
+                .unk_dword_7199 = 105,
+                .unk_dword_890 = 105,
+                .unk_string_4 = eyesModel,
+                .unk_string_2 = STR8("Default"),
+                .equipment_slot_id2 = 105,
+                .equipment_slot_id3 = 105,
+                .guid = 0x1004,
                 .tint_alias = STR8("Default"),
                 .decal_alias = STR8("#"),
             },

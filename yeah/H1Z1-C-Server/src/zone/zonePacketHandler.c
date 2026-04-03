@@ -53,7 +53,10 @@ packetIdSwitch:
     switch (packetId) {
         case ZONE_CLIENTISREADY_ID: {
             kind = Zone_Packet_Kind_ClientIsReady;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t t1; _time64(&t1);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+                   zone_packet_names[kind], t1,
+                   session->isReady, session->finished_loading, session->characterReleased);
 
             if (session->isReady) {
                 printf("[*] Ignoring duplicate ClientIsReady\n");
@@ -65,7 +68,10 @@ packetIdSwitch:
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t t2; _time64(&t2);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
+                   zone_packet_names[kind], t2,
+                   session->isReady, session->finished_loading, session->characterReleased);
 
             if (session->finished_loading) {
                 printf("[*] Ignoring duplicate ClientFinishedLoading\n");
@@ -118,11 +124,7 @@ packetIdSwitch:
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
         } break;
         case ZONE_WALLOFDATA_UIEVENT_ID: {
-            kind = Zone_Packet_Kind_WallOfData_UIEvent;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-
-            Zone_Packet_WallOfData_UIEvent uiEvent = { 0 };
-            zone_packet_unpack(data + 2, dataLen - 2, kind, &uiEvent, &app->arenaPerTick);
+            // No-op — client spam, nothing to handle
         } break;
         case ZONE_WALLOFDATA_CLIENTSYSTEMINFO_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientSystemInfo;
@@ -180,7 +182,12 @@ packetIdSwitch:
         } break;
         case ZONE_PLAYERWORLDTRANSFERREQUEST_ID: {
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            __time64_t tNow;
+            _time64(&tNow);
+            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n"),
+                   zone_packet_names[kind], tNow,
+                   session->isReady, session->finished_loading, session->characterReleased,
+                   session->characterDeployed);
 
             // 1. Transfer confirm
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
@@ -272,6 +279,55 @@ packetIdSwitch:
             // 6. Reset loading flags for the new zone transition
             session->finished_loading = FALSE;
             session->isReady = FALSE;
+            session->characterDeployed = FALSE;
+
+                // ADD THESE before ClientBeginZoning:
+            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_DynamicAppearance.bin");
+            printf("[TRANSFER] Sending empty DynamicAppearance ref data\n");
+            {
+            u8 emptyDynAppearance[] = {
+                    0x17, 0x06,
+                    0x04, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                };
+                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
+                memcpy(baseBuffer + TunnelDataHeaderLen, emptyDynAppearance, sizeof(emptyDynAppearance));
+                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
+            }
+            printf("[TRANSFER] Sending empty ItemDefinitions ref data\n");
+            {
+                u8 emptyItemDefs[] = {
+                    0x09, 0x47, 0x00,  // opcode: CommandItemDefinitions (0x09 0x4700)
+                    0x00, 0x00, 0x00, 0x00,  // stream length = 0 (empty stream)
+                };
+                // Actually we need stream length to include the list count:
+                u8 emptyItemDefs2[] = {
+                    0x09, 0x47, 0x00,           // opcode
+                    0x04, 0x00, 0x00, 0x00,     // stream length = 4
+                    0x00, 0x00, 0x00, 0x00,     // list count = 0 (no item defs)
+                };
+                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
+                memcpy(baseBuffer + TunnelDataHeaderLen, emptyItemDefs2, sizeof(emptyItemDefs2));
+                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
+            }
+            printf("[TRANSFER] Sending empty WeaponDefinitions ref data\n");
+            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 65536, "..\\data\\ReferenceData_WeaponDefinitions.bin");
+            {
+                u8 emptyWeaponDefs[] = {
+                    0x17, 0x04,
+                    0x10, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                };
+                u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyWeaponDefs) + TunnelDataHeaderLen);
+                memcpy(baseBuffer + TunnelDataHeaderLen, emptyWeaponDefs, sizeof(emptyWeaponDefs));
+                GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyWeaponDefs) + TunnelDataHeaderLen);
+            }
+            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_ProfileDefinitions.bin");
+            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 8192,  "..\\data\\ReferenceData_ProjectileDefinitions.bin");
+            // ZonePacketRawFileSend(app, session, &app->arenaPerTick, 4096,  "..\\data\\ReferenceData_ItemClassDefinitions.bin");
 
             // 7. Begin Zoning
             Zone_Packet_ClientBeginZoning beginZoning = { 0 };
@@ -345,12 +401,20 @@ packetIdSwitch:
         } break;
         case 0x0f: {
             if (dataLen > 1 && data[1] == 0x45) {
-                printf("[*] Handling Character.FullCharacterDataRequest\n");
-                // h1emu responds with LightweightToFullNpc (0xdb), not LightweightToFullPc (0xda)
-                u8* baseBuffer = arena_push_size(&app->arenaPerTick, 1 + TunnelDataHeaderLen);
-                baseBuffer[TunnelDataHeaderLen] = 0xdb;
-                GatewayTunnelDataSend(app, session, baseBuffer, 1 + TunnelDataHeaderLen);
+                u64 requestedCharId = 0;
+                if (dataLen >= 10) {
+                    requestedCharId = endian_read_u64_little(data + 2);
+                }
+                printf("[*] FullCharacterDataRequest for 0x%llx — ignoring (self has full data from SendSelfToClient)\n",
+                       (unsigned long long)requestedCharId);
+                // Don't respond. The self-character already received full data via
+                // SendSelfToClient. The old bare 0xdb byte was a corrupt packet that
+                // may have been resetting the character's visual state.
             }
+        } break;
+        case 0x1144: {
+            kind = Zone_Packet_Kind_ClientUpdate_MonitorTimeDrift;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ignored)\n"), zone_packet_names[kind]);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);

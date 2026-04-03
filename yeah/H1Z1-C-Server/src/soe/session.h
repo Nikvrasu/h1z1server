@@ -199,7 +199,14 @@ struct SessionState {
 
     // gateway channel stuff & testing related
     u8 gatewayChannel;
-    b8 isLoggedIn; 
+    b8 isLoggedIn;
+    
+    // Add these fields to track character data state
+    b8 characterDataSent;      // Track if character data has been sent
+    b8 equipmentDataSent;     // Track if equipment data has been sent
+    b8 characterAppearanceSent; // Track if appearance data has been sent
+    b8 resourcesSent;        // Track if resources data has been sent
+    
     String8 characterName;
 
     u64 characterId;
@@ -270,6 +277,7 @@ struct SessionState {
 
     // begin world_character struct
     b8 characterReleased;
+    b8 characterDeployed;       // TODO 3: Set in DeployCharacter to prevent re-entry
     b8 isLoading;
     b8 isMoving;
     b8 isRunning;
