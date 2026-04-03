@@ -39,8 +39,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
 
     // 1. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
-    gameTimeSync.cycle_speed = 10.f;
-    gameTimeSync.time = 0x0bull;
+    gameTimeSync.cycle_speed = 0.0f;
+    gameTimeSync.time = 300000;
     gameTimeSync.unk_bool = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
 
@@ -87,7 +87,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     // 3. Character.WeaponStance
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
-    weaponStance.stance = 1;
+    weaponStance.stance = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
@@ -159,7 +159,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
 
     // 6. Command.RunSpeed
-    Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
+    Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 7.5f };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
 
@@ -282,7 +282,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     // 8. WeaponStance — send immediately so character has valid animation state
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
-    weaponStance.stance = 1;
+    weaponStance.stance = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
@@ -402,6 +402,31 @@ void OnLogin(AppState* app, SessionState* session) {
 
     SendSelfToClient(app, session, FALSE);
 
+    Zone_Packet_AddLightweightPc lightweightPc = { 0 };
+    lightweightPc.character_id = session->characterId;
+    lightweightPc.transient_id.value = 52;
+    lightweightPc.id_characterFirstName = session->characterName;
+    lightweightPc.id_characterLastName = STR8("");
+    lightweightPc.id_unknownString1 = STR8("00000000000000000");
+    lightweightPc.id_characterName = session->characterName;
+    lightweightPc.actorModelId = session->pGetPlayerActor.actorModelId;
+    lightweightPc.position = (vec3){
+        .x = -297.31f, .y = 506.06f, .z = -4894.10f
+    };
+    lightweightPc.rotation = (vec4){
+        .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f
+    };
+    lightweightPc.movementVersion = 1;
+    lightweightPc.flags1 = 0;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
+
+    Zone_Packet_Character_UpdateScale updateScale = { 0 };
+    updateScale.character_id = session->characterId;
+    updateScale.scale = (vec4){ .x = 1.0f, .y = 1.0f, .z = 1.0f, .w = 1.0f };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+    Zone_Packet_Kind_Character_UpdateScale, &updateScale);
+
     // 5.5 Send equipment immediately so client has attachments before zone load
     {
         u32 eqGender = session->pGetPlayerActor.gender;
@@ -449,16 +474,7 @@ void OnLogin(AppState* app, SessionState* session) {
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
     // 7. Reference data — empty valid packets
-    {
-        u8 emptyItemDefs2[] = {
-            0x09, 0x47, 0x00,
-            0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-        };
-        u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
-        memcpy(baseBuffer + TunnelDataHeaderLen, emptyItemDefs2, sizeof(emptyItemDefs2));
-        GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyItemDefs2) + TunnelDataHeaderLen);
-    }
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(10), "..\\data\\Command_ItemDefinitions.bin");
 
     {
         u8 emptyWeaponDefs[] = {

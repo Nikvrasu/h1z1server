@@ -92,13 +92,12 @@ packetIdSwitch:
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
             Zone_Packet_GameTimeSync gameTimeSync = { 0 };
-
-            gameTimeSync.cycle_speed = 10.f;
-            gameTimeSync.time = 0x0bull;
+            gameTimeSync.cycle_speed = 0.0f;
+            gameTimeSync.time = 300000;
             gameTimeSync.unk_bool = TRUE;
 
             ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync,
-                           &gameTimeSync);
+                        &gameTimeSync);
         } break;
         case ZONE_GETCONTINENTBATTLEINFO_ID: {
             kind = Zone_Packet_Kind_GetContinentBattleInfo;
