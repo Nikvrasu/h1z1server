@@ -19,6 +19,7 @@ IF NOT EXIST output mkdir output
 gcc -o schema_tool.exe -g -O2 ../src/schema_tool.c -lm
 schema_tool.exe kotk_login_udp_11.schm output/kotk_login_udp_11.c
 popd
+
 pushd login_binaries
 gcc -shared -o loginModule.dll -g -O2 ../src/kotk_login_server.c -DYOTE_INTERNAL -luser32 -lkernel32 -lws2_32 -lwinmm
 gcc -o loginServer.exe -g -O2 ../src/win32_login_server.c -DYOTE_INTERNAL -luser32 -lkernel32 -lws2_32 -lwinmm
@@ -34,6 +35,7 @@ pushd schema
 gcc -o schema_tool.exe -g -O2 ../src/schema_tool.c -lm
 schema_tool.exe client_protocol_1087.schm output/client_protocol_1087.c
 popd
+
 pushd zone_binaries
 gcc -shared -o zoneModule.dll -g -O0 ../src/kotk_zone_server.c -DYOTE_INTERNAL -luser32 -lkernel32 -lws2_32 -lwinmm
 gcc -o zoneServer.exe -g -O2 ../src/win32_zone_server.c -DYOTE_INTERNAL -luser32 -lkernel32 -lws2_32 -lwinmm
@@ -50,11 +52,15 @@ popd
 
 echo.
 echo ============================================================
-echo  Starting Zone Server (output in THIS window)...
+echo  Starting Zone Server (Output to Console + zone_log.txt)
 echo ============================================================
 pushd zone_binaries
 IF EXIST packets rmdir /S /Q packets
-zoneServer.exe > zone_log.txt 2>&1
+
+:: Running via MSYS2/MinGW64 tee utility
+:: 2>&1 redirects stderr to stdout so crashes are also logged
+zoneServer.exe 2>&1 | tee zone_log.txt
+
 popd
 
 echo.
