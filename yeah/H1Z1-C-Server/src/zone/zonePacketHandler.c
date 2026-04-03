@@ -294,6 +294,26 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_Command_InteractionList;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
         } break;
+        case 0x8d: {
+            kind = Zone_Packet_Kind_Synchronization;
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+
+            // Echo back with server timestamps
+            __time64_t now;
+            _time64(&now);
+            u64 serverTimeMs = (u64)now * 1000;
+
+            Zone_Packet_Synchronization sync = { 0 };
+            sync.client_hours_ms = endian_read_u64_little(data + 1);
+            sync.client_hours_ms2 = endian_read_u64_little(data + 9);
+            sync.client_time = endian_read_u64_little(data + 17);
+            sync.server_time = serverTimeMs;
+            sync.server_time_2 = serverTimeMs;
+            sync.unk_time = 0;
+
+            ZonePacketSend(app, session, &app->arenaPerTick,
+                        Zone_Packet_Kind_Synchronization, &sync);
+        } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);
             // Hex dump first few bytes for debugging

@@ -37,7 +37,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed);
 
-    // 1. GameTimeSync — h1emu calls sendGameTimeSync(client) in ClientFinishedLoading
+    // 1. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 10.f;
     gameTimeSync.time = 0x0bull;
@@ -84,14 +84,14 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData,
                    &updt_weather_data);
 
-    // 2. Character.WeaponStance (reinforcement — also sent in DeployCharacter now)
+    // 3. Character.WeaponStance
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
     weaponStance.stance = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
-    // 3. Equipment.SetCharacterEquipment (reinforcement — also sent in OnLogin now)
+    // 4. Equipment.SetCharacterEquipment
     u32 gender = session->pGetPlayerActor.gender;
     if (gender == 0) gender = 1;
 
@@ -118,8 +118,18 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [3] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [4] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = 0x1004, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
-    // 3b. TODO 5 — Loadout.SetLoadoutSlots (needed for hotbar/context menu)
-    // This mirrors what h1emu sends in LoadoutSlots right after SetCharacterEquipment
+    setEquipment.attachments_data_1_count = 5;
+    setEquipment.attachments_data_1 = (struct attachments_data_1_s[5]){
+        [0] = { .model_name = eqHeadActor, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1 },
+        [1] = { .model_name = eqChestModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3 },
+        [2] = { .model_name = eqLegsModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4 },
+        [3] = { .model_name = STR8("Weapon_Empty.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7 },
+        [4] = { .model_name = eqEyesModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 105 },
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
+
+    // 5. Loadout.SetLoadoutSlots
     Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
     loadoutSlots.character_id = session->characterId;
     loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
@@ -148,23 +158,12 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
 
-    setEquipment.attachments_data_1_count = 5;
-    setEquipment.attachments_data_1 = (struct attachments_data_1_s[5]){
-        [0] = { .model_name = eqHeadActor, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1 },
-        [1] = { .model_name = eqChestModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3 },
-        [2] = { .model_name = eqLegsModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4 },
-        [3] = { .model_name = STR8("Weapon_Empty.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7 },
-        [4] = { .model_name = eqEyesModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 105 },
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-
-    // 4. Command.RunSpeed
+    // 6. Command.RunSpeed
     Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 0.0f };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
 
-    // 5. ClientUpdate.ModifyMovementSpeed
+    // 7. ClientUpdate.ModifyMovementSpeed
     Zone_Packet_ClientUpdate_ModifyMovementSpeed moveSpeed = { 0 };
     moveSpeed.speed = 2.0f;
     moveSpeed.movementVersion = 1;
@@ -380,6 +379,7 @@ void OnLogin(AppState* app, SessionState* session) {
     };
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
                    &game_settings);
+
 
     // 4. ReferenceData.DynamicAppearance — empty valid packet
     {
