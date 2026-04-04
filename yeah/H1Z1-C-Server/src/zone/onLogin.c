@@ -432,43 +432,52 @@ void OnLogin(AppState* app, SessionState* session) {
     Zone_Packet_Kind_Character_UpdateScale, &updateScale);
 
     // 5.5 Send equipment immediately so client has attachments before zone load
-    {
-        u32 eqGender = session->pGetPlayerActor.gender;
-        if (eqGender == 0) eqGender = 1;
+{
+    u32 eqGender = session->pGetPlayerActor.gender;
+    if (eqGender == 0) eqGender = 1;
 
-        String8 eqHeadActor = session->pGetPlayerActor.headActor;
-        if (eqHeadActor.size == 0) eqHeadActor = (eqGender == 2) ? STR8("SurvivorFemale_Head_01.adr") : STR8("SurvivorMale_Head_01.adr");
+    String8 eqHeadActor = session->pGetPlayerActor.headActor;
+    if (eqHeadActor.size == 0) eqHeadActor = (eqGender == 2) ? STR8("SurvivorFemale_Head_01.adr") : STR8("SurvivorMale_Head_01.adr");
 
-        String8 eqChestModel = (eqGender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr")             : STR8("SurvivorMale_Chest_Bra.adr");
-        String8 eqLegsModel  = (eqGender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr")  : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
-        String8 eqEyesModel  = (eqGender == 2) ? STR8("SurvivorFemale_Eyes_01.adr")               : STR8("SurvivorMale_Eyes_01.adr");
-        Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-        setEquipment.unk_string_1 = STR8("Default");
-        setEquipment.unk_string_2 = STR8("#");
-        setEquipment.unk_bool_2 = TRUE;
-        setEquipment.length_1 = (struct length_1_s[1]){[0] = {
-            .character_id = session->characterId,
-            .profile_id = 3,
-        }};
-        setEquipment.equipment_slot_array_count = 5;
-        setEquipment.equipment_slot_array = (struct equipment_slot_array_s[5]){
-            [0] = { .equipment_slot_id_1 = 1, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 1, .guid = 0x1003, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-            [1] = { .equipment_slot_id_1 = 3, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3, .guid = 0x1001, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-            [2] = { .equipment_slot_id_1 = 4, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4, .guid = 0x1002, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-            [3] = { .equipment_slot_id_1 = 7, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7, .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-            [4] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = 0x1004, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        };
-        setEquipment.attachments_data_1_count = 5;
-        setEquipment.attachments_data_1 = (struct attachments_data_1_s[5]){
-            [0] = { .model_name = eqHeadActor, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1 },
-            [1] = { .model_name = eqChestModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3 },
-            [2] = { .model_name = eqLegsModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4 },
-            [3] = { .model_name = STR8("Weapon_Empty.adr"), .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7 },
-            [4] = { .model_name = eqEyesModel, .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 105 },
-        };
-        ZonePacketSend(app, session, &app->arenaPerTick,
-                       Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-    }
+    String8 eqChestModel = (eqGender == 2) ? STR8("SurvivorFemale_Chest_T-Shirt_Base.adr") : STR8("SurvivorMale_Chest_T-Shirt_Base.adr");
+    String8 eqLegsModel  = (eqGender == 2) ? STR8("SurvivorFemale_Legs_Pants_Base.adr")    : STR8("SurvivorMale_Legs_Pants_Base.adr");
+    String8 eqFeetModel  = (eqGender == 2) ? STR8("SurvivorFemale_Feet_Boots_Base.adr")    : STR8("SurvivorMale_Feet_Boots_Base.adr");
+    String8 eqEyesModel  = (eqGender == 2) ? STR8("SurvivorFemale_Eyes_01.adr")            : STR8("SurvivorMale_Eyes_01.adr");
+
+    String8 eqChestTex = (eqGender == 2) ? STR8("SurvivorFemale_Chest_Shirt_Default") : STR8("SurvivorMale_Chest_Shirt_Default");
+    String8 eqLegsTex  = (eqGender == 2) ? STR8("SurvivorFemale_Legs_Pants_Default")  : STR8("SurvivorMale_Legs_Pants_Default");
+    String8 eqFeetTex  = (eqGender == 2) ? STR8("SurvivorFemale_Feet_Boots_GrayBlue") : STR8("SurvivorMale_Feet_Boots_GrayBlue");
+
+    Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
+    setEquipment.unk_string_1 = STR8("Default");
+    setEquipment.unk_string_2 = STR8("#");
+    setEquipment.unk_bool_2 = TRUE;
+    setEquipment.length_1 = (struct length_1_s[1]){[0] = {
+        .character_id = session->characterId,
+        .profile_id = 5,
+    }};
+    setEquipment.equipment_slot_array_count = 6;
+    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[6]){
+        [0] = { .equipment_slot_id_1 = 1,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 1,   .guid = 0x1003,           .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [1] = { .equipment_slot_id_1 = 3,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3,   .guid = 0x1001,           .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [2] = { .equipment_slot_id_1 = 4,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4,   .guid = 0x1002,           .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [3] = { .equipment_slot_id_1 = 5,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 5,   .guid = 0x1005,           .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [4] = { .equipment_slot_id_1 = 7,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7,   .guid = ITEM_GUID_FISTS,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [5] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = 0x1004,           .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+    };
+    setEquipment.attachments_data_1_count = 6;
+    setEquipment.attachments_data_1 = (struct attachments_data_1_s[6]){
+        [0] = { .model_name = eqHeadActor,              .texture_alias = STR8(""), .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 1   },
+        [1] = { .model_name = eqChestModel,             .texture_alias = eqChestTex, .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 3   },
+        [2] = { .model_name = eqLegsModel,              .texture_alias = eqLegsTex,  .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 4   },
+        [3] = { .model_name = eqFeetModel,              .texture_alias = eqFeetTex,  .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 5   },
+        [4] = { .model_name = STR8("Weapon_Empty.adr"), .texture_alias = STR8(""), .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 7   },
+        [5] = { .model_name = eqEyesModel,              .texture_alias = STR8(""), .tint_alias = STR8(""), .decal_alias = STR8("#"), .slot_id = 105 },
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
+    printf("[DEPLOY] Sent Equipment.SetCharacterEquipment (6 slots: head/chest/legs/feet/rhand/eyes)\n");
+}
 
     // 6. Container.InitEquippedContainers (empty)
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
