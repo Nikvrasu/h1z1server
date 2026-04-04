@@ -302,6 +302,10 @@ struct SessionState {
     i32 needsProximityComplete;
     u64 proximityCompleteTick;
 
+    // Deferred UpdateCamera (0x57) — sent ~500ms after ZoneDoneSendingInitialData
+    i32 needsUpdateCamera;
+    u64 updateCameraTick;
+
     u64 creationDate;
     u64 lastLoginDate;
 

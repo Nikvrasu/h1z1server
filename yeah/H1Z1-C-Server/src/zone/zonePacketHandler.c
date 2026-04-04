@@ -267,11 +267,16 @@ packetIdSwitch:
                 if (dataLen >= 10) {
                     requestedCharId = endian_read_u64_little(data + 2);
                 }
-                printf("[*] FullCharacterDataRequest for 0x%llx — ignoring (self has full data from SendSelfToClient)\n",
+                printf("[*] FullCharacterDataRequest for 0x%llx\n",
                        (unsigned long long)requestedCharId);
-                // Don't respond. The self-character already received full data via
-                // SendSelfToClient. The old bare 0xdb byte was a corrupt packet that
-                // may have been resetting the character's visual state.
+
+                // Only respond if it's asking about our own character
+                if (requestedCharId == session->characterId) {
+                    // Re-send equipment to force composite model rebuild
+                    // This is the correct response path — the client is asking
+                    // us to confirm the full visual state
+                    SendEquipmentAndMovement(app, session);
+                }
             }
         } break;
         case 0x1144: {
@@ -312,6 +317,12 @@ packetIdSwitch:
 
             ZonePacketSend(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_Synchronization, &sync);
+        } break;
+        case ZONE_COMMAND_SETPROFILE_ID: {
+            printf(MESSAGE_CONCAT_INFO("Handling Command_SetProfile\n"));
+            // Client is explicitly requesting profile activation
+            // Re-send equipment and activate profile
+            SendEquipmentAndMovement(app, session);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);

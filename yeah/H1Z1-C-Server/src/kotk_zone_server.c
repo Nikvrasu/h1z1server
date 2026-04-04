@@ -488,6 +488,16 @@ __declspec(dllexport) AppTick(serverTick) {
                 printf("[*] Sent deferred NetworkProximityUpdatesComplete\n");
             }
         }
+
+        // Deferred UpdateCamera (0x57) — shoot raw camera update 500ms after zone init
+        if (app->sessions[i].isLoggedIn && app->sessions[i].needsUpdateCamera) {
+            if (*app->tickCount >= app->sessions[i].updateCameraTick) {
+                printf("[DEFERRED] Sending UpdateCamera 0x57 (raw opcode)\n");
+                ZonePacketSend(app, &app->sessions[i], &app->arenaPerTick,
+                            Zone_Packet_Kind_UpdateCamera, 0);
+                app->sessions[i].needsUpdateCamera = 0;
+            }
+        }
     }
 
     arena_reset(&app->arenaPerTick);

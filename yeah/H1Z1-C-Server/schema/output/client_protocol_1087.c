@@ -17112,7 +17112,7 @@ printf("-- character_id            \t%lld\t%llxh\t%f\n", (i64)packet->length_1[l
 
 } // length_1
 endian_write_u32_little((u8*)length_1_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)length_1_length_ptr - sizeof(u32)));
-printf("-- STREAM_LENGTH_ACTUAL    \t%u\n", endian_read_u32_little((u8*)length_1_length_ptr));
+
 // u32 unk_dword_1
 endian_write_u32_little(buffer + offset, packet->unk_dword_1);
 offset += sizeof(u32);

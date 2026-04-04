@@ -186,27 +186,31 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
     packetReply.characters_count = 1;
     packetReply.characters = (struct characters_s[1]){
         {
-            .charId = session->characterId,
+            .charId        = session->characterId,
             .lastLoginDate = 0x00ull,
-            .serverId = session->selected_server_id,
+            .serverId      = session->selected_server_id,
         },
     };
 
     packetReply.characters->payload = (struct payload_s[1]){
         {
             .actorModelId = session->pGetPlayerActor.actorModelId,
-            .gender = session->pGetPlayerActor.gender,
-            .headId = session->pGetPlayerActor.headType,
-            .name = session->characterName,
+            .gender       = session->pGetPlayerActor.gender,
+            .headId       = session->pGetPlayerActor.headType,
+            .name         = session->characterName,
         },
     };
 
     packetReply.characters->payload->loadoutSlots_count = 1;
     packetReply.characters->payload->loadoutSlots = (struct loadoutSlots_s[1]){
         {
-            .unkByte1 = 1,
-            .unkDword1 = 22,
-            .loadoutId = 3,
+            .hotbarSlotId    = LOADOUT_SLOT_MELEE,
+            .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
+            .slotId          = LOADOUT_SLOT_MELEE,
+            .itemDefId       = WEAPON_FISTS,
+            .loadoutItemGuid = ITEM_GUID_FISTS,
+            .unkByte1        = 1,
+            .unkDword1       = 22,
         },
     };
 
