@@ -501,7 +501,7 @@ void OnLogin(AppState* app, SessionState* session) {
            session->pGetPlayerActor.gender,
            session->pGetPlayerActor.headType);
 
-    SendSelfToClientRaw(app, session);
+    SendSelfToClient(app, session);
 
     // 6. AddLightweightPc — broadcast self presence to proximity system
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
