@@ -672,7 +672,7 @@ offset++;
 }
 
 } // char_payload
-endian_write_u32_little((u8*)char_payload_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)char_payload_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)char_payload_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)char_payload_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -748,7 +748,7 @@ offset += sizeof(u32);
 printf("-- preferred_gateway_id    \t%lld\t%llxh\t%f\n", (i64)packet->payload2[payload2_iter].preferred_gateway_id, (u64)packet->payload2[payload2_iter].preferred_gateway_id, (f64)packet->payload2[payload2_iter].preferred_gateway_id);
 
 } // payload2
-endian_write_u32_little((u8*)payload2_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)payload2_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)payload2_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)payload2_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -879,7 +879,7 @@ offset += sizeof(u64);
 printf("-- server_feature_bit      \t%lld\t%llxh\t%f\n", (i64)packet->login_payload[login_payload_iter].server_feature_bit, (u64)packet->login_payload[login_payload_iter].server_feature_bit, (f64)packet->login_payload[login_payload_iter].server_feature_bit);
 
 } // login_payload
-endian_write_u32_little((u8*)login_payload_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)login_payload_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)login_payload_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)login_payload_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -945,7 +945,7 @@ offset++;
 }
 
 } // data_client
-endian_write_u32_little((u8*)data_client_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)data_client_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)data_client_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)data_client_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -1011,7 +1011,7 @@ offset += sizeof(u32);
 printf("-- status                  \t%lld\t%llxh\t%f\n", (i64)packet->data_server[data_server_iter].status, (u64)packet->data_server[data_server_iter].status, (f64)packet->data_server[data_server_iter].status);
 
 } // data_server
-endian_write_u32_little((u8*)data_server_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)data_server_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)data_server_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)data_server_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -1702,7 +1702,7 @@ offset += sizeof(u64);
 printf("-- lastUseDate             \t%lld\t%llxh\t%f\n", (i64)packet->characters[characters_iter].payload[payload_iter].lastUseDate, (u64)packet->characters[characters_iter].payload[payload_iter].lastUseDate, (f64)packet->characters[characters_iter].payload[payload_iter].lastUseDate);
 
 } // payload
-endian_write_u32_little((u8*)payload_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)payload_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)payload_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)payload_length_ptr - sizeof(u32)));
 
 } // characters
 

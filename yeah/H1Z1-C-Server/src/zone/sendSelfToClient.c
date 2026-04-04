@@ -207,7 +207,7 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
     [0] = {
         .guid = session->characterId,
         .character_id = session->characterId,
-        .transient_id.value = 52,
+        .transient_id.value = 1,
         .last_login_date = 0,
         .actor_model_id = actorModelId,
         .head_actor = headActor,
@@ -219,15 +219,15 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_string_4 = STR8(""),
         .head_id = headType,
         .unk_u32_3 = 0,
-        .faction_id = 0,
+        .faction_id = 2,
         .unk_u32_4 = 0,
         .unk_u32_5 = 0,
         // Position matching ClientBeginZoning
         .position = {.x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f},
         .rotation = {.x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f},
         // Identity
-        .unk_u32_iden = 0,
-        .unk_u32_iden_2 = 0,
+        .unk_u32_iden = (u32)(session->characterId & 0xFFFFFFFF),
+        .unk_u32_iden_2 = (u32)((session->characterId >> 32) & 0xFFFFFFFF),
         .unk_u32_iden_3 = 0,
         .character_first_name = charName,
         .character_last_name = STR8(""),
@@ -240,7 +240,7 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .profiles_count = 1,
         .profiles = (struct profiles_s[1]){
             [0] = {
-                .profile_id = 5,
+                .profile_id = 3,
                 .name_id1 = 0,
                 .description_id = 0,
                 .type = 3,
@@ -267,7 +267,7 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
                 .unk_u32_12 = 0,
             },
         },
-        .current_profile = 5,
+        .current_profile = 3,
         .unk_list_count = 0,
         .collections_count = 0,
         // Inventory

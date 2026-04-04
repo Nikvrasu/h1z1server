@@ -2818,7 +2818,7 @@ void emit_c_source(Parser_Object_Kind kind, Parser_State state_stack[MAX_STATE_S
 
             output_buffers->packer_buffer_tail +=
                 sprintf(output_buffers->packer_buffer + output_buffers->packer_buffer_tail,
-                        "endian_write_%s_%s((u8*)%s_length_ptr, (%s)((uptr)buffer + (uptr)offset - "
+                        "endian_write_%s_%s((u8*)%s_length_ptr, (%s)((uptr)(buffer + offset) - "
                         "(uptr)%s_length_ptr - sizeof(%s)));\n\n",
                         token_names[state_stack[state_stack_tail].length_type],
                         token_names[state_stack[state_stack_tail].endian], identifier_buffer,

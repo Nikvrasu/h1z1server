@@ -13,10 +13,53 @@ typedef struct BaseEntity {
     u32 interactionDistance;
 } BaseEntity;
 
+// u32 getRenderDistance(u32 actorModelId) {
+//     u32 range = 0;
+
+//     switch (actorModelId) {
+//         case 9115: // tamper
+//             range = 1000;
+//             break;
+//         case 9492: // expansion
+//         case 9181: // shack door
+//         case 9180: // metal shack
+//         case 9192: // small shack
+//         case 55:   // dew collector
+//         case 9223: // wood shack
+//         case 63:   // wood shack door
+//             range = 500;
+//             break;
+//         case 9487: // ramp
+//             range = 450;
+//             break;
+//         case 9488: // foundation stairs
+//         case 49:   // metal gate
+//         case 50:   // metal wall
+//         case 9407: // upper metal wall
+//         case 51:   // shelter
+//         case 52:   // large shelter
+//         case 9408: // upper level shelter
+//         case 9411: // upper level large shelter
+//         case 53:   // structure stairs
+//         case 9493: // tower
+//         case 9130: // foundation, lod distance is 2250, tho i dont think we need it to be that high
+//             range = 750;
+//             break;
+//     }
+
+//     return range ? range : 0;
+// }
+
 u32 getRenderDistance(u32 actorModelId) {
     u32 range = 0;
 
     switch (actorModelId) {
+        // Player character models
+        case 9469: // SurvivorMale
+        case 9474: // SurvivorFemale
+            range = 300;
+            break;
+
         case 9115: // tamper
             range = 1000;
             break;
@@ -42,12 +85,15 @@ u32 getRenderDistance(u32 actorModelId) {
         case 9411: // upper level large shelter
         case 53:   // structure stairs
         case 9493: // tower
-        case 9130: // foundation, lod distance is 2250, tho i dont think we need it to be that high
+        case 9130: // foundation
             range = 750;
+            break;
+        default:
+            range = 300;
             break;
     }
 
-    return range ? range : 0;
+    return range;
 }
 
 BaseEntity* BaseEntityConstructor(u64 characterId, uint2b transientId, u32 actorModelId, vec4 position,

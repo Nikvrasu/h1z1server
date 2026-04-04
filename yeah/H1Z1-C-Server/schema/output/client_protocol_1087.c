@@ -8747,7 +8747,7 @@ offset += sizeof(u8);
 printf("-- spectator_flags         \t%lld\t%llxh\t%f\n", (i64)packet->payload_self[payload_self_iter].spectator_flags, (u64)packet->payload_self[payload_self_iter].spectator_flags, (f64)packet->payload_self[payload_self_iter].spectator_flags);
 
 } // payload_self
-endian_write_u32_little((u8*)payload_self_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)payload_self_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)payload_self_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)payload_self_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -9781,7 +9781,7 @@ printf("-- unk_dword_10            \t%lld\t%llxh\t%f\n", (i64)packet->item_def_r
 } // stats_item_def_1
 
 } // item_def_reply_1
-endian_write_u32_little((u8*)item_def_reply_1_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)item_def_reply_1_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)item_def_reply_1_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)item_def_reply_1_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -10238,7 +10238,7 @@ printf("-- unk_dword_10            \t%lld\t%llxh\t%f\n", (i64)packet->item_def_r
 } // item_defs
 
 } // item_def_reply_2
-endian_write_u32_little((u8*)item_def_reply_2_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)item_def_reply_2_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)item_def_reply_2_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)item_def_reply_2_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -11372,7 +11372,7 @@ offset += sizeof(u32);
 printf("-- unk_dword_13            \t%lld\t%llxh\t%f\n", (i64)packet->profile_payload[profile_payload_iter].unk_dword_13, (u64)packet->profile_payload[profile_payload_iter].unk_dword_13, (f64)packet->profile_payload[profile_payload_iter].unk_dword_13);
 
 } // profile_payload
-endian_write_u32_little((u8*)profile_payload_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)profile_payload_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)profile_payload_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)profile_payload_length_ptr - sizeof(u32)));
 
 // list attachment_list
 endian_write_u32_little(buffer + offset, packet->attachment_list_count);
@@ -14203,7 +14203,7 @@ printf("-- max_input_strafe_arrive_time\t%lld\t%llxh\t%f\n", (i64)packet->weapon
 } // aim_assist_defs
 
 } // weapon_byteswithlength
-endian_write_u32_little((u8*)weapon_byteswithlength_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)weapon_byteswithlength_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)weapon_byteswithlength_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)weapon_byteswithlength_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -14620,7 +14620,7 @@ offset++;
 }
 
 } // definitions_data
-endian_write_u32_little((u8*)definitions_data_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)definitions_data_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)definitions_data_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)definitions_data_length_ptr - sizeof(u32)));
 
 } break;
 
@@ -17111,8 +17111,8 @@ offset += sizeof(u64);
 printf("-- character_id            \t%lld\t%llxh\t%f\n", (i64)packet->length_1[length_1_iter].character_id, (u64)packet->length_1[length_1_iter].character_id, (f64)packet->length_1[length_1_iter].character_id);
 
 } // length_1
-endian_write_u32_little((u8*)length_1_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)length_1_length_ptr - sizeof(u32)));
-
+endian_write_u32_little((u8*)length_1_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)length_1_length_ptr - sizeof(u32)));
+printf("-- STREAM_LENGTH_ACTUAL    \t%u\n", endian_read_u32_little((u8*)length_1_length_ptr));
 // u32 unk_dword_1
 endian_write_u32_little(buffer + offset, packet->unk_dword_1);
 offset += sizeof(u32);
@@ -17189,7 +17189,7 @@ offset++;
 }
 
 } // length_2
-endian_write_u32_little((u8*)length_2_length_ptr, (u32)((uptr)buffer + (uptr)offset - (uptr)length_2_length_ptr - sizeof(u32)));
+endian_write_u32_little((u8*)length_2_length_ptr, (u32)((uptr)(buffer + offset) - (uptr)length_2_length_ptr - sizeof(u32)));
 
 } // equipment_slot_array
 

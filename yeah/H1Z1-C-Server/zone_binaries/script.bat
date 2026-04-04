@@ -1,24 +1,18 @@
 @echo off
-title Zone Log Scanner
+title Zone Log Scanner - CH2 RAW Only
 
-IF NOT EXIST "zone_logs.txt" (
-    echo Error: zone_logs.txt not found in this folder.
-    echo Make sure the file is named correctly and is in the same directory as this script.
+IF NOT EXIST "zone_log.txt" (
+    echo Error: zone_log.txt not found in this folder.
     pause
     exit /b
 )
 
-echo ============================================================
-echo  Scanning zone_logs.txt for Client Events...
-echo ============================================================
-echo.
+echo Scanning zone_log.txt for [CH2 RAW]...
+echo Saving results to: ch2_raw_only.txt
 
-:: The /n flag adds the line number so you know exactly where it happened
-:: The /c flag specifies the exact string to search for
-findstr /n /c:"ClientFinishedLoading" /c:"ClientIsReady" "zone_logs.txt"
+:: /n - Displays line numbers
+:: /c - Search for the literal string "[CH2 RAW]"
+findstr /n /c:"[CH2 RAW]" "zone_log.txt" > ch2_raw_only.txt
 
-echo.
-echo ============================================================
-echo  Scan complete.
-echo ============================================================
+echo Done. Results written to ch2_raw_only.txt.
 pause
