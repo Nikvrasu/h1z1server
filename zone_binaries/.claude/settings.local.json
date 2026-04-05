@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr:*)",
+      "Bash(cmd /c 'findstr /c:\"PlayerWorldTransfer\" /c:\"WorldTransfer\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'findstr /c:\"Unhandled Zone packet\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'findstr /c:\"WallOfData_UIEvent\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\" | wc -l')",
+      "Bash(cmd /c 'findstr /c:\"PlayerWorldTransfer\" /c:\"Ignoring duplicate\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'findstr \"ed 01 00\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'type \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\" | findstr /n /c:\"isReady=0 finished_loading=0 characterReleased=1\"')",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(cmd /c \"more +40\")",
+      "Bash(cmd /c 'findstr /C:\"PlayerWorldTransfer\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"' 2>&1)",
+      "Bash(cmd /c 'findstr /C:\"DeployCharacter\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"' 2>&1)",
+      "Bash(cmd /c 'findstr /C:\"OnLogin\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"' 2>&1)",
+      "Bash(cmd /c 'findstr /C:\"EquipmentAndMovement\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"' 2>&1)",
+      "Bash(cmd /c 'findstr /C:\"SEND #\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"' 2>&1)",
+      "Bash(cmd /c 'findstr /C:\"\"Packing\"\" \"\"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"\" | findstr /C:\"\"Login\"\"')",
+      "Bash(cmd /c 'findstr /c:\"TRANSFER\" /c:\"PlayerWorldTransfer\" /c:\"SendSelfToClient called 2\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'findstr /c:\"SendSelfToClient called\" \"D:/h1z1server/yeah/H1Z1-C-Server/zone_binaries/zone_log.txt\"')",
+      "Bash(cmd /c 'type \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\" | find \"SendSelfToClient called\" | find /c \"called\"')",
+      "Bash(cmd /c 'findstr \"SendSelfToClient called\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\"')",
+      "Bash(powershell -Command 'Get-Content \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\" | Select-String -Pattern \"PlayerWorldTransfer|SendSelfToClient called|SendSelfToClient called 2|\\\\[TRANSFER\\\\]\" | Select-Object -First 20')",
+      "Bash(powershell -Command 'Get-Content \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\" | Select-String -Pattern \"WeaponDefinitions|DynamicAppearance|ItemDefinitions|\\\\[TRANSFER\\\\]\" | Select-Object -First 30')",
+      "Bash(cmd /c 'cd \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\" && type \"zone_binaries\\\\zone_log.txt\" | find \"STREAM_LENGTH\"')",
+      "Bash(cmd /c 'cd \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\" && type zone_binaries\\\\zone_log.txt | find \"guid\" | findstr /r \".*189700002fa7h.*\" | find /v \"character_id\" | find /v \"Session\" | find /v \"character\" | find /v \"equip\" | find /v \"Equip\" | find /v \"item\" | find /v \"Item\" | find /v \"owner\" | find /v \"Owner\"')",
+      "Bash(cmd /c 'echo %cd%')",
+      "Bash(cmd /c 'find /n \"SendSelfToClient_Pack\\\\|sendSelfToClient_pack\\\\|zone_packet_pack\" \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\schema\\\\output\\\\client_protocol_1087.c\" | find /i \"pack\" | find /v \"unpack\"')",
+      "Bash(powershell -Command 'Get-Content \"D:\\\\h1z1server\\\\yeah\\\\H1Z1-C-Server\\\\zone_binaries\\\\zone_log.txt\" | Select-String -Pattern \"\\\\[ONLOGIN\\\\]|\\\\[DEPLOY\\\\]|\\\\[SSTC\\\\]|\\\\[EQUIP\\\\]|\\\\[TIMING\\\\]|\\\\[TRANSFER\\\\]|ClientIsReady|ClientFinishedLoading|PlayerWorldTransfer|ClientBeginZoning|ClientUpdate_UpdateLocation|SendSelfToClient|Equipment_SetCharacterEquipment|Loadout_SetLoadoutSlots\" | Select-Object -First 80')"
+    ]
+  }
+}

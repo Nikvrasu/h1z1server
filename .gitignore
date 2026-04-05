@@ -1,14 +1,12 @@
-yeah/H1Z1_dump_32934_SCY.zip
-yeah/H1Z1-C-Server/zone_binaries/zoneModule.dll
-yeah/H1Z1-C-Server/zone_binaries/zoneServer.exe
-yeah/H1Z1-C-Server/login_binaries/loginServer.exe
-/yeah/depot_433851
-/yeah/H1Z1-C-Server/login_binaries
-/yeah/.vscode
-/yeah/H1Z1-C-Server/login_binaries
-yeah/H1Z1-C-Server/login_binaries/loginServer.exe
-yeah/Not to be included/h1z1-server/
-/yeah/H1Z1-C-Server/login_binaries
-/yeah/H1Z1-C-Server/.vscode
-yeah/H1Z1-C-Server/zone_binaries/zone_log.txt
-yeah/H1Z1_dump_32934_SCY/H1Z1_dump_32934_SCY.i64
+# Specify filepatterns you want git to ignore.
+_IGNORE_*
+GAME_PACKETS/
+login_binaries/loginModuleTemp.dll
+zone_binaries/zoneModuleTemp.dll
+schema/schema_tool.exe
+LOGIN_PACKETS/
+*.bkp
+zig/*
+patch/H1Emu-Kotk-Patch
+src/cTesting/*
+/Additional Resources Not For Git
