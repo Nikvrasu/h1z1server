@@ -287,22 +287,10 @@ void WallOfDataBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
             // ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_WallOfData_UIEvent, 0);
         } break;
         case 6: {
-            Zone_Packet_WallOfData_ClientSystemInfo systemInfo = { 0 };
-            zone_packet_unpack(data + offset, dataLen - offset,
-                               Zone_Packet_Kind_WallOfData_ClientSystemInfo, &systemInfo,
-                               &app->arenaPerTick);
-
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_WallOfData_ClientSystemInfo, &systemInfo);
+            // ClientSystemInfo — telemetry only, DO NOT echo back
         } break;
         case 0xc: {
-            Zone_Packet_WallOfData_ClientTransition clientTransition = { 0 };
-            zone_packet_unpack(data + offset, dataLen - offset,
-                               Zone_Packet_Kind_WallOfData_ClientTransition, &clientTransition,
-                               &app->arenaPerTick);
-
-            ZonePacketSend(app, session, &app->arenaPerTick,
-                           Zone_Packet_Kind_WallOfData_ClientTransition, &clientTransition);
+            // ClientTransition — state notification only, DO NOT echo back
         } break;
     }
 }
@@ -339,7 +327,7 @@ void StaticViewBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
                        &updateLoc);
 
         Zone_Packet_StaticViewReply reply = {
-            .state = 0,
+            .state = 1,
             .position = { .x = 74.8f, .y = 201.5f, .z = 458.1f, .w = 99.01f },
             .rotation = { .x = 199.99f, .y = 289.99999f, .z = 370.17f, .w = 6.79f },
             .lookAt = { .x = 69.81f, .y = 56.f, .z = 0.f, .w = 0.f },

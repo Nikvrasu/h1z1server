@@ -129,21 +129,13 @@ packetIdSwitch:
         } break;
         case ZONE_WALLOFDATA_CLIENTSYSTEMINFO_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientSystemInfo;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-
-            Zone_Packet_WallOfData_ClientSystemInfo systemInfo = { 0 };
-            zone_packet_unpack(data + 2, dataLen - 2, kind, &systemInfo, &app->arenaPerTick);
-
-            ZonePacketSend(app, session, &app->arenaPerTick, kind, &systemInfo);
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ignored)\n"), zone_packet_names[kind]);
+            // DO NOT echo back — client sends this as telemetry only
         } break;
         case ZONE_WALLOFDATA_CLIENTTRANSITION_ID: {
             kind = Zone_Packet_Kind_WallOfData_ClientTransition;
-            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-
-            Zone_Packet_WallOfData_ClientTransition clientTransition = { 0 };
-            zone_packet_unpack(data + 2, dataLen - 2, kind, &clientTransition, &app->arenaPerTick);
-
-            ZonePacketSend(app, session, &app->arenaPerTick, kind, &clientTransition);
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ignored)\n"), zone_packet_names[kind]);
+            // DO NOT echo back — client sends this as a state notification only
         } break;
         case ZONE_SETLOCALE_ID: {
             kind = Zone_Packet_Kind_SetLocale;
@@ -272,16 +264,8 @@ packetIdSwitch:
                 if (dataLen >= 10) {
                     requestedCharId = endian_read_u64_little(data + 2);
                 }
-                printf("[*] FullCharacterDataRequest for 0x%llx\n",
+                printf("[*] FullCharacterDataRequest for 0x%llx (ignored — KOTK client never uses this)\n",
                        (unsigned long long)requestedCharId);
-
-                // Only respond if it's asking about our own character
-                if (requestedCharId == session->characterId) {
-                    // Re-send equipment to force composite model rebuild
-                    // This is the correct response path — the client is asking
-                    // us to confirm the full visual state
-                    SendEquipmentAndMovement(app, session);
-                }
             }
         } break;
         case 0x1144: {
@@ -324,10 +308,15 @@ packetIdSwitch:
                         Zone_Packet_Kind_Synchronization, &sync);
         } break;
         case ZONE_COMMAND_SETPROFILE_ID: {
-            printf(MESSAGE_CONCAT_INFO("Handling Command_SetProfile\n"));
-            // Client is explicitly requesting profile activation
-            // Re-send equipment and activate profile
-            SendEquipmentAndMovement(app, session);
+            kind = Zone_Packet_Kind_Command_SetProfile;
+            printf(MESSAGE_CONCAT_INFO("Handling %s (ignored)\n"), zone_packet_names[kind]);
+        } break;
+        case 0xc4: {
+            printf(MESSAGE_CONCAT_INFO("Handling CharacterSelectSessionRequest\n"));
+            u8 sessionResponse[] = { 0xc5 };
+            u8* buf = arena_push_size(&app->arenaPerTick, sizeof(sessionResponse) + TunnelDataHeaderLen);
+            memcpy(buf + TunnelDataHeaderLen, sessionResponse, sizeof(sessionResponse));
+            GatewayTunnelDataSend(app, session, buf, sizeof(sessionResponse) + TunnelDataHeaderLen);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);

@@ -171,15 +171,15 @@ typedef enum ResourceId {
 } ResourceId;
 
 typedef enum ResourceType {
-    HEALTHTYPE = 1,
-    HUNGERTYPE = 4,
+    HEALTHTYPE    = 1,
+    HUNGERTYPE    = 4,
     HYDRATIONTYPE = 5,
-    STAMINATYPE = 6,
-    VIRUSTYPE = 12,
-    BLEEDINGTYPE = 21,
-    COMFORTTYPE = 68,
-    FUELTYPE = 50,
-    CONDITIONTYPE = 1,
+    STAMINATYPE   = 6,
+    VIRUSTYPE     = 12,
+    BLEEDINGTYPE  = 21,
+    COMFORTTYPE   = 68,
+    FUELTYPE      = 396,   // match FUELID
+    CONDITIONTYPE = 561,   // match CONDITIONID
 } ResourceType;
 
 struct SessionState {

@@ -337,6 +337,12 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
+
+    // LightweightToFullPc — proactive full character upgrade with position
+    printf("[DEPLOY] Sending LightweightToFullPc...\n");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
+    printf("[DEPLOY] LightweightToFullPc sent\n");
+
     // Schedule UpdateCamera (0x57) to be sent 500ms later
     session->needsUpdateCamera = 1;
     session->updateCameraTick = *app->tickCount + 500;
@@ -347,17 +353,13 @@ void DeployCharacter(AppState* app, SessionState* session) {
         resourceEvent.gametime = timer & 0x7fffffff;
         resourceEvent.variabletype8_case = 0;
         resourceEvent.variabletype8.set_character_resources_1.character_id_1 = session->characterId;
-        resourceEvent.variabletype8.set_character_resources_1.character_resources_1_count = 9;
-        resourceEvent.variabletype8.set_character_resources_1.character_resources_1 = (struct character_resources_1_s[9]){
+        // Just send health, stamina, hunger, hydration for now
+        resourceEvent.variabletype8.set_character_resources_1.character_resources_1_count = 4;
+        resourceEvent.variabletype8.set_character_resources_1.character_resources_1 = (struct character_resources_1_s[4]){
             [0] = { .resource_type_1 = HEALTHTYPE,    .resource_id_1 = HEALTHID,    .resource_type_2 = HEALTHTYPE,    .value = 10000 },
             [1] = { .resource_type_1 = HUNGERTYPE,    .resource_id_1 = HUNGERID,    .resource_type_2 = HUNGERTYPE,    .value = 10000 },
             [2] = { .resource_type_1 = HYDRATIONTYPE, .resource_id_1 = HYDRATIONID, .resource_type_2 = HYDRATIONTYPE, .value = 10000 },
             [3] = { .resource_type_1 = STAMINATYPE,   .resource_id_1 = STAMINAID,   .resource_type_2 = STAMINATYPE,   .value = 10000 },
-            [4] = { .resource_type_1 = VIRUSTYPE,     .resource_id_1 = VIRUSID,     .resource_type_2 = VIRUSTYPE,     .value = 0     },
-            [5] = { .resource_type_1 = BLEEDINGTYPE,  .resource_id_1 = BLEEDINGID,  .resource_type_2 = BLEEDINGTYPE,  .value = 0     },
-            [6] = { .resource_type_1 = COMFORTTYPE,   .resource_id_1 = COMFORTID,   .resource_type_2 = COMFORTTYPE,   .value = 5000  },
-            [7] = { .resource_type_1 = FUELTYPE,      .resource_id_1 = FUELID,      .resource_type_2 = FUELTYPE,      .value = 0     },
-            [8] = { .resource_type_1 = CONDITIONTYPE, .resource_id_1 = CONDITIONID, .resource_type_2 = CONDITIONTYPE, .value = 10000 },
         };
         ZonePacketSend(app, session, &app->arenaPerTick,
                     Zone_Packet_Kind_ResourceEventBase, &resourceEvent);
@@ -534,24 +536,24 @@ void OnLogin(AppState* app, SessionState* session) {
     SendSelfToClient(app, session, FALSE);
 
     // 6. AddLightweightPc — broadcast self presence to proximity system
-    Zone_Packet_AddLightweightPc lightweightPc = { 0 };
-    lightweightPc.character_id          = session->characterId;
-    lightweightPc.transient_id.value    = 1;
-    lightweightPc.id_characterFirstName = session->characterName;
-    lightweightPc.id_characterLastName  = STR8("");
-    lightweightPc.id_unknownString1     = STR8("00000000000000000");
-    lightweightPc.id_characterName      = session->characterName;
-    lightweightPc.actorModelId          = session->pGetPlayerActor.actorModelId;
-    lightweightPc.position = (vec3){
-        .x = -297.31f, .y = 506.06f, .z = -4894.10f
-    };
-    lightweightPc.rotation = (vec4){
-        .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f
-    };
-    lightweightPc.movementVersion = 1;
-    lightweightPc.flags1          = 0;
-    ZonePacketSendDebug(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_AddLightweightPc, &lightweightPc, "AddLightweightPc");
+    // Zone_Packet_AddLightweightPc lightweightPc = { 0 };
+    // lightweightPc.character_id          = session->characterId;
+    // lightweightPc.transient_id.value    = 1;
+    // lightweightPc.id_characterFirstName = session->characterName;
+    // lightweightPc.id_characterLastName  = STR8("");
+    // lightweightPc.id_unknownString1     = STR8("00000000000000000");
+    // lightweightPc.id_characterName      = session->characterName;
+    // lightweightPc.actorModelId          = session->pGetPlayerActor.actorModelId;
+    // lightweightPc.position = (vec3){
+    //     .x = -297.31f, .y = 506.06f, .z = -4894.10f
+    // };
+    // lightweightPc.rotation = (vec4){
+    //     .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f
+    // };
+    // lightweightPc.movementVersion = 1;
+    // lightweightPc.flags1          = 0;
+    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_AddLightweightPc, &lightweightPc, "AddLightweightPc");
 
     // 7. Character.UpdateScale
     Zone_Packet_Character_UpdateScale updateScale = { 0 };
@@ -859,55 +861,55 @@ ZonePacketSend(app, session, &app->arenaPerTick,
            (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
 
     // 10. ClientBeginZoning
-    Zone_Packet_ClientBeginZoning beginZoning = { 0 };
-    beginZoning.zone_name  = STR8("Z2");
-    beginZoning.zone_type  = 4;
-    beginZoning.pos        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-    beginZoning.rot        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
-    beginZoning.overcast   = 1.0f;
-    beginZoning.fogDensity = 0.000173f;
-    beginZoning.fogFloor   = 10.0f;
-    beginZoning.fogGradient = 0.0144f;
-    beginZoning.globalPrecipitation = 0.0f;
-    beginZoning.temperature = 75.0f;
-    beginZoning.skyClarity  = 0.0f;
-    beginZoning.cloudWeight0 = 0.05f;
-    beginZoning.cloudWeight1 = 0.0f;
-    beginZoning.cloudWeight2 = 0.05f;
-    beginZoning.cloudWeight3 = 0.15f;
-    beginZoning.transitionTime = 0.0f;
-    beginZoning.sunAxisX = 38.0f;
-    beginZoning.sunAxisY = -15.0f;
-    beginZoning.sunAxisZ = 0.0f;
-    beginZoning.windDirX = -1.0f;
-    beginZoning.windDirY = -0.5f;
-    beginZoning.windDirZ = -1.0f;
-    beginZoning.wind = 3.0f;
-    beginZoning.rainMinStrength       = 0.0f;
-    beginZoning.rainRampUpTimeSeconds = 1.0f;
-    beginZoning.cloudFile             = STR8("sky_Z_clouds.dds");
-    beginZoning.stratusCloudTiling    = 0.30f;
-    beginZoning.stratusCloudScrollU   = -0.002f;
-    beginZoning.stratusCloudScrollV   = 0.0f;
-    beginZoning.stratusCloudHeight    = 1000.0f;
-    beginZoning.cumulusCloudTiling    = 0.20f;
-    beginZoning.cumulusCloudScrollU   = 0.0f;
-    beginZoning.cumulusCloudScrollV   = 0.002f;
-    beginZoning.cumulusCloudHeight    = 8000.0f;
-    beginZoning.cloudAnimationSpeed   = 0.0f;
-    beginZoning.cloudSilverLiningThickness  = 0.25f;
-    beginZoning.cloudSilverLiningBrightness = 7.0f;
-    beginZoning.cloudShadows    = 0.5f;
-    beginZoning.unk_byte_1      = 4;
-    beginZoning.zone_id_1       = 5;
-    beginZoning.zone_id_2       = 5;
-    beginZoning.name_id         = 61609;
-    beginZoning.unk_dword_1     = 0x0f2b07d0;
-    beginZoning.unk_bool_1      = FALSE;
-    beginZoning.wait_for_zone_ready = FALSE;
-    beginZoning.unk_bool_2      = FALSE;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
+    // Zone_Packet_ClientBeginZoning beginZoning = { 0 };
+    // beginZoning.zone_name  = STR8("Z2");
+    // beginZoning.zone_type  = 4;
+    // beginZoning.pos        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+    // beginZoning.rot        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+    // beginZoning.overcast   = 1.0f;
+    // beginZoning.fogDensity = 0.000173f;
+    // beginZoning.fogFloor   = 10.0f;
+    // beginZoning.fogGradient = 0.0144f;
+    // beginZoning.globalPrecipitation = 0.0f;
+    // beginZoning.temperature = 75.0f;
+    // beginZoning.skyClarity  = 0.0f;
+    // beginZoning.cloudWeight0 = 0.05f;
+    // beginZoning.cloudWeight1 = 0.0f;
+    // beginZoning.cloudWeight2 = 0.05f;
+    // beginZoning.cloudWeight3 = 0.15f;
+    // beginZoning.transitionTime = 0.0f;
+    // beginZoning.sunAxisX = 38.0f;
+    // beginZoning.sunAxisY = -15.0f;
+    // beginZoning.sunAxisZ = 0.0f;
+    // beginZoning.windDirX = -1.0f;
+    // beginZoning.windDirY = -0.5f;
+    // beginZoning.windDirZ = -1.0f;
+    // beginZoning.wind = 3.0f;
+    // beginZoning.rainMinStrength       = 0.0f;
+    // beginZoning.rainRampUpTimeSeconds = 1.0f;
+    // beginZoning.cloudFile             = STR8("sky_Z_clouds.dds");
+    // beginZoning.stratusCloudTiling    = 0.30f;
+    // beginZoning.stratusCloudScrollU   = -0.002f;
+    // beginZoning.stratusCloudScrollV   = 0.0f;
+    // beginZoning.stratusCloudHeight    = 1000.0f;
+    // beginZoning.cumulusCloudTiling    = 0.20f;
+    // beginZoning.cumulusCloudScrollU   = 0.0f;
+    // beginZoning.cumulusCloudScrollV   = 0.002f;
+    // beginZoning.cumulusCloudHeight    = 8000.0f;
+    // beginZoning.cloudAnimationSpeed   = 0.0f;
+    // beginZoning.cloudSilverLiningThickness  = 0.25f;
+    // beginZoning.cloudSilverLiningBrightness = 7.0f;
+    // beginZoning.cloudShadows    = 0.5f;
+    // beginZoning.unk_byte_1      = 4;
+    // beginZoning.zone_id_1       = 5;
+    // beginZoning.zone_id_2       = 5;
+    // beginZoning.name_id         = 61609;
+    // beginZoning.unk_dword_1     = 0x0f2b07d0;
+    // beginZoning.unk_bool_1      = FALSE;
+    // beginZoning.wait_for_zone_ready = FALSE;
+    // beginZoning.unk_bool_2      = FALSE;
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
 
     // 11. UpdateLocation
     Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {

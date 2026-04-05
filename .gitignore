@@ -10,3 +10,8 @@ src/cTesting/*
 /Additional Resources Not For Git
 .roomodes
 .vscode
+login_binaries/loginModule.dll
+login_binaries/loginServer.exe
+zone_binaries/zone_log.txt
+zone_binaries/zoneModule.dll
+zone_binaries/zoneServer.exe
