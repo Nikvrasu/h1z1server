@@ -1,9 +1,7 @@
-# Specify filepatterns you want git to ignore.
 _IGNORE_*
 GAME_PACKETS/
 login_binaries/*
 zone_binaries/*
-schema/schema_tool.exe
 LOGIN_PACKETS/
 *.bkp
 zig/*
@@ -11,4 +9,4 @@ patch/H1Emu-Kotk-Patch
 src/cTesting/*
 /Additional Resources Not For Git
 .roomodes
-
+.vscode
