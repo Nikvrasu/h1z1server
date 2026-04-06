@@ -297,7 +297,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // UpdateCamera — no-field trigger packet
+    // UpdateCamera
     u8 updateCamera[] = { 0x57 };
     u8* camBuf = arena_push_size(&app->arenaPerTick, sizeof(updateCamera) + TunnelDataHeaderLen);
     memcpy(camBuf + TunnelDataHeaderLen, updateCamera, sizeof(updateCamera));
@@ -328,7 +328,32 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 6. ZoneDoneSendingInitialData
+    // 5b. AddLightweightPc — registers self as world entity, initializes CharacterAttachmentGroup
+    printf("[DEPLOY] Sending AddLightweightPc...\n");
+    Zone_Packet_AddLightweightPc lightweightPc = { 0 };
+    lightweightPc.character_id       = session->characterId;
+    lightweightPc.transient_id.value = 1;
+    lightweightPc.id_characterName   = session->characterName;
+    lightweightPc.actorModelId       = session->pGetPlayerActor.actorModelId;
+    lightweightPc.position           = (vec3){ -297.309998f, 506.059998f, -4894.100098f };
+    lightweightPc.rotation           = (vec4){ 0.0f, -0.707100f, 0.0f, 0.707100f };
+    lightweightPc.unknownFloat1      = 1.0f;
+    lightweightPc.flags1             = 0;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
+    printf("[DEPLOY] Sent AddLightweightPc\n");
+
+    // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
+    //    while client is still in WaitForFirstZone, giving geometry time to load
+    //    before the Running state attachment group check.
+    SendEquipmentAndMovement(app, session);
+
+    // 7. LightweightToFullPc — full character upgrade with position
+    printf("[DEPLOY] Sending LightweightToFullPc...\n");
+    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
+    printf("[DEPLOY] LightweightToFullPc sent\n");
+
+    // 8. ZoneDoneSendingInitialData
     {
         __time64_t zdSendTime;
         _time64(&zdSendTime);
@@ -337,23 +362,12 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
-
-    // LightweightToFullPc — proactive full character upgrade with position
-    printf("[DEPLOY] Sending LightweightToFullPc...\n");
-    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
-    printf("[DEPLOY] LightweightToFullPc sent\n");
-
-    // Schedule UpdateCamera (0x57) to be sent 500ms later
-    session->needsUpdateCamera = 1;
-    session->updateCameraTick = *app->tickCount + 500;
-    
-    // ResourceEventBase — set character resources (case 0: set_character_resources_1)
+    // 9. ResourceEventBase
     {
         Zone_Packet_ResourceEventBase resourceEvent = { 0 };
         resourceEvent.gametime = timer & 0x7fffffff;
         resourceEvent.variabletype8_case = 0;
         resourceEvent.variabletype8.set_character_resources_1.character_id_1 = session->characterId;
-        // Just send health, stamina, hunger, hydration for now
         resourceEvent.variabletype8.set_character_resources_1.character_resources_1_count = 4;
         resourceEvent.variabletype8.set_character_resources_1.character_resources_1 = (struct character_resources_1_s[4]){
             [0] = { .resource_type_1 = HEALTHTYPE,    .resource_id_1 = HEALTHID,    .resource_type_2 = HEALTHTYPE,    .value = 10000 },
@@ -365,7 +379,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
                     Zone_Packet_Kind_ResourceEventBase, &resourceEvent);
     }
 
-    // 7. AccountItemManagerStateChanged
+    // 10. AccountItemManagerStateChanged
     {
         u8 escrowData[] = {
             0x23, 0x00,
@@ -377,21 +391,17 @@ void DeployCharacter(AppState* app, SessionState* session) {
         u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(escrowData) + TunnelDataHeaderLen);
         memcpy(baseBuffer + TunnelDataHeaderLen, escrowData, sizeof(escrowData));
         GatewayTunnelDataSend(app, session, baseBuffer, sizeof(escrowData) + TunnelDataHeaderLen);
-        printf("[DEPLOY] Sent AccountItemManagerStateChanged (raw escrow packet)\n");
+        printf("[DEPLOY] Sent AccountItemManagerStateChanged\n");
     }
 
-    // 8. WeaponStance
+    // 11. WeaponStance
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
     weaponStance.stance = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
-    // NOTE: No Equipment.SetCharacterEquipment here.
-    // Equipment is sent in SendEquipmentAndMovement on ClientFinishedLoading,
-    // after zone assets are fully loaded in memory.
-
-    // 9. Deferred NetworkProximityUpdatesComplete
+    // 12. Deferred NetworkProximityUpdatesComplete
     session->needsProximityComplete = 1;
     _time64(&session->proximityCompleteTime);
     session->proximityCompleteTime += 5;

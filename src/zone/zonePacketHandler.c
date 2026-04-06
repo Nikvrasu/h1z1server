@@ -72,8 +72,8 @@ packetIdSwitch:
             PRINT_TIMESTAMP(); printf("[*] ClientFinishedLoading received\n");
             __time64_t t2; _time64(&t2);
             printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
-                   zone_packet_names[kind], t2,
-                   session->isReady, session->finished_loading, session->characterReleased);
+                zone_packet_names[kind], t2,
+                session->isReady, session->finished_loading, session->characterReleased);
 
             if (session->finished_loading) {
                 printf("[*] Ignoring duplicate ClientFinishedLoading\n");
@@ -81,11 +81,7 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
-            // h1emu sends Equipment, WeaponStance, RunSpeed, ModifyMovementSpeed
-            // in ClientFinishedLoading — NOT in DeployCharacter/ClientIsReady
-            SendEquipmentAndMovement(app, session);
-
-            printf("[*] ClientFinishedLoading acknowledged — equipment & movement sent\n");
+            printf("[*] ClientFinishedLoading acknowledged\n");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
             kind = Zone_Packet_Kind_GameTimeSync;
