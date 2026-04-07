@@ -227,6 +227,19 @@ void GatewayExtractCharacterName(AppState* app, SessionState* session,
         }
     }
 
+    if (found && colonPos > 0) {
+        session->ticketIdentity.size = colonPos;
+        session->ticketIdentity.data = arena_push_size(&app->arenaTotal, colonPos);
+        memcpy(session->ticketIdentity.data, ticket, colonPos);
+        printf("[GW] Extracted ticket identity: '%.*s' len=%u\n",
+               (int)session->ticketIdentity.size, session->ticketIdentity.data,
+               (u32)session->ticketIdentity.size);
+    } else {
+        session->ticketIdentity.size = 0;
+        session->ticketIdentity.data = NULL;
+        printf("[GW] WARNING: No ticket identity found in server ticket!\n");
+    }
+
     if (found && (colonPos + 1) < ticketLen) {
         u32 nameLen = ticketLen - colonPos - 1;
         session->characterName.size = nameLen;

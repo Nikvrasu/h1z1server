@@ -135,9 +135,12 @@ void LoginPacketHandler(AppState* app, SessionState* session, u8* data, u32 data
             packetReply.status = 1;
 
             char ticketBuf[256];
-            snprintf(ticketBuf, sizeof(ticketBuf), "7y3Bh44sKWZCYZH:%.*s",
-            (int)session->characterName.size,
-            session->characterName.data);
+            // Build a Steam64-like identity prefix before ':' so zone can mirror it in SendSelf.
+            u64 steamLikeId = 76561197960265728ull + (packet.character_id & 0xffffffffull);
+            snprintf(ticketBuf, sizeof(ticketBuf), "%llu:%.*s",
+                     (unsigned long long)steamLikeId,
+                     (int)session->characterName.size,
+                     session->characterName.data);
 
             packetReply.login_payload = (struct login_payload_s[1]){
                 {
