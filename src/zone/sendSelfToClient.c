@@ -116,6 +116,24 @@ u32 getResourceType(u32 resourceId) {
 // The guid that was patched in previously (at offset 5)
 #define SENDSELF_BIN_ORIG_GUID      0x0000189700002fa7ull
 
+// Scans buf[0..len-8] for all little-endian occurrences of oldId and
+// replaces each with newId. Returns the number of replacements made.
+u32 PatchCharacterId(u8* buf, u32 len, u64 oldId, u64 newId) {
+    if (len < 8) return 0;
+    u8 origBytes[8];
+    u8 newBytes[8];
+    endian_write_u64_little(origBytes, oldId);
+    endian_write_u64_little(newBytes, newId);
+    u32 replacements = 0;
+    for (u32 i = 0; i <= len - 8; i++) {
+        if (memcmp(buf + i, origBytes, 8) == 0) {
+            memcpy(buf + i, newBytes, 8);
+            replacements++;
+        }
+    }
+    return replacements;
+}
+
 void SendSelfToClientRaw(AppState* app, SessionState* session) {
     // 1. Load the binary file
     u32 maxBuf = KB(20);
@@ -138,18 +156,7 @@ void SendSelfToClientRaw(AppState* app, SessionState* session) {
 
     // 3. Find and replace ALL occurrences of the original character_id
     //    The original char_id appears 24 times throughout the packet
-    u8 origCharIdBytes[8];
-    u8 newCharIdBytes[8];
-    endian_write_u64_little(origCharIdBytes, SENDSELF_BIN_ORIG_CHARID);
-    endian_write_u64_little(newCharIdBytes, session->characterId);
-
-    u32 replacements = 0;
-    for (u32 i = 0; i <= fileLen - 8; i++) {
-        if (memcmp(fileBuffer + i, origCharIdBytes, 8) == 0) {
-            memcpy(fileBuffer + i, newCharIdBytes, 8);
-            replacements++;
-        }
-    }
+    u32 replacements = PatchCharacterId(fileBuffer, fileLen, SENDSELF_BIN_ORIG_CHARID, session->characterId);
     printf("[SENDSELF RAW] Replaced character_id %u times\n", replacements);
 
     // 4. Recalculate stream length (u32 LE at offset 1)
@@ -193,6 +200,9 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
     String8 eyesModel = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
     String8 chestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
     String8 legsModel = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
+    String8 outerChestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Hoodie_Down.adr") : STR8("SurvivorMale_Chest_Hoodie_Down.adr");
+    String8 outerLegsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_SkinnyLeg.adr") : STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr");
+    String8 feetModel       = (gender == 2) ? STR8("SurvivorFemale_Feet_Conveys.adr") : STR8("SurvivorMale_Feet_Conveys.adr");
 
     String8 charName = session->characterName;
     if (charName.size == 0) charName = STR8("Unknown");
@@ -372,18 +382,18 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         .unk_array_291_count = 0,
         .unk_array_2112_count = 0,
         .unk_array_2122_count = 0,
-        .equipment_slots_count = 0,
-        // .equipment_slots = (struct equipment_slots_s[9]){
-        //     [0] = { .unk_dword_7199=15,  .unk_dword_890=15,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=15,  .equipment_slot_id3=15,  .guid=0,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [1] = { .unk_dword_7199=27,  .unk_dword_890=27,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=27,  .equipment_slot_id3=27,  .guid=0,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [2] = { .unk_dword_7199=3,   .unk_dword_890=3,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=3,   .equipment_slot_id3=3,   .guid=0x1001,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [3] = { .unk_dword_7199=4,   .unk_dword_890=4,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=4,   .equipment_slot_id3=4,   .guid=0x1002,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [4] = { .unk_dword_7199=7,   .unk_dword_890=7,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=7,   .equipment_slot_id3=7,   .guid=ITEM_GUID_FISTS, .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [5] = { .unk_dword_7199=105, .unk_dword_890=105, .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=105, .equipment_slot_id3=105, .guid=0x1004,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [6] = { .unk_dword_7199=10,  .unk_dword_890=10,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=10,  .equipment_slot_id3=10,  .guid=0x1005,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [7] = { .unk_dword_7199=14,  .unk_dword_890=14,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=14,  .equipment_slot_id3=14,  .guid=0x1006,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        //     [8] = { .unk_dword_7199=13,  .unk_dword_890=13,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=13,  .equipment_slot_id3=13,  .guid=0x1007,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-        // },
+        .equipment_slots_count = 9,
+        .equipment_slots = (struct equipment_slots_s[9]){
+            [0] = { .unk_dword_7199=15,  .unk_dword_890=15,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=15,  .equipment_slot_id3=15,  .guid=0,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [1] = { .unk_dword_7199=27,  .unk_dword_890=27,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=27,  .equipment_slot_id3=27,  .guid=0,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [2] = { .unk_dword_7199=3,   .unk_dword_890=3,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=3,   .equipment_slot_id3=3,   .guid=0x1001,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [3] = { .unk_dword_7199=4,   .unk_dword_890=4,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=4,   .equipment_slot_id3=4,   .guid=0x1002,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [4] = { .unk_dword_7199=7,   .unk_dword_890=7,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=7,   .equipment_slot_id3=7,   .guid=ITEM_GUID_FISTS, .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [5] = { .unk_dword_7199=105, .unk_dword_890=105, .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=105, .equipment_slot_id3=105, .guid=0x1004,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [6] = { .unk_dword_7199=10,  .unk_dword_890=10,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=10,  .equipment_slot_id3=10,  .guid=0x1005,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [7] = { .unk_dword_7199=14,  .unk_dword_890=14,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=14,  .equipment_slot_id3=14,  .guid=0x1006,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+            [8] = { .unk_dword_7199=13,  .unk_dword_890=13,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=13,  .equipment_slot_id3=13,  .guid=0x1007,          .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+        },
         .unk_array_2135_count = 0,
         .unk_dword_8123 = 0,
         .unk_dword_264 = 0,

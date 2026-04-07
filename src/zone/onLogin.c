@@ -100,6 +100,9 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     String8 eqChestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
     String8 eqLegsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
     String8 eqEyesModel  = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
+    String8 eqOuterChestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Hoodie_Down.adr") : STR8("SurvivorMale_Chest_Hoodie_Down.adr");
+    String8 eqOuterLegsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_SkinnyLeg.adr") : STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr");
+    String8 eqFeetModel       = (gender == 2) ? STR8("SurvivorFemale_Feet_Conveys.adr") : STR8("SurvivorMale_Feet_Conveys.adr");
 
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
@@ -127,9 +130,9 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4   },
         [3] = { .model_name = STR8("Weapon_Empty.adr"),                       .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7   },
         [4] = { .model_name = eqEyesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 105 },
-        [5] = { .model_name = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),     .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10  },
-        [6] = { .model_name = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),  .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14  },
-        [7] = { .model_name = STR8("SurvivorMale_Feet_Conveys.adr"),          .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13  },
+        [5] = { .model_name = eqOuterChestModel,                              .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10  },
+        [6] = { .model_name = eqOuterLegsModel,                               .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14  },
+        [7] = { .model_name = eqFeetModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13  },
     };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
@@ -173,9 +176,9 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4,   .unk_bool_1 = FALSE },
         [3] = { .model_name = STR8("Weapon_Empty.adr"),                       .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7,   .unk_bool_1 = FALSE },
         [4] = { .model_name = eqEyesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 105, .unk_bool_1 = FALSE },
-        [5] = { .model_name = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),     .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10,  .unk_bool_1 = FALSE },
-        [6] = { .model_name = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),  .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14,  .unk_bool_1 = FALSE },
-        [7] = { .model_name = STR8("SurvivorMale_Feet_Conveys.adr"),          .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13,  .unk_bool_1 = FALSE },
+        [5] = { .model_name = eqOuterChestModel,                              .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10,  .unk_bool_1 = FALSE },
+        [6] = { .model_name = eqOuterLegsModel,                               .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14,  .unk_bool_1 = FALSE },
+        [7] = { .model_name = eqFeetModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13,  .unk_bool_1 = FALSE },
     };
     activateProfile.unk_dword_1    = 0;
     activateProfile.unk_dword_2    = 0;
@@ -349,8 +352,23 @@ void DeployCharacter(AppState* app, SessionState* session) {
     SendEquipmentAndMovement(app, session);
 
     // 7. LightweightToFullPc — full character upgrade with position
+    //    Patch the baked-in characterId so the client can match this to the
+    //    AddLightweightPc entity it just registered.
     printf("[DEPLOY] Sending LightweightToFullPc...\n");
-    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
+    {
+        u32 maxBuf = KB(2);
+        u8* fileBuffer = arena_push_size(&app->arenaPerTick, maxBuf);
+        u32 fileLen = app->api->buffer_load_from_file("..\\data\\LightweightToFullPc.bin", fileBuffer, maxBuf);
+        if (!fileLen) {
+            printf("[DEPLOY] ERROR: Failed to load LightweightToFullPc.bin!\n");
+        } else {
+            u32 replacements = PatchCharacterId(fileBuffer, fileLen, SENDSELF_BIN_ORIG_CHARID, session->characterId);
+            printf("[DEPLOY] LightweightToFullPc: patched characterId %u time(s)\n", replacements);
+            u8* baseBuffer = arena_push_size(&app->arenaPerTick, fileLen + TunnelDataHeaderLen);
+            memcpy(baseBuffer + TunnelDataHeaderLen, fileBuffer, fileLen);
+            GatewayTunnelDataSend(app, session, baseBuffer, fileLen + TunnelDataHeaderLen);
+        }
+    }
     printf("[DEPLOY] LightweightToFullPc sent\n");
 
     // 8. ZoneDoneSendingInitialData
