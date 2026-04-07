@@ -178,6 +178,19 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
+            // If transfer state is already active, acknowledge only and avoid replaying zoning.
+            // Legitimate matchmaking transfers are handled when the character is in-world
+            // (isReady/finished_loading are true before reset).
+            if (!session->isReady && !session->finished_loading && !session->characterDeployed) {
+                printf("[TRANSFER] Duplicate transfer request while transfer in progress; reply-only\n");
+
+                Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
+                transferReply.world_id_reply = 1;
+                ZonePacketSend(app, session, &app->arenaPerTick,
+                            Zone_Packet_Kind_PlayerWorldTransferReply, &transferReply);
+                break;
+            }
+
             // 1. Transfer reply
             Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
             transferReply.world_id_reply = 1;
@@ -238,6 +251,14 @@ packetIdSwitch:
             // 3. Reset loading flags
             session->finished_loading = FALSE;
             session->isReady = FALSE;
+            session->characterReleased = FALSE;
+            session->characterDeployed = FALSE;
+            session->zoneCycleId += 1;
+            if (session->zoneCycleId == 0) {
+                session->zoneCycleId = 1;
+            }
+            printf("[TRANSFER] Reset lifecycle: zoneCycleId=%u deployedCycleId=%u characterReleased=%d\n",
+                   session->zoneCycleId, session->deployedCycleId, session->characterReleased);
         } break;
         case 0x11: {
             // ClientUpdateBase — check sub-opcode

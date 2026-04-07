@@ -208,6 +208,7 @@ struct SessionState {
     b8 resourcesSent;        // Track if resources data has been sent
     
     String8 characterName;
+    String8 ticketIdentity;
 
     u64 characterId;
     u64 guid;
@@ -278,6 +279,9 @@ struct SessionState {
     // begin world_character struct
     b8 characterReleased;
     b8 characterDeployed;       // TODO 3: Set in DeployCharacter to prevent re-entry
+    // Deploy guard state: one DeployCharacter execution per zone cycle.
+    u32 zoneCycleId;
+    u32 deployedCycleId;
     b8 isLoading;
     b8 isMoving;
     b8 isRunning;

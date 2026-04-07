@@ -260,10 +260,22 @@ void DeployCharacter(AppState* app, SessionState* session) {
     _time64(&deployTime);
     static int deployCount = 0;
     deployCount++;
-    printf("[DEPLOY] DeployCharacter called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
+    printf("[DEPLOY] DeployCharacter called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d zoneCycleId=%u deployedCycleId=%u\n",
            deployCount, deployTime, (unsigned long long)session->characterId,
            session->isReady, session->finished_loading, session->characterReleased,
-           session->characterDeployed);
+           session->characterDeployed, session->zoneCycleId, session->deployedCycleId);
+
+    // Ensure first login on older sessions gets a valid cycle.
+    if (session->zoneCycleId == 0) {
+        session->zoneCycleId = 1;
+    }
+
+    // Deploy exactly once per zone cycle; protects ClientIsReady/0x97 race.
+    if (session->deployedCycleId == session->zoneCycleId) {
+        printf("[DEPLOY GUARD] Duplicate deploy blocked for zoneCycleId=%u\n",
+               session->zoneCycleId);
+        return;
+    }
     printf("[DEPLOY] Session actor: model=%u gender=%u head=%u hair='%.*s' headActor='%.*s'\n",
            session->pGetPlayerActor.actorModelId, session->pGetPlayerActor.gender,
            session->pGetPlayerActor.headType,
@@ -319,6 +331,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
     session->characterReleased = TRUE;
     session->characterDeployed = TRUE;
+    session->deployedCycleId = session->zoneCycleId;
 
     // 5. Character.CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
@@ -332,7 +345,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     printf("[DEPLOY] Sending AddLightweightPc...\n");
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
     lightweightPc.character_id       = session->characterId;
-    lightweightPc.transient_id.value = 1;
+    lightweightPc.transient_id.value = session->zoneCycleId;
     lightweightPc.id_characterName   = session->characterName;
     lightweightPc.actorModelId       = session->pGetPlayerActor.actorModelId;
     lightweightPc.position           = (vec3){ -297.309998f, 506.059998f, -4894.100098f };
@@ -702,7 +715,7 @@ itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
                 // Fists
                 .defs_id       = 85,
                 .bitflags1     = 0,
-                .bitflags2     = 0b00001100, // FLAG_CAN_EQUIP | FLAG_NO_DRAG_DROP
+                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP | FLAG_NO_DRAG_DROP yes drop
                 .name_id       = 0,
                 .item_class    = 25006,
                 .item_type     = 20,
