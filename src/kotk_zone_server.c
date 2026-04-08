@@ -113,6 +113,12 @@ InputStreamCallbackData(pingInputStreamData);
 void GatewayOnLogin(AppState* app, SessionState* session, u64 characterId) {
     printf("[!] Character %llxh trying to login to zone server\n", characterId);
     session->characterId = characterId;
+    if (!session->guid) {
+        session->guid = characterId;
+    }
+    if (!session->transientId) {
+        session->transientId = 1;
+    }
     session->zoneCycleId = 1;
     session->deployedCycleId = 0;
 

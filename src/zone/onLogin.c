@@ -21,6 +21,291 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
     GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
 }
 
+static u32 TraceCrc32(const u8* data, u32 len) {
+    u32 crc = 0xFFFFFFFFu;
+    for (u32 i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (u32 b = 0; b < 8; b++) {
+            crc = (crc >> 1) ^ (0xEDB88320u & (-(i32)(crc & 1u)));
+        }
+    }
+    return ~crc;
+}
+
+static const u8 kLtfpcTemplate[] = {
+    0xda, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69,
+    0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x48, 0x65, 0x61, 0x64, 0x5f, 0x30, 0x31, 0x2e,
+    0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66, 0x61, 0x75,
+    0x6c, 0x74, 0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x1a, 0x00, 0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65,
+    0x5f, 0x43, 0x68, 0x65, 0x73, 0x74, 0x5f, 0x42, 0x72, 0x61, 0x2e, 0x61, 0x64, 0x72, 0x00, 0x00,
+    0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x01, 0x00, 0x00,
+    0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00, 0x00, 0x00, 0x53,
+    0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x4c, 0x65, 0x67, 0x73,
+    0x5f, 0x50, 0x61, 0x6e, 0x74, 0x73, 0x5f, 0x55, 0x6e, 0x64, 0x65, 0x72, 0x77, 0x65, 0x61, 0x72,
+    0x2e, 0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66, 0x61,
+    0x75, 0x6c, 0x74, 0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x10, 0x00, 0x00, 0x00, 0x57, 0x65, 0x61, 0x70, 0x6f, 0x6e, 0x5f, 0x45, 0x6d, 0x70, 0x74,
+    0x79, 0x2e, 0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66,
+    0x61, 0x75, 0x6c, 0x74, 0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61,
+    0x6c, 0x65, 0x5f, 0x45, 0x79, 0x65, 0x73, 0x5f, 0x30, 0x31, 0x2e, 0x61, 0x64, 0x72, 0x00, 0x00,
+    0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x01, 0x00, 0x00,
+    0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00, 0x53,
+    0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x43, 0x68, 0x65, 0x73,
+    0x74, 0x5f, 0x48, 0x6f, 0x6f, 0x64, 0x69, 0x65, 0x5f, 0x44, 0x6f, 0x77, 0x6e, 0x2e, 0x61, 0x64,
+    0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66, 0x61, 0x75, 0x6c, 0x74,
+    0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x25, 0x00,
+    0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x4c,
+    0x65, 0x67, 0x73, 0x5f, 0x50, 0x61, 0x6e, 0x74, 0x73, 0x5f, 0x53, 0x6b, 0x69, 0x6e, 0x6e, 0x79,
+    0x4c, 0x65, 0x67, 0x2e, 0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44,
+    0x65, 0x66, 0x61, 0x75, 0x6c, 0x74, 0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72,
+    0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x46, 0x65, 0x65, 0x74, 0x5f, 0x43, 0x6f, 0x6e, 0x76, 0x65, 0x79,
+    0x73, 0x2e, 0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x44, 0x65, 0x66,
+    0x61, 0x75, 0x6c, 0x74, 0x01, 0x00, 0x00, 0x00, 0x23, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61,
+    0x6c, 0x65, 0x5f, 0x48, 0x65, 0x61, 0x64, 0x5f, 0x30, 0x31, 0x2e, 0x61, 0x64, 0x72, 0x21, 0x00,
+    0x00, 0x00, 0x53, 0x75, 0x72, 0x76, 0x69, 0x76, 0x6f, 0x72, 0x4d, 0x61, 0x6c, 0x65, 0x5f, 0x48,
+    0x61, 0x69, 0x72, 0x5f, 0x4d, 0x65, 0x64, 0x69, 0x75, 0x6d, 0x4d, 0x65, 0x73, 0x73, 0x79, 0x2e,
+    0x61, 0x64, 0x72, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+    0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x10,
+    0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06,
+    0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0xae, 0xa7, 0x94, 0xc3, 0xae, 0x07, 0xfd, 0x43, 0xcd, 0xf0, 0x98, 0xc5,
+};
+
+static const u32 kLtfpcTemplateLen = sizeof(kLtfpcTemplate);
+
+static void TraceLightweightToFullPcPayloadBytes(SessionState* session, const u8* payload,
+                                                 u32 payloadLen, const char* source);
+
+static i32 FindBytes(const u8* haystack, u32 haystackLen, const u8* needle, u32 needleLen) {
+    if (!haystack || !needle || needleLen == 0 || haystackLen < needleLen) {
+        return -1;
+    }
+    for (u32 i = 0; i + needleLen <= haystackLen; i++) {
+        if (memcmp(haystack + i, needle, needleLen) == 0) {
+            return (i32)i;
+        }
+    }
+    return -1;
+}
+
+static b8 PatchTemplateStringInPlace(u8* buffer, u32 bufferLen, const char* fromLiteral,
+                                     String8 toValue) {
+    u32 fromLen = (u32)strlen(fromLiteral);
+    i32 idx = FindBytes(buffer, bufferLen, (const u8*)fromLiteral, fromLen);
+    if (idx < 0) {
+        return FALSE;
+    }
+
+    // Keep template layout stable: truncate to original slot length if needed.
+    u32 copyLen = toValue.size < fromLen ? toValue.size : fromLen;
+    memset(buffer + idx, 0, fromLen);
+    memcpy(buffer + idx, toValue.data, copyLen);
+
+    // Most strings in this payload are prefixed by a u32 length right before the bytes.
+    if ((u32)idx >= 4) {
+        u32 oldLen = endian_read_u32_little(buffer + idx - 4);
+        if (oldLen == fromLen) {
+            endian_write_u32_little(buffer + idx - 4, copyLen);
+        }
+    }
+
+    return TRUE;
+}
+
+static void SendLightweightToFullPcDynamic(AppState* app, SessionState* session, Arena* arena) {
+    u8* payload = arena_push_size(arena, KB(4));
+    u32 offset = 0;
+
+    u32 gender = session->pGetPlayerActor.gender ? session->pGetPlayerActor.gender : 1;
+    String8 headActor = session->pGetPlayerActor.headActor;
+    if (headActor.size == 0) {
+        headActor = gender == 2 ? STR8("SurvivorFemale_Head_01.adr") : STR8("SurvivorMale_Head_01.adr");
+    }
+    String8 hairModel = session->pGetPlayerActor.hairModel;
+    if (hairModel.size == 0) {
+        hairModel = gender == 2 ? STR8("SurvivorFemale_Hair_Down.adr") : STR8("SurvivorMale_Hair_MediumMessy.adr");
+    }
+
+    String8 chestModel = gender == 2 ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
+    String8 legsModel = gender == 2 ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
+    String8 eyesModel = gender == 2 ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
+
+    String8 attachmentModels[8] = {
+        headActor,
+        chestModel,
+        legsModel,
+        STR8("Weapon_Empty.adr"),
+        eyesModel,
+        STR8("SurvivorMale_Chest_Hoodie_Down.adr"),
+        STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),
+        STR8("SurvivorMale_Feet_Conveys.adr"),
+    };
+    u32 attachmentSlots[8] = { 1, 3, 4, 7, 105, 10, 14, 13 };
+
+    // Explicitly serialize 0xDA attachment-group header and entries.
+    endian_write_u8_little(payload + offset, 0xda);
+    offset += sizeof(u8);
+    endian_write_u8_little(payload + offset, 0x00);
+    offset += sizeof(u8);
+    endian_write_u8_little(payload + offset, 0x04);
+    offset += sizeof(u8);
+    endian_write_u32_little(payload + offset, ARRAY_COUNT(attachmentModels));
+    offset += sizeof(u32);
+
+    for (u32 i = 0; i < ARRAY_COUNT(attachmentModels); i++) {
+        String8 model = attachmentModels[i];
+        endian_write_u32_little(payload + offset, model.size);
+        offset += sizeof(u32);
+        memcpy(payload + offset, model.data, model.size);
+        offset += model.size;
+
+        endian_write_u32_little(payload + offset, 0);  // unk
+        offset += sizeof(u32);
+
+        endian_write_u32_little(payload + offset, 7);  // tint alias len
+        offset += sizeof(u32);
+        memcpy(payload + offset, "Default", 7);
+        offset += 7;
+
+        endian_write_u32_little(payload + offset, 1);  // decal alias len
+        offset += sizeof(u32);
+        memcpy(payload + offset, "#", 1);
+        offset += 1;
+
+        endian_write_u32_little(payload + offset, 0);
+        offset += sizeof(u32);
+        endian_write_u32_little(payload + offset, 0);
+        offset += sizeof(u32);
+        endian_write_u32_little(payload + offset, 0);
+        offset += sizeof(u32);
+
+        endian_write_u32_little(payload + offset, attachmentSlots[i]);
+        offset += sizeof(u32);
+
+        endian_write_u32_little(payload + offset, 0);
+        offset += sizeof(u32);
+        endian_write_u32_little(payload + offset, 0);
+        offset += sizeof(u32);
+    }
+
+    i32 headBangIdx = FindBytes(kLtfpcTemplate, kLtfpcTemplateLen,
+                                (const u8*)"SurvivorMale_Head_01.adr!",
+                                (u32)strlen("SurvivorMale_Head_01.adr!"));
+    if (headBangIdx < 4) {
+        printf("[LTFPC DYN] failed to locate template tail anchor, aborting send\n");
+        return;
+    }
+
+    u32 tailOffset = (u32)(headBangIdx - 4);
+    u32 tailLen = kLtfpcTemplateLen - tailOffset;
+    memcpy(payload + offset, kLtfpcTemplate + tailOffset, tailLen);
+    offset += tailLen;
+
+    u32 payloadLen = offset;
+
+    struct ltfpc_patch_s {
+        const char* from;
+        String8 to;
+    } patchList[] = {
+        { "SurvivorMale_Hair_MediumMessy.adr", hairModel },
+    };
+
+    u32 patchedCount = 0;
+    for (u32 i = 0; i < ARRAY_COUNT(patchList); i++) {
+        patchedCount += PatchTemplateStringInPlace(payload, payloadLen, patchList[i].from,
+                                                   patchList[i].to)
+                            ? 1
+                            : 0;
+    }
+
+    // One template variant contains this head string with trailing punctuation.
+    String8 headActorBang = headActor;
+    patchedCount += PatchTemplateStringInPlace(payload, payloadLen, "SurvivorMale_Head_01.adr!",
+                                               headActorBang)
+                        ? 1
+                        : 0;
+
+    u32 dynCrc = TraceCrc32(payload, payloadLen);
+    printf("[LTFPC DYN] source=explicit-attachments len=%u crc32=0x%08x patched=%u gender=%u head='%.*s' hair='%.*s'\n",
+           payloadLen,
+           dynCrc,
+           patchedCount,
+           gender,
+           (int)headActor.size, headActor.data,
+           (int)hairModel.size, hairModel.data);
+    TraceLightweightToFullPcPayloadBytes(session, payload, payloadLen, "dynamic-built");
+
+    u8* baseBuffer = arena_push_size(arena, payloadLen + TunnelDataHeaderLen);
+    memcpy(baseBuffer + TunnelDataHeaderLen, payload, payloadLen);
+    GatewayTunnelDataSend(app, session, baseBuffer, payloadLen + TunnelDataHeaderLen);
+}
+
+static void TraceLifecycleState(const char* tag, SessionState* session) {
+    __time64_t now;
+    _time64(&now);
+    printf("[TRACE LIFE] %s ts=%lld guid=0x%llx char=0x%llx transient=%u cycle=%u deployedCycle=%u isReady=%d finished=%d released=%d deployed=%d\n",
+           tag,
+           now,
+           (unsigned long long)session->guid,
+           (unsigned long long)session->characterId,
+           session->transientId,
+           session->zoneCycleId,
+           session->deployedCycleId,
+           session->isReady,
+           session->finished_loading,
+           session->characterReleased,
+           session->characterDeployed);
+}
+
+static void TraceLightweightToFullPcPayloadBytes(SessionState* session, const u8* payload,
+                                                 u32 payloadLen, const char* source) {
+    if (!payload || payloadLen == 0) {
+        printf("[TRACE LTFPC] source='%s' empty payload\n", source);
+        return;
+    }
+
+    u32 crc32 = TraceCrc32(payload, payloadLen);
+    printf("[TRACE LTFPC] source='%s' fileLen=%u crc32=0x%08x guid=0x%llx char=0x%llx transient=%u cycle=%u\n",
+           source,
+           payloadLen,
+           crc32,
+           (unsigned long long)session->guid,
+           (unsigned long long)session->characterId,
+           session->transientId,
+           session->zoneCycleId);
+
+    u32 headLen = payloadLen < 16 ? payloadLen : 16;
+    u32 tailLen = payloadLen < 16 ? payloadLen : 16;
+
+    printf("[TRACE LTFPC] head=");
+    for (u32 i = 0; i < headLen; i++) {
+        printf("%02x", payload[i]);
+        if (i + 1 < headLen) printf(" ");
+    }
+    printf("\n");
+
+    printf("[TRACE LTFPC] tail=");
+    for (u32 i = payloadLen - tailLen; i < payloadLen; i++) {
+        printf("%02x", payload[i]);
+        if (i + 1 < payloadLen) printf(" ");
+    }
+    printf("\n");
+}
+
 
 // ============================================================================
 // SendEquipmentAndMovement — called from ClientFinishedLoading
@@ -345,7 +630,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     printf("[DEPLOY] Sending AddLightweightPc...\n");
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
     lightweightPc.character_id       = session->characterId;
-    lightweightPc.transient_id.value = session->zoneCycleId;
+    lightweightPc.transient_id.value = session->transientId ? session->transientId : 1;
     lightweightPc.id_characterName   = session->characterName;
     lightweightPc.actorModelId       = session->pGetPlayerActor.actorModelId;
     lightweightPc.position           = (vec3){ -297.309998f, 506.059998f, -4894.100098f };
@@ -356,14 +641,23 @@ void DeployCharacter(AppState* app, SessionState* session) {
                    Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
     printf("[DEPLOY] Sent AddLightweightPc\n");
 
-    // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
-    //    while client is still in WaitForFirstZone, giving geometry time to load
-    //    before the Running state attachment group check.
-    SendEquipmentAndMovement(app, session);
+    // 6. Equipment + movement — prefer ClientFinishedLoading timing.
+    // If the client finished loading early, send immediately from here.
+    if (session->finished_loading) {
+        printf("[DEPLOY] ClientFinishedLoading already set; sending equipment immediately\n");
+        SendEquipmentAndMovement(app, session);
+    } else {
+        printf("[DEPLOY] Waiting for ClientFinishedLoading before equipment/attachments\n");
+    }
 
     // 7. LightweightToFullPc — full character upgrade with position
     printf("[DEPLOY] Sending LightweightToFullPc...\n");
-    ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
+    static u32 ltfpcSendCount = 0;
+    ltfpcSendCount += 1;
+    printf("[TRACE LTFPC] sendCount=%u sendSeqDebug=%u\n", ltfpcSendCount, session->sendSeqDebug);
+    TraceLifecycleState("before-LightweightToFullPc", session);
+    SendLightweightToFullPcDynamic(app, session, &app->arenaPerTick);
+    TraceLifecycleState("after-LightweightToFullPc", session);
     printf("[DEPLOY] LightweightToFullPc sent\n");
 
     // 8. ZoneDoneSendingInitialData

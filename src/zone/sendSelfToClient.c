@@ -207,8 +207,11 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         identityString.size = (u64)identityFallbackLen;
     }
 
+    u64 selfGuid = session->guid ? session->guid : session->characterId;
+    u32 selfTransientId = session->transientId ? session->transientId : 1;
+
     printf("[SENDSELF] Dynamic packer: guid=0x%llx model=%u gender=%u head=%u name='%.*s' id='%.*s'\n",
-           (unsigned long long)session->characterId, actorModelId, gender, headType,
+           (unsigned long long)selfGuid, actorModelId, gender, headType,
            (int)charName.size, charName.data,
            (int)identityString.size, identityString.data);
 
@@ -216,9 +219,9 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
 
 sendSelf.payload_self = (struct payload_self_s[1]){
         [0] = {
-            .guid = session->characterId,
+            .guid = selfGuid,
             .character_id = session->characterId,
-            .transient_id.value = 1,
+            .transient_id.value = selfTransientId,
             .last_login_date = 0,
             .actor_model_id = actorModelId,
             .head_actor = headActor,

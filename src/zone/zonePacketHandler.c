@@ -1,3 +1,23 @@
+static void TraceZoneLifecycleEvent(const char* eventName, SessionState* session, u32 packetId,
+                     u32 packetLen) {
+    __time64_t now;
+    _time64(&now);
+    printf("[TRACE ZONE] evt=%s ts=%lld packet=0x%x len=%u guid=0x%llx char=0x%llx transient=%u cycle=%u deployedCycle=%u isReady=%d finished=%d released=%d deployed=%d\n",
+        eventName,
+        now,
+        packetId,
+        packetLen,
+        (unsigned long long)session->guid,
+        (unsigned long long)session->characterId,
+        session->transientId,
+        session->zoneCycleId,
+        session->deployedCycleId,
+        session->isReady,
+        session->finished_loading,
+        session->characterReleased,
+        session->characterDeployed);
+}
+
 void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataLen) {
     if (dataLen == 0) {
         printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
@@ -54,6 +74,7 @@ packetIdSwitch:
         case ZONE_CLIENTISREADY_ID: {
             kind = Zone_Packet_Kind_ClientIsReady;
             PRINT_TIMESTAMP(); printf("[*] ClientIsReady received\n");
+            TraceZoneLifecycleEvent("ClientIsReady", session, packetId, dataLen);
             __time64_t t1; _time64(&t1);
             printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
                    zone_packet_names[kind], t1,
@@ -70,6 +91,7 @@ packetIdSwitch:
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
             PRINT_TIMESTAMP(); printf("[*] ClientFinishedLoading received\n");
+            TraceZoneLifecycleEvent("ClientFinishedLoading", session, packetId, dataLen);
             __time64_t t2; _time64(&t2);
             printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
                 zone_packet_names[kind], t2,
@@ -80,6 +102,15 @@ packetIdSwitch:
                 break;
             }
             session->finished_loading = TRUE;
+
+            // Send equipment/attachments only after client reports finished loading.
+            // This avoids races where attachment groups are validated before setup packets land.
+            if (session->characterReleased && session->characterDeployed) {
+                SendEquipmentAndMovement(app, session);
+            } else {
+                printf("[EQUIP] Deferring equipment send: character not deployed yet (released=%d deployed=%d)\n",
+                       session->characterReleased, session->characterDeployed);
+            }
 
             printf("[*] ClientFinishedLoading acknowledged\n");
         } break;
@@ -142,9 +173,34 @@ packetIdSwitch:
 
             ZonePacketSend(app, session, &app->arenaPerTick, kind, &setLocale);
         } break;
+        case ZONE_INGAMEPURCHASEBASE_ID: {
+            // Client sends 0x27 sub-messages (e.g. 0x2714/0x2719) with locale payload.
+            // They are not required for core zone/deploy flow.
+            u8 subOpcode = dataLen > 1 ? data[1] : 0;
+            printf("[IGP] Handling InGamePurchaseBase sub-opcode 0x%02x (len=%u)\n",
+                   subOpcode, dataLen);
+
+            if (dataLen >= 8) {
+                u32 strLen = endian_read_u32_little(data + 3);
+                if (strLen > 0 && dataLen >= (u32)(7 + strLen)) {
+                    printf("[IGP] payload locale='%.*s'\n", (int)strLen, data + 7);
+                }
+            }
+        } break;
         case ZONE_CLIENTLOG_ID: {
             kind = Zone_Packet_Kind_ClientLog;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            TraceZoneLifecycleEvent("ClientLog", session, packetId, dataLen);
+
+            Zone_Packet_ClientLog clientLog = { 0 };
+            if (dataLen > 1) {
+                zone_packet_unpack(data + 1, dataLen - 1, kind, &clientLog, &app->arenaPerTick);
+                printf("[CLIENTLOG] file='%.*s' message='%.*s'\n",
+                       (int)clientLog.file.size, clientLog.file.data,
+                       (int)clientLog.message.size, clientLog.message.data);
+            } else {
+                printf("[CLIENTLOG] malformed packet (dataLen=%u)\n", dataLen);
+            }
         } break;
         case ZONE_CLIENTLOGOUT_ID: {
             kind = Zone_Packet_Kind_ClientLogout;
@@ -177,6 +233,7 @@ packetIdSwitch:
         case ZONE_PLAYERWORLDTRANSFERREQUEST_ID: {
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            TraceZoneLifecycleEvent("PlayerWorldTransferRequest", session, packetId, dataLen);
 
             // If transfer state is already active, acknowledge only and avoid replaying zoning.
             // Legitimate matchmaking transfers are handled when the character is in-world
@@ -247,12 +304,15 @@ packetIdSwitch:
             beginZoning.unk_bool_2                 = FALSE;
             ZonePacketSend(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
+            TraceZoneLifecycleEvent("ClientBeginZoning(sent)", session,
+                                    ZONE_CLIENTBEGINZONING_ID, 0);
 
             // 3. Reset loading flags
             session->finished_loading = FALSE;
             session->isReady = FALSE;
             session->characterReleased = FALSE;
             session->characterDeployed = FALSE;
+            session->deployedCycleId = 0;
             session->zoneCycleId += 1;
             if (session->zoneCycleId == 0) {
                 session->zoneCycleId = 1;
@@ -269,6 +329,7 @@ packetIdSwitch:
             if (subOpcode == 0x97) {
                 // 0x11 0x97 — Zone ready notification from client after a zone transition.
                 printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
+                TraceZoneLifecycleEvent("ClientUpdateBase_0x97", session, packetId, dataLen);
                 DeployCharacter(app, session);
             } else {
                 printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"),
