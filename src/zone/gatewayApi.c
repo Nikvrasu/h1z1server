@@ -1,10 +1,23 @@
+// ============================================================================
+// Gateway Protocol — Pack / Unpack / Handle
+//
+// The gateway layer sits between SOE transport and zone client protocol.
+// It handles: LoginRequest, LoginReply, TunnelPacket routing, ChannelIsRoutable.
+//
+// Ref: H1emu/h1z1-server src/servers/GatewayServer/gatewayserver.ts
+//
+// Channels:
+//   0 = main zone protocol (encrypted after login)
+//   1 = secondary channel (routable)
+//   2 = position updates (silently dropped for now)
+//   4,5 = additional channels (routable)
+// ============================================================================
+
 u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
     u32 offset = 0;
-    printf("\n");
 
     switch (kind) {
         case GatewayKindLoginRequest: {
-            printf(MESSAGE_CONCAT_INFO("Packing LoginRequest...\n"));
             GatewayLoginRequest* packet = packetPtr;
 
             endian_write_u8_little(buffer + offset, GatewayLoginRequestId);
@@ -12,43 +25,32 @@ u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
 
             endian_write_u64_little(buffer + offset, packet->characterId);
             offset += sizeof(u64);
-            printf("-- characterId            \t%lld\t%llxh\t%f\n", (i64)packet->characterId,
-                   (u64)packet->characterId, (f64)packet->characterId);
 
             endian_write_u32_little(buffer + offset, packet->serverTicketLen);
             offset += sizeof(u32);
-            printf("-- serverTicketLen           \t%lld\t%llxh\t%f\n", (i64)packet->serverTicketLen,
-                   (u64)packet->serverTicketLen, (f64)packet->serverTicketLen);
 
-            for (u32 serverTickeIter = 0; serverTickeIter < packet->serverTicketLen;
-                 serverTickeIter++) {
-                endian_write_i8_little(buffer + offset, packet->serverTicket[serverTickeIter]);
+            for (u32 i = 0; i < packet->serverTicketLen; i++) {
+                endian_write_i8_little(buffer + offset, packet->serverTicket[i]);
                 offset++;
             }
 
             endian_write_u32_little(buffer + offset, packet->clientProtocolLen);
             offset += sizeof(u32);
-            printf("-- clientProtocolLen           \t%lld\t%llxh\t%f\n", (i64)packet->clientProtocolLen,
-                   (u64)packet->clientProtocolLen, (f64)packet->clientProtocolLen);
 
-            for (u32 clientProtocolIter = 0; clientProtocolIter < packet->clientProtocolLen;
-                 clientProtocolIter++) {
-                endian_write_i8_little(buffer + offset, packet->clientProtocol[clientProtocolIter]);
+            for (u32 i = 0; i < packet->clientProtocolLen; i++) {
+                endian_write_i8_little(buffer + offset, packet->clientProtocol[i]);
                 offset++;
             }
 
             endian_write_u32_little(buffer + offset, packet->clientBuildLen);
             offset += sizeof(u32);
-            printf("-- clientBuildLen           \t%lld\t%llxh\t%f\n", (i64)packet->clientBuildLen,
-                   (u64)packet->clientBuildLen, (f64)packet->clientBuildLen);
 
-            for (u32 clientBuildIter = 0; clientBuildIter < packet->clientBuildLen; clientBuildIter++) {
-                endian_write_i8_little(buffer + offset, packet->clientBuild[clientBuildIter]);
+            for (u32 i = 0; i < packet->clientBuildLen; i++) {
+                endian_write_i8_little(buffer + offset, packet->clientBuild[i]);
                 offset++;
             }
         } break;
         case GatewayKindLoginReply: {
-            printf(MESSAGE_CONCAT_INFO("Packing LoginReply...\n"));
             GatewayLoginReply* packet = packetPtr;
 
             endian_write_u8_little(buffer + offset, GatewayLoginReplyId);
@@ -56,17 +58,12 @@ u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
 
             endian_write_b8_little(buffer + offset, packet->isLoggedIn);
             offset += sizeof(b8);
-
-            printf("-- isLoggedIn            \t%lld\t%llxh\t%f\n", (i64)packet->isLoggedIn,
-                   (u64)packet->isLoggedIn, (f64)packet->isLoggedIn);
         } break;
         case GatewayKindTunnelPacketToExternalConnection:
         case GatewayKindTunnelPacketFromExternalConnection: {
-            printf(MESSAGE_CONCAT_INFO("Packing %s...\n"), gatewayKindNames[kind]);
             GatewayTunnelPacket* packet = packetPtr;
 
             u8 opcode;
-
             if (kind == GatewayKindTunnelPacketToExternalConnection) {
                 opcode = GatewayTunnelToExternalConnectionId;
             } else if (kind == GatewayKindTunnelPacketFromExternalConnection) {
@@ -79,33 +76,21 @@ u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
             endian_write_u8_little(buffer + offset, opcode | (packet->channel << 5));
             offset++;
 
-            printf("-- channel                 \t%lld\t%llxh\t%f\n", (i64)packet->channel,
-                   (u64)packet->channel, (f64)packet->channel);
             memcpy(buffer + offset, packet->data, packet->dataLen);
             offset += packet->dataLen;
         } break;
         case GatewayKindChannelIsRoutable: {
-            printf(MESSAGE_CONCAT_INFO("Packing ChannelIsRoutable...\n"));
             GatewayChannelIsRoutable* packet = packetPtr;
 
             endian_write_u8_little(buffer + offset,
                                    GatewayChannelIsRoutableId | (packet->channel << 5));
             offset++;
 
-            printf("-- channel                 \t%lld\t%llxh\t%f\n", (i64)packet->channel,
-                   (u64)packet->channel, (f64)packet->channel);
-
             endian_write_b8_little(buffer + offset, packet->isRoutable);
             offset += sizeof(b8);
 
-            printf("-- isRoutable             \t%lld\t%llxh\t%f\n", (i64)packet->isRoutable,
-                   (u64)packet->isRoutable, (f64)packet->isRoutable);
-
             endian_write_b8_little(buffer + offset, packet->unkBool);
             offset += sizeof(b8);
-
-            printf("-- unkBool                \t%lld\t%llxh\t%f\n", (i64)packet->unkBool,
-                   (u64)packet->unkBool, (f64)packet->unkBool);
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Packing %s not implemented\n"), gatewayKindNames[kind]);
@@ -117,28 +102,20 @@ u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
 
 void GatewayPacketUnpack(u8* data, u32 dataLen, GatewayKindEnum kind, void* packetPtr, Arena* arena) {
     u32 offset = 1;
-    printf("\n");
 
     switch (kind) {
         case GatewayKindLoginRequest: {
-            printf(MESSAGE_CONCAT_INFO("Unpacking LoginRequest...\n"));
             GatewayLoginRequest* packet = packetPtr;
 
             packet->characterId = endian_read_u64_little(data + offset);
             offset += sizeof(u64);
 
-            printf("-- characterId            \t%lld\t%llxh\t%f\n", (i64)packet->characterId,
-                   (u64)packet->characterId, (f64)packet->characterId);
-
             packet->serverTicketLen = endian_read_u32_little(data + offset);
             offset += sizeof(u32);
 
             packet->serverTicket = arena_push_size(arena, packet->serverTicketLen);
-            printf("-- serverTicketLen           \t%d\n", packet->serverTicketLen);
-
-            for (u32 serverTicketIter = 0; serverTicketIter < packet->serverTicketLen;
-                 serverTicketIter++) {
-                packet->serverTicket[serverTicketIter] = *(i8*)((uptr)data + offset);
+            for (u32 i = 0; i < packet->serverTicketLen; i++) {
+                packet->serverTicket[i] = *(i8*)((uptr)data + offset);
                 offset++;
             }
 
@@ -146,11 +123,8 @@ void GatewayPacketUnpack(u8* data, u32 dataLen, GatewayKindEnum kind, void* pack
             offset += sizeof(u32);
 
             packet->clientProtocol = arena_push_size(arena, packet->clientProtocolLen);
-            printf("-- clientProtocolLen           \t%d\n", packet->clientProtocolLen);
-
-            for (u32 clientProtocolIter = 0; clientProtocolIter < packet->clientProtocolLen;
-                 clientProtocolIter++) {
-                packet->clientProtocol[clientProtocolIter] = *(i8*)((uptr)data + offset);
+            for (u32 i = 0; i < packet->clientProtocolLen; i++) {
+                packet->clientProtocol[i] = *(i8*)((uptr)data + offset);
                 offset++;
             }
 
@@ -158,25 +132,18 @@ void GatewayPacketUnpack(u8* data, u32 dataLen, GatewayKindEnum kind, void* pack
             offset += sizeof(u32);
 
             packet->clientBuild = arena_push_size(arena, packet->clientBuildLen);
-            printf("-- clientBuildLen           \t%d\n", packet->clientBuildLen);
-
-            for (u32 clientBuildIter = 0; clientBuildIter < packet->clientBuildLen; clientBuildIter++) {
-                packet->clientBuild[clientBuildIter] = *(i8*)((uptr)data + offset);
+            for (u32 i = 0; i < packet->clientBuildLen; i++) {
+                packet->clientBuild[i] = *(i8*)((uptr)data + offset);
                 offset++;
             }
         } break;
         case GatewayKindLoginReply: {
-            printf(MESSAGE_CONCAT_INFO("Unpacking LoginReply...\n"));
             GatewayLoginReply* packet = packetPtr;
 
             packet->isLoggedIn = endian_read_b8_little(data + offset);
             offset += sizeof(b8);
-
-            printf("-- isLoggedIn            \t%lld\t%llxh\t%f\n", (i64)packet->isLoggedIn,
-                   (u64)packet->isLoggedIn, (f64)packet->isLoggedIn);
         } break;
         case GatewayKindTunnelPacketFromExternalConnection: {
-            printf(MESSAGE_CONCAT_INFO("Unpacking %s...\n"), gatewayKindNames[kind]);
             GatewayTunnelPacket* packet = packetPtr;
 
             packet->channel = (*data) >> 5;
@@ -210,10 +177,10 @@ void GatewayPacketSend(AppState* app, SessionState* session, Arena* arena, u32 m
 }
 
 // ============================================================================
-// Extract character name from server ticket.
-// Ticket format: "7y3Bh44sKWZCYZH:CharacterName"
-// Everything after the first ':' is the character name.
-// Stores into session->characterName using arenaTotal so it persists.
+// Extract character name and identity from server ticket.
+// Ticket format: "76561197960265729:CharacterName"
+// Before ':' = Steam-like identity, after ':' = character name.
+// Stores into session using arenaTotal so it persists across ticks.
 // ============================================================================
 void GatewayExtractCharacterName(AppState* app, SessionState* session,
                                  char* ticket, u32 ticketLen) {
@@ -231,13 +198,9 @@ void GatewayExtractCharacterName(AppState* app, SessionState* session,
         session->ticketIdentity.size = colonPos;
         session->ticketIdentity.data = arena_push_size(&app->arenaTotal, colonPos);
         memcpy(session->ticketIdentity.data, ticket, colonPos);
-        printf("[GW] Extracted ticket identity: '%.*s' len=%u\n",
-               (int)session->ticketIdentity.size, session->ticketIdentity.data,
-               (u32)session->ticketIdentity.size);
     } else {
         session->ticketIdentity.size = 0;
         session->ticketIdentity.data = NULL;
-        printf("[GW] WARNING: No ticket identity found in server ticket!\n");
     }
 
     if (found && (colonPos + 1) < ticketLen) {
@@ -246,29 +209,36 @@ void GatewayExtractCharacterName(AppState* app, SessionState* session,
         session->characterName.data = arena_push_size(&app->arenaTotal, nameLen);
         memcpy(session->characterName.data, ticket + colonPos + 1, nameLen);
 
-        printf("[GW] Extracted character name from ticket: '%.*s' len=%u\n",
-               (int)nameLen, session->characterName.data, nameLen);
+        printf(MESSAGE_CONCAT_INFO("Ticket: identity='%.*s' name='%.*s'\n"),
+               (int)session->ticketIdentity.size, session->ticketIdentity.data,
+               (int)nameLen, session->characterName.data);
     } else {
-        printf("[GW] WARNING: No character name found in server ticket!\n");
         session->characterName.size = 0;
         session->characterName.data = NULL;
+        printf(MESSAGE_CONCAT_WARN("No character name found in server ticket\n"));
     }
 }
 
+// ============================================================================
+// GatewayPacketHandle — Routes incoming gateway-level packets.
+//
+// Ref: H1emu/h1z1-server src/servers/GatewayServer/gatewayserver.ts
+//
+// LoginRequest → enable encryption → LoginReply → ChannelIsRoutable × 5
+//             → GatewayOnLogin (triggers zone init)
+// TunnelPacket → extract channel/data → ZonePacketHandler
+// ============================================================================
 void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dataLen) {
-    printf("[GW] Raw byte 0x%02x, dataLen=%u\n", data[0], dataLen);
     GatewayKindEnum kind;
-    printf("\n");
 
     u8 channel  = *data >> 5;
     u8 packetId = *data & 0b00011111;
 
+    // Non-zero channel = tunnel data on alternate channel
     if (channel != 0) {
         if (channel == 2) {
-            // Channel 2 = position updates, silently drop for now
-            return;
+            return; // position updates — silently drop
         }
-        printf(MESSAGE_CONCAT_INFO("(%u) Routing channel %u data as tunnel data\n"), channel, channel);
         if (dataLen > 1) {
             GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);
         }
@@ -276,9 +246,14 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
     }
 
     switch (packetId) {
+        // ================================================================
+        // Gateway LoginRequest — client authenticating to zone
+        // Enable encryption, send LoginReply, mark channels routable,
+        // then trigger zone OnLogin
+        // ================================================================
         case GatewayLoginRequestId: {
             kind = GatewayKindLoginRequest;
-            printf(MESSAGE_CONCAT_INFO("(%u) Handling %s...\n"), channel, gatewayKindNames[kind]);
+            printf(MESSAGE_CONCAT_INFO("Gateway LoginRequest\n"));
 
             GatewayLoginRequest loginRequest = { 0 };
             GatewayPacketUnpack(data, dataLen, kind, &loginRequest, &app->arenaPerTick);
@@ -288,14 +263,11 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
                                         loginRequest.serverTicketLen);
 
             if (!session->isLoggedIn) {
-                printf("[*] Enabling encryption for session (first login)\n");
-
-                // Enable encryption on ch0 streams — do NOT re-init their RC4,
-                // the keystream position must be preserved from session creation.
+                // Enable encryption on main channel streams
                 session->inputStream.useEncryption  = TRUE;
                 session->outputStream.useEncryption = TRUE;
 
-                // Ch1/2/4/5 haven't been used yet so init their RC4 now.
+                // Initialize RC4 for secondary channels
                 session->inputStream1.useEncryption = TRUE;
                 crypt_rc4_initialize(&session->inputStream1.rc4, app->rc4Decoded, app->rc4DecodedLen);
                 session->inputStream2.useEncryption = TRUE;
@@ -313,61 +285,45 @@ void GatewayPacketHandle(AppState* app, SessionState* session, u8* data, u32 dat
             };
             GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindLoginReply, &loginReply);
 
-            GatewayChannelIsRoutable channelZeroIsRoutable = {
-                .channel = 0, .isRoutable = TRUE, .unkBool = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                            &channelZeroIsRoutable);
-
-            GatewayChannelIsRoutable channelOneIsRoutable = {
-                .channel = 1, .isRoutable = TRUE, .unkBool = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                            &channelOneIsRoutable);
-
-            GatewayChannelIsRoutable channelTwoIsRoutable = {
-                .channel = 2, .isRoutable = TRUE, .unkBool = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                            &channelTwoIsRoutable);
-
-            GatewayChannelIsRoutable channelFourIsRoutable = {
-                .channel = 4, .isRoutable = TRUE, .unkBool = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                            &channelFourIsRoutable);
-
-            GatewayChannelIsRoutable channelFiveIsRoutable = {
-                .channel = 5, .isRoutable = TRUE, .unkBool = TRUE,
-            };
-            GatewayPacketSend(app, session, &app->arenaPerTick, 32, GatewayKindChannelIsRoutable,
-                            &channelFiveIsRoutable);
+            // Mark all channels as routable
+            // Ref: H1emu gatewayserver.ts sends ChannelIsRoutable for ch 0,1,2,4,5
+            u8 routableChannels[] = { 0, 1, 2, 4, 5 };
+            for (u32 ch = 0; ch < sizeof(routableChannels); ch++) {
+                GatewayChannelIsRoutable chRoutable = {
+                    .channel = routableChannels[ch], .isRoutable = TRUE, .unkBool = TRUE,
+                };
+                GatewayPacketSend(app, session, &app->arenaPerTick, 32,
+                                  GatewayKindChannelIsRoutable, &chRoutable);
+            }
 
             GatewayOnLogin(app, session, loginRequest.characterId);
         } break;
+        // ================================================================
+        // TunnelPacket — zone protocol data from client
+        // ================================================================
         case GatewayTunnelFromExternalConnectionId: {
-            kind = GatewayKindTunnelPacketFromExternalConnection;
-            printf(MESSAGE_CONCAT_INFO("(%u) Handling %s...\n"), channel, gatewayKindNames[kind]);
-
             GatewayTunnelPacket tunnelPacket = { 0 };
-            GatewayPacketUnpack(data, dataLen, kind, &tunnelPacket, &app->arenaPerTick);
-
+            GatewayPacketUnpack(data, dataLen, GatewayKindTunnelPacketFromExternalConnection,
+                                &tunnelPacket, &app->arenaPerTick);
             GatewayOnTunnelDataFromClient(app, session, tunnelPacket.data, tunnelPacket.dataLen);
         } break;
+
+        // ================================================================
+        // Alternate channel routing (0x09, 0x0a, 0x18, 0x19)
+        // ================================================================
         case 0x18:
         case 0x09:
         case 0x0a:
         case 0x19: {
-            printf(MESSAGE_CONCAT_INFO("(%u) Routing alternate channel 0x%02x as tunnel data\n"), channel, packetId);
             if (dataLen > 1) {
                 GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);
             }
         } break;
         default: {
             if (dataLen > 1) {
-                printf(MESSAGE_CONCAT_INFO("(%u) Routing 0x%02x as tunnel data\n"),
-                       channel, packetId);
                 GatewayOnTunnelDataFromClient(app, session, data + 1, dataLen - 1);
+            } else {
+                printf(MESSAGE_CONCAT_WARN("Unhandled gateway packet 0x%02x\n"), packetId);
             }
         }
     }
