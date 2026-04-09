@@ -112,13 +112,13 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     setEquipment.equipment_slot_array_count = 8;
     setEquipment.equipment_slot_array = (struct equipment_slot_array_s[8]){
         [0] = { .equipment_slot_id_1 = 1,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 1,   .guid =      0,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [1] = { .equipment_slot_id_1 = 3,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3,   .guid = 0x1001,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [2] = { .equipment_slot_id_1 = 4,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4,   .guid = 0x1002,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [1] = { .equipment_slot_id_1 = 3,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3,   .guid = ITEM_GUID_CHEST, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [2] = { .equipment_slot_id_1 = 4,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4,   .guid = ITEM_GUID_LEGS,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [3] = { .equipment_slot_id_1 = 7,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7,   .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [4] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = 0x1004,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [5] = { .equipment_slot_id_1 = 10,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 10,  .guid = 0x1005,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [6] = { .equipment_slot_id_1 = 14,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 14,  .guid = 0x1006,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [7] = { .equipment_slot_id_1 = 13,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 13,  .guid = 0x1007,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [4] = { .equipment_slot_id_1 = 105, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 105, .guid = ITEM_GUID_EYES,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [5] = { .equipment_slot_id_1 = 10,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 10,  .guid = ITEM_GUID_CHEST, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [6] = { .equipment_slot_id_1 = 14,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 14,  .guid = ITEM_GUID_LEGS,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [7] = { .equipment_slot_id_1 = 13,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 13,  .guid = ITEM_GUID_FEET,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
     setEquipment.attachments_data_1_count = 8;
     setEquipment.attachments_data_1 = (struct attachments_data_1_s[8]){
@@ -191,8 +191,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
     loadoutSlots.character_id = session->characterId;
     loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
-    loadoutSlots.loadout_slot_data_count = 5;
-    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[5]){
+    loadoutSlots.loadout_slot_data_count = 6;
+    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[6]){
         [0] = {
             .hotbar_slot_id = LOADOUT_SLOT_MELEE,
             .loadout_id_1   = LOADOUT_ID_KOTK_CHARACTER,
@@ -212,25 +212,32 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .unk_dword_1    = 0,
         },
         [2] = {
-            .hotbar_slot_id    = 10,
+            .hotbar_slot_id    = LOADOUT_SLOT_CHEST,
             .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id           = 10,
+            .slot_id           = LOADOUT_SLOT_CHEST,
             .item_def_id1      = 5747,
-            .loadout_item_guid = 0x1005,
+            .loadout_item_guid = ITEM_GUID_CHEST,
         },
         [3] = {
-            .hotbar_slot_id    = 14,
+            .hotbar_slot_id    = LOADOUT_SLOT_LEGS,
             .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id           = 14,
+            .slot_id           = LOADOUT_SLOT_LEGS,
             .item_def_id1      = 2178,
-            .loadout_item_guid = 0x1006,
+            .loadout_item_guid = ITEM_GUID_LEGS,
         },
         [4] = {
-            .hotbar_slot_id    = 13,
+            .hotbar_slot_id    = LOADOUT_SLOT_FEET,
             .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id           = 13,
+            .slot_id           = LOADOUT_SLOT_FEET,
             .item_def_id1      = 2216,
-            .loadout_item_guid = 0x1007,
+            .loadout_item_guid = ITEM_GUID_FEET,
+        },
+        [5] = {
+            .hotbar_slot_id    = LOADOUT_SLOT_EYES,
+            .loadout_id_1      = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id           = LOADOUT_SLOT_EYES,
+            .item_def_id1      = ITEM_DEF_SURVIVOR_EYES,
+            .loadout_item_guid = ITEM_GUID_EYES,
         },
     };
     loadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
@@ -356,17 +363,12 @@ void DeployCharacter(AppState* app, SessionState* session) {
                    Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
     printf("[DEPLOY] Sent AddLightweightPc\n");
 
-    // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
-    //    while client is still in WaitForFirstZone, giving geometry time to load
-    //    before the Running state attachment group check.
-    SendEquipmentAndMovement(app, session);
-
-    // 7. LightweightToFullPc — full character upgrade with position
+    // 6. LightweightToFullPc — full character upgrade with position
     printf("[DEPLOY] Sending LightweightToFullPc...\n");
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
     printf("[DEPLOY] LightweightToFullPc sent\n");
 
-    // 8. ZoneDoneSendingInitialData
+    // 7. ZoneDoneSendingInitialData
     {
         __time64_t zdSendTime;
         _time64(&zdSendTime);
@@ -375,7 +377,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
-    // 9. ResourceEventBase
+    // 8. ResourceEventBase
     {
         Zone_Packet_ResourceEventBase resourceEvent = { 0 };
         resourceEvent.gametime = timer & 0x7fffffff;
@@ -703,14 +705,14 @@ void OnLogin(AppState* app, SessionState* session) {
     // 9. Reference data
     //ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(10), "..\\data\\Command_ItemDefinitions.bin");
     // Command.ItemDefinitions — empty list, no server-side item defs
-    // Command.ItemDefinitions — 5 items: fists, binoculars, hoodie, jeans, sneakers
+    // Command.ItemDefinitions — 6 items: fists, binoculars, hoodie, jeans, sneakers, eyes
 Zone_Packet_CommandItemDefinitions itemDefs = { 0 };
 
 itemDefs.item_def_reply_2_length = 1;
 itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
     [0] = {
-        .item_defs_count = 5,
-        .item_defs = (struct item_defs_s[5]){
+        .item_defs_count = 6,
+        .item_defs = (struct item_defs_s[6]){
             [0] = {
                 // Fists
                 .defs_id       = 85,
@@ -802,6 +804,23 @@ itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
                 .curreny_type  = -1,
                 .stats_item_def_2_count = 0,
             },
+            [5] = {
+                // Default survivor eyes
+                .defs_id       = ITEM_DEF_SURVIVOR_EYES,
+                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
+                .item_class    = 25004,
+                .item_type     = 34,
+                .item_type_1   = 34,
+                .category_id   = 2,
+                .model_name    = STR8("SurvivorMale_Eyes_01.adr"),
+                .texture_alias = STR8(""),
+                .tint_alias    = STR8(""),
+                .bulk          = 0,
+                .max_stack_size = 1,
+                .min_stack_size = 1,
+                .curreny_type  = -1,
+                .stats_item_def_2_count = 0,
+            },
         },
     },
 };
@@ -875,6 +894,7 @@ ZonePacketSend(app, session, &app->arenaPerTick,
     // Reset loading flags before zone transition
     session->finished_loading = FALSE;
     session->isReady          = FALSE;
+    session->equipmentDataSent = FALSE;
 
     printf("[ONLOGIN] Flags: finished_loading=%d isReady=%d characterReleased=%d\n",
            session->finished_loading, session->isReady, session->characterReleased);

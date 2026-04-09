@@ -8,10 +8,15 @@
 
 // Loadout slot IDs (SlotId column in LoadoutSlotDefinitionDataSource)
 #define LOADOUT_SLOT_PRIMARY      1
-#define LOADOUT_SLOT_SECONDARY    2
+#define LOADOUT_SLOT_SECONDARY    3
 #define LOADOUT_SLOT_TERTIARY     4
 #define LOADOUT_SLOT_BINOCULARS   5
 #define LOADOUT_SLOT_MELEE        7
+#define LOADOUT_SLOT_CHEST        10
+#define LOADOUT_SLOT_FEET         13
+#define LOADOUT_SLOT_LEGS         14
+#define LOADOUT_SLOT_BELT         25
+#define LOADOUT_SLOT_EYES         29
 #define LOADOUT_SLOT_THROWABLES   9
 
 // Equipment slot IDs (BaseClient.EquipmentSlots: Slot 7 = Right Hand)
@@ -21,6 +26,12 @@
 // These are server-assigned values unique to the initial spawn state.
 #define ITEM_GUID_FISTS       0x0001000000000001ULL
 #define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+#define ITEM_GUID_CHEST       0x0001000000000005ULL
+#define ITEM_GUID_LEGS        0x0001000000000006ULL
+#define ITEM_GUID_FEET        0x0001000000000007ULL
+#define ITEM_GUID_EYES        0x0001000000000008ULL
+
+#define ITEM_DEF_SURVIVOR_EYES 127
 
 typedef enum Items {
     // #region WEAPONS
