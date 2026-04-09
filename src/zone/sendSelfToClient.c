@@ -1,185 +1,81 @@
-u32 GetActorModelId(SessionState* session) {
-    u32 headId = session->pGetPlayerActor.headType;
+// ============================================================================
+// SendSelfToClient — Character initialization packet builder
+//
+// Based on H1emu/h1z1-server ZoneServer2016 sendCharacterData() flow.
+// This is the most critical zone packet: it defines the entire player state
+// sent to the client during login.
+//
+// The packet contains (in order):
+//   1. Character identity (guid, character_id, name, position, rotation)
+//   2. Character appearance (actor_model_id, head_actor, hair_model, gender)
+//   3. Profiles (movement speed, type)
+//   4. Inventory items (items1 array — MUST match equipment/loadout GUIDs)
+//   5. Equipment slots (equipment_slots array)
+//   6. Loadout slots (loadout_slots_array — hotbar assignments)
+//   7. Resources (health, hunger, hydration, stamina, etc.)
+//   8. Skill points, containers, misc flags
+//
+// Key invariant: Every GUID referenced in equipment_slots and
+// loadout_slots_array MUST have a corresponding entry in items1.
+// Without this, the client cannot resolve items and the hotbar stays blank.
+// ============================================================================
 
-    switch (headId) {
-        case 1: {
-            session->pGetPlayerActor.actorModelId = 9469;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 2: {
-            session->pGetPlayerActor.actorModelId = 9469;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 3: {
-            session->pGetPlayerActor.actorModelId = 9474;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 4: {
-            session->pGetPlayerActor.actorModelId = 9474;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 5: {
-            session->pGetPlayerActor.actorModelId = 9469;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 6: {
-            session->pGetPlayerActor.actorModelId = 9474;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 7: {
-            session->pGetPlayerActor.actorModelId = 9469;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        case 8: {
-            session->pGetPlayerActor.actorModelId = 9474;
-            return session->pGetPlayerActor.actorModelId;
-        } break;
-        default: {
-            return 0;
-        }
-    }
-}
-
-u32 GetGender(SessionState* session) {
-    u32 actorModelId = session->pGetPlayerActor.actorModelId;
-
-    switch (actorModelId) {
-        case 9469: {
-            session->pGetPlayerActor.gender = 1;
-            return session->pGetPlayerActor.gender;
-        } break;
-        case 9474: {
-            session->pGetPlayerActor.gender = 2;
-            return session->pGetPlayerActor.gender;
-        } break;
-        default: {
-            return 0;
-        }
-    }
-}
-
-char* GetHairModel(u32 actorModelId) {
-    switch (actorModelId) {
-        case 9469:
-            printf("Male Hair Model Selected!\n");
-            return "SurvivorMale_Hair_MediumMessy.adr";
-        case 9474:
-            printf("Female Hair Model Selected!\n");
-            return "SurvivorFemale_Hair_ShortBun.adr";
-        default:
-            return "";
-    }
-}
-
+// Resource type helper — maps ResourceId → ResourceType
 u32 getResourceType(u32 resourceId) {
     switch (resourceId) {
-        case HEALTHID:
-            return HEALTHTYPE;
-        case HUNGERID:
-            return HUNGERTYPE;
-        case HYDRATIONID:
-            return HYDRATIONTYPE;
-        case STAMINAID:
-            return STAMINATYPE;
-        case VIRUSID:
-            return VIRUSTYPE;
-        case BLEEDINGID:
-            return BLEEDINGTYPE;
-        case COMFORTID:
-            return COMFORTTYPE;
-        case FUELID:
-            return FUELTYPE;
-        case CONDITIONID:
-            return CONDITIONTYPE;
-        default:
-            return 0;
+        case HEALTHID:    return HEALTHTYPE;
+        case HUNGERID:    return HUNGERTYPE;
+        case HYDRATIONID: return HYDRATIONTYPE;
+        case STAMINAID:   return STAMINATYPE;
+        case VIRUSID:     return VIRUSTYPE;
+        case BLEEDINGID:  return BLEEDINGTYPE;
+        case COMFORTID:   return COMFORTTYPE;
+        case FUELID:      return FUELTYPE;
+        case CONDITIONID: return CONDITIONTYPE;
+        default:          return 0;
     }
 }
 
 // ============================================================================
-// SendSelfToClient — Raw binary approach
+// SendSelfToClientRaw — DEPRECATED binary approach
 //
-// Loads sendself_patched.bin and patches guid + character_id at runtime.
-// The bin was captured from a working server and contains full equipment,
-// inventory, profiles, and loadout data that makes the character visible.
-//
-// Replace your current SendSelfToClient() function in sendSelfToClient.c
-// with this one. Keep the existing helper functions (GetActorModelId, etc.)
+// This was a workaround that loaded sendself_patched.bin and patched GUIDs
+// at runtime. It is kept for reference but should NOT be used.
+// The structured SendSelfToClient() below is the correct implementation.
 // ============================================================================
-
-// The original character_id baked into sendself_patched.bin
-// Every occurrence of this value gets replaced with the session's actual character_id
-#define SENDSELF_BIN_ORIG_CHARID_HI 0x02d8022a
-#define SENDSELF_BIN_ORIG_CHARID_LO 0xff9431d1
-#define SENDSELF_BIN_ORIG_CHARID    0x02d8022aff9431d1ull
-
-// The guid that was patched in previously (at offset 5)
-#define SENDSELF_BIN_ORIG_GUID      0x0000189700002fa7ull
-
+#if 0
 void SendSelfToClientRaw(AppState* app, SessionState* session) {
-    // 1. Load the binary file
-    u32 maxBuf = KB(20);
-    u8* fileBuffer = arena_push_size(&app->arenaPerTick, maxBuf);
-
-    u32 fileLen = app->api->buffer_load_from_file("..\\data\\sendself_patched.bin", fileBuffer, maxBuf);
-    if (!fileLen) {
-        printf("[SENDSELF RAW] ERROR: Failed to load sendself_patched.bin!\n");
-        return;
-    }
-
-    printf("[SENDSELF RAW] Loaded %u bytes from sendself_patched.bin\n", fileLen);
-    printf("[SENDSELF RAW] Session guid=0x%llx characterId=0x%llx\n",
-           (unsigned long long)session->guid,
-           (unsigned long long)session->characterId);
-
-    // 2. Patch the guid at offset 5 (u64 LE)
-    endian_write_u64_little(fileBuffer + 5, session->characterId);
-    printf("[SENDSELF RAW] Patched guid at offset 5\n");
-
-    // 3. Find and replace ALL occurrences of the original character_id
-    //    The original char_id appears 24 times throughout the packet
-    u8 origCharIdBytes[8];
-    u8 newCharIdBytes[8];
-    endian_write_u64_little(origCharIdBytes, SENDSELF_BIN_ORIG_CHARID);
-    endian_write_u64_little(newCharIdBytes, session->characterId);
-
-    u32 replacements = 0;
-    for (u32 i = 0; i <= fileLen - 8; i++) {
-        if (memcmp(fileBuffer + i, origCharIdBytes, 8) == 0) {
-            memcpy(fileBuffer + i, newCharIdBytes, 8);
-            replacements++;
-        }
-    }
-    printf("[SENDSELF RAW] Replaced character_id %u times\n", replacements);
-
-    // 4. Recalculate stream length (u32 LE at offset 1)
-    //    Stream length = total packet length - opcode(1) - stream_length_field(4) = fileLen - 5
-    u32 streamLen = fileLen - 5;
-    endian_write_u32_little(fileBuffer + 1, streamLen);
-    printf("[SENDSELF RAW] Stream length set to %u\n", streamLen);
-
-    // 5. Send it through the gateway tunnel
-    //    We need to prepend the tunnel header, same as ZonePacketSend does
-    u8* baseBuffer = arena_push_size(&app->arenaPerTick, fileLen + TunnelDataHeaderLen);
-    memcpy(baseBuffer + TunnelDataHeaderLen, fileBuffer, fileLen);
-
-    printf("[SENDSELF RAW] Sending %u bytes (+%d header)\n", fileLen, TunnelDataHeaderLen);
-    GatewayTunnelDataSend(app, session, baseBuffer, fileLen + TunnelDataHeaderLen);
+    // See git history for the original implementation
 }
+#endif
 
+// ============================================================================
+// SendSelfToClient — Builds and sends the full character initialization packet
+//
+// Based on H1emu ZoneServer2016.sendCharacterData()
+//
+// Parameters:
+//   withStats - If TRUE, includes character_stats1 (stat_id=2/movement)
+//
+// The function:
+//   1. Resolves appearance from session data (with fallbacks)
+//   2. Builds identity block (guid, character_id, name, position)
+//   3. Builds profile block (profile_id=4 for KotK player)
+//   4. Builds inventory items (items1 array: fists, binoculars, clothing)
+//   5. Builds equipment slots (head, chest, legs, weapon, eyes, etc.)
+//   6. Builds loadout slots (hotbar: melee=fists, binoculars, clothing)
+//   7. Builds resources (health, hunger, hydration, stamina, etc.)
+//   8. Sends via ZonePacketSendSelfDebug for stream validation
+// ============================================================================
 void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
-    static int sstcCount = 0;
-    sstcCount++;
-    printf("[SSTC] SendSelfToClient called %d time(s) total [withStats=%d] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d\n",
-           sstcCount, withStats,
-           (unsigned long long)session->characterId,
-           session->isReady, session->finished_loading, session->characterReleased);
-    // Use session data if available, fallback to defaults
+    printf("[SENDSELF] Building SendSelfToClient (withStats=%d)\n", withStats);
+
+    // Resolve appearance with fallback defaults
     u32 actorModelId = session->pGetPlayerActor.actorModelId;
-    if (actorModelId == 0) actorModelId = 9469; // default male
+    if (actorModelId == 0) actorModelId = 9469;
 
     u32 gender = session->pGetPlayerActor.gender;
-    if (gender == 0) gender = 1; // default male
+    if (gender == 0) gender = 1;
 
     u32 headType = session->pGetPlayerActor.headType;
     if (headType == 0) headType = 1;
@@ -190,13 +86,15 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
     String8 hairModel = session->pGetPlayerActor.hairModel;
     if (hairModel.size == 0) hairModel = STR8("SurvivorMale_Hair_MediumMessy.adr");
 
-    String8 eyesModel = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
+    // Gender-specific appearance models
+    String8 eyesModel  = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
     String8 chestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
-    String8 legsModel = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
+    String8 legsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
 
     String8 charName = session->characterName;
     if (charName.size == 0) charName = STR8("Unknown");
 
+    // Build identity string (Steam64-like fallback if ticket identity is missing)
     char identityFallbackBuf[32] = {0};
     u64 steamLikeFallback = 76561197960265728ull + (session->characterId & 0xffffffffull);
     i32 identityFallbackLen = snprintf(identityFallbackBuf, sizeof(identityFallbackBuf), "%llu",
@@ -207,11 +105,13 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
         identityString.size = (u64)identityFallbackLen;
     }
 
-    printf("[SENDSELF] Dynamic packer: guid=0x%llx model=%u gender=%u head=%u name='%.*s' id='%.*s'\n",
+    printf("[SENDSELF] guid=0x%llx model=%u gender=%u head=%u name='%.*s'\n",
            (unsigned long long)session->characterId, actorModelId, gender, headType,
-           (int)charName.size, charName.data,
-           (int)identityString.size, identityString.data);
+           (int)charName.size, charName.data);
 
+    // ========================================================================
+    // Build the SendSelfToClient packet
+    // ========================================================================
     Zone_Packet_SendSelfToClient sendSelf = { 0 };
 
 sendSelf.payload_self = (struct payload_self_s[1]){
@@ -694,15 +594,8 @@ sendSelf.payload_self = (struct payload_self_s[1]){
         }
     };
 
-        printf("[SENDSELF] item_guid summary: fists=0x%llx bino=0x%llx hoodie=0x%llx jeans=0x%llx shoes=0x%llx\n",
-            (unsigned long long)ITEM_GUID_FISTS,
-            (unsigned long long)ITEM_GUID_BINOCULARS,
-            (unsigned long long)0x1005ull,
-            (unsigned long long)0x1006ull,
-            (unsigned long long)0x1007ull);
-
-    // Use the debug version that hex-dumps the packed data
-    // This will show us the stream:u32 length prefix and verify it matches
+    // Send via debug wrapper that validates stream length
     ZonePacketSendSelfDebug(app, session, &app->arenaPerTick,
                             Zone_Packet_Kind_SendSelfToClient, &sendSelf);
+    printf("[SENDSELF] SendSelfToClient complete\n");
 }
