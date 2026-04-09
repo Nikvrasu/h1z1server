@@ -3,6 +3,23 @@ typedef enum SessionKind {
     SessionKindPingResponder,
 } SessionKind;
 
+typedef enum LoginFlowPhase {
+    LoginFlowPhase_Connected = 0,
+    LoginFlowPhase_LoginRequestHandled,
+    LoginFlowPhase_ServerListSent,
+    LoginFlowPhase_CharacterFlowReady,
+    LoginFlowPhase_CharacterLoginAccepted,
+} LoginFlowPhase;
+
+typedef enum ZoneFlowPhase {
+    ZoneFlowPhase_Disconnected = 0,
+    ZoneFlowPhase_LoginBegin,
+    ZoneFlowPhase_InitDataSent,
+    ZoneFlowPhase_ClientReady,
+    ZoneFlowPhase_Deployed,
+    ZoneFlowPhase_PostLoadSynced,
+} ZoneFlowPhase;
+
 typedef union SessionAddress {
     u64 full;
     struct {
@@ -200,6 +217,8 @@ struct SessionState {
     // gateway channel stuff & testing related
     u8 gatewayChannel;
     b8 isLoggedIn;
+    LoginFlowPhase loginPhase;
+    ZoneFlowPhase zonePhase;
     
     // Add these fields to track character data state
     b8 characterDataSent;      // Track if character data has been sent
@@ -298,6 +317,8 @@ struct SessionState {
     b8 isMuted;
     b8 isAdmin;
     b8 isReady;
+    b8 pendingClientReady;
+    b8 pendingFinishedLoading;
     b8 hasGodMode;
     b8 hasConveys;
 

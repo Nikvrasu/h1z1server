@@ -201,15 +201,15 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
             .headId                = session->pGetPlayerActor.headType,
             .actorModelId          = session->pGetPlayerActor.actorModelId,
             .gender                = session->pGetPlayerActor.gender,
-            .profileId             = 4,
+            .profileId             = KOTK_CHARACTER_PROFILE_ID,
             .unkDword1             = 0,
             .unkDword2             = 0,
             .lastUseDate           = 0,
         },
     };
 
-    packetReply.characters->payload->loadoutSlots_count = 1;
-    packetReply.characters->payload->loadoutSlots = (struct loadoutSlots_s[1]){
+    packetReply.characters->payload->loadoutSlots_count = 2;
+    packetReply.characters->payload->loadoutSlots = (struct loadoutSlots_s[2]){
         {
             .hotbarSlotId    = LOADOUT_SLOT_MELEE,
             .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
@@ -219,14 +219,23 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
             .unkByte1        = 1,
             .unkDword1       = 22,
         },
+        {
+            .hotbarSlotId    = LOADOUT_SLOT_BINOCULARS,
+            .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
+            .slotId          = LOADOUT_SLOT_BINOCULARS,
+            .itemDefId       = WEAPON_BINOCULARS,
+            .loadoutItemGuid = ITEM_GUID_BINOCULARS,
+            .unkByte1        = 1,
+            .unkDword1       = 22,
+        },
     };
 
     packetReply.characters->payload->itemDefinitions_count = 1;
     packetReply.characters->payload->itemDefinitions = (struct itemDefinitions_s[1]){
         [0] = {
             .ID = 0,
-            .item_defs_count = 5,
-            .item_defs = (struct item_defs_s[5]){
+            .item_defs_count = 6,
+            .item_defs = (struct item_defs_s[6]){
                 [0] = {
                     .defs_id       = 85,
                     .bitflags2     = 0b00001100,
@@ -238,6 +247,9 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .texture_alias = STR8(""),
                     .tint_alias    = STR8(""),
                     .bulk          = 0,
+                    .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .passive_equip_slot_group_id = 0,
                     .max_stack_size = 1,
                     .min_stack_size = 1,
                     .power_rating  = 43001,
@@ -255,6 +267,9 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .texture_alias = STR8(""),
                     .tint_alias    = STR8(""),
                     .bulk          = 50,
+                    .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+                    .passive_equip_slot_group_id = 0,
                     .max_stack_size = 1,
                     .min_stack_size = 1,
                     .curreny_type  = -1,
@@ -271,6 +286,9 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .texture_alias = STR8(""),
                     .tint_alias    = STR8(""),
                     .bulk          = 50,
+                    .active_equip_slot_id = EQUIPMENT_SLOT_CHEST,
+                    .passive_equip_slot_id = EQUIPMENT_SLOT_CHEST,
+                    .passive_equip_slot_group_id = 0,
                     .max_stack_size = 1,
                     .min_stack_size = 1,
                     .power_rating  = 55001,
@@ -288,6 +306,9 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .texture_alias = STR8(""),
                     .tint_alias    = STR8(""),
                     .bulk          = 50,
+                    .active_equip_slot_id = 4,
+                    .passive_equip_slot_id = 4,
+                    .passive_equip_slot_group_id = 0,
                     .max_stack_size = 1,
                     .min_stack_size = 1,
                     .power_rating  = 55001,
@@ -305,9 +326,32 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .texture_alias = STR8(""),
                     .tint_alias    = STR8(""),
                     .bulk          = 200,
+                    .active_equip_slot_id = 5,
+                    .passive_equip_slot_id = 5,
+                    .passive_equip_slot_group_id = 0,
                     .max_stack_size = 1,
                     .min_stack_size = 1,
                     .power_rating  = 49001,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
+                [5] = {
+                    .defs_id       = ITEM_DEF_EYES_ATTACHMENT,
+                    .bitflags2     = 0b00000100,
+                    .item_class    = 25004,
+                    .item_type     = 34,
+                    .item_type_1   = 34,
+                    .category_id   = 2,
+                    .model_name    = STR8("SurvivorMale_Eyes_01.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 0,
+                    .active_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+                    .passive_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+                    .passive_equip_slot_group_id = LOADOUT_SLOT_REQUIRED_EYES,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .power_rating  = 0,
                     .curreny_type  = -1,
                     .stats_item_def_2_count = 0,
                 },

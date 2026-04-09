@@ -115,6 +115,11 @@ void GatewayOnLogin(AppState* app, SessionState* session, u64 characterId) {
     session->characterId = characterId;
     session->zoneCycleId = 1;
     session->deployedCycleId = 0;
+    session->zonePhase = ZoneFlowPhase_LoginBegin;
+    session->is_synced = FALSE;
+    session->pendingClientReady = FALSE;
+    session->pendingFinishedLoading = FALSE;
+    session->needsProximityComplete = 0;
 
     OnLogin(app, session);
 }
@@ -283,6 +288,11 @@ __declspec(dllexport) AppTick(serverTick) {
                     printf(MESSAGE_CONCAT_WARN("No free sessions avaliable\n"));
                 } else {
                     knownSession = firstFreeSession;
+
+                    SessionState* newSession = &app->sessions[firstFreeSession];
+                    memset(newSession, 0, sizeof(*newSession));
+                    newSession->loginPhase = LoginFlowPhase_Connected;
+                    newSession->zonePhase = ZoneFlowPhase_Disconnected;
 
                     app->sessions[firstFreeSession].address.full = incomingAddress.full;
                     app->sessions[firstFreeSession].nextAck = -1;
@@ -478,6 +488,10 @@ __declspec(dllexport) AppTick(serverTick) {
     for (i32 i = 0; i < app->sessionCapacity; i++) {
         if (app->sessions[i].address.full
             && app->sessions[i].needsProximityComplete) {
+
+            if (app->sessions[i].zonePhase < ZoneFlowPhase_PostLoadSynced) {
+                continue;
+            }
             
             __time64_t now;
             _time64(&now);

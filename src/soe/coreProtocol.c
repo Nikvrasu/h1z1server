@@ -376,8 +376,15 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
 
                 // Reset zone state
                 session->needsProximityComplete = 0;
+                session->needsUpdateCamera = 0;
                 session->characterReleased = FALSE;
+                session->characterDeployed = FALSE;
                 session->isReady = FALSE;
+                session->finished_loading = FALSE;
+                session->is_synced = FALSE;
+                session->pendingClientReady = FALSE;
+                session->pendingFinishedLoading = FALSE;
+                session->zonePhase = ZoneFlowPhase_Disconnected;
             }
 
             printf("\n");

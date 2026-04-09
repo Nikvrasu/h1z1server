@@ -210,29 +210,34 @@ __declspec(dllexport) AppTick(serverTick) {
                 } else {
                     knownSession = firstFreeSession;
 
-                    app->sessions[firstFreeSession].address.full = incomingAddress.full;
-                    app->sessions[firstFreeSession].nextAck = -1;
-                    app->sessions[firstFreeSession].previousAck = -1;
+                    SessionState* newSession = &app->sessions[firstFreeSession];
+                    memset(newSession, 0, sizeof(*newSession));
 
-                    memcpy(&app->sessions[firstFreeSession].args, &app->args, sizeof(app->args));
+                    newSession->address.full = incomingAddress.full;
+                    newSession->nextAck = -1;
+                    newSession->previousAck = -1;
+                    newSession->loginPhase = LoginFlowPhase_Connected;
+                    newSession->zonePhase = ZoneFlowPhase_Disconnected;
 
-                    app->sessions[firstFreeSession].inputPool =
+                    memcpy(&newSession->args, &app->args, sizeof(app->args));
+
+                    newSession->inputPool =
                         FragmentCreate(MAX_FRAGMENTS, MAX_PACKET_LENGTH, &app->arenaTotal);
-                    app->sessions[firstFreeSession].outputPool = FragmentCreate(
+                    newSession->outputPool = FragmentCreate(
                         MAX_FRAGMENTS, MAX_PACKET_LENGTH - DATA_HEADER_LENGTH, &app->arenaTotal);
 
-                    app->sessions[firstFreeSession].inputStream =
-                        InputStreamInit(&app->sessions[firstFreeSession].inputPool, app->rc4Decoded,
+                    newSession->inputStream =
+                        InputStreamInit(&newSession->inputPool, app->rc4Decoded,
                                         app->rc4DecodedLen, FALSE);
-                    app->sessions[firstFreeSession].outputStream =
-                        OutputStreamInit(&app->sessions[firstFreeSession].outputPool, app->rc4Decoded,
+                    newSession->outputStream =
+                        OutputStreamInit(&newSession->outputPool, app->rc4Decoded,
                                          app->rc4DecodedLen, FALSE);
 
-                    app->sessions[firstFreeSession].inputStream.ackCallbackPtr =
+                    newSession->inputStream.ackCallbackPtr =
                         &app->streamFunctionTable->gameInputAck;
-                    app->sessions[firstFreeSession].inputStream.dataCallbackPtr =
+                    newSession->inputStream.dataCallbackPtr =
                         &app->streamFunctionTable->gameInputData;
-                    app->sessions[firstFreeSession].outputStream.dataCallbackPtr =
+                    newSession->outputStream.dataCallbackPtr =
                         &app->streamFunctionTable->gameOutputData;
                 }
             }

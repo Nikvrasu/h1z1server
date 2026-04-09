@@ -1,3 +1,73 @@
+static void ZoneHandleReadySignal(AppState* app, SessionState* session, const char* source) {
+    __time64_t now;
+    _time64(&now);
+
+    printf("[ZONE READY] %s [TIMESTAMP=%lld] phase=%d isReady=%d finished_loading=%d deployed=%d\n",
+           source, now, (int)session->zonePhase, session->isReady,
+           session->finished_loading, session->characterDeployed);
+
+    if (session->zonePhase < ZoneFlowPhase_InitDataSent) {
+        session->pendingClientReady = TRUE;
+        printf("[ZONE READY] Queued %s until init packets are complete\n", source);
+        return;
+    }
+
+    if (session->isReady) {
+        printf("[ZONE READY] Duplicate %s ignored\n", source);
+        return;
+    }
+
+    session->pendingClientReady = FALSE;
+    session->isReady = TRUE;
+    if (session->zonePhase < ZoneFlowPhase_ClientReady) {
+        session->zonePhase = ZoneFlowPhase_ClientReady;
+    }
+
+    DeployCharacter(app, session);
+
+    if (session->characterDeployed && session->zonePhase < ZoneFlowPhase_Deployed) {
+        session->zonePhase = ZoneFlowPhase_Deployed;
+    }
+
+    if (session->pendingFinishedLoading && !session->finished_loading) {
+        ZoneFinalizePostLoad(session, "deferred-after-ready");
+    }
+}
+
+static void ZoneHandleFinishedLoadingSignal(SessionState* session, const char* source) {
+    __time64_t now;
+    _time64(&now);
+
+    printf("[ZONE LOAD] %s [TIMESTAMP=%lld] phase=%d deployed=%d finished_loading=%d\n",
+           source, now, (int)session->zonePhase, session->characterDeployed,
+           session->finished_loading);
+
+    if (session->zonePhase < ZoneFlowPhase_Deployed || !session->characterDeployed) {
+        session->pendingFinishedLoading = TRUE;
+        printf("[ZONE LOAD] Queued %s until deploy completes\n", source);
+        return;
+    }
+
+    ZoneFinalizePostLoad(session, source);
+}
+
+static void ZoneDrainQueuedLifecycleSignals(AppState* app, SessionState* session) {
+    if (session->pendingClientReady
+        && !session->isReady
+        && session->zonePhase >= ZoneFlowPhase_InitDataSent) {
+        printf("[ZONE READY] Draining queued ClientIsReady\n");
+        ZoneHandleReadySignal(app, session, "QueuedClientIsReady");
+    }
+
+    if (session->pendingFinishedLoading
+        && !session->finished_loading
+        && session->zonePhase >= ZoneFlowPhase_Deployed
+        && session->characterDeployed) {
+        printf("[ZONE LOAD] Draining queued ClientFinishedLoading\n");
+        ZoneFinalizePostLoad(session, "QueuedClientFinishedLoading");
+    }
+}
+
 void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataLen) {
     if (dataLen == 0) {
         printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
@@ -50,38 +120,20 @@ void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataL
     }
 
 packetIdSwitch:
+    ZoneDrainQueuedLifecycleSignals(app, session);
+
     switch (packetId) {
         case ZONE_CLIENTISREADY_ID: {
             kind = Zone_Packet_Kind_ClientIsReady;
             PRINT_TIMESTAMP(); printf("[*] ClientIsReady received\n");
-            __time64_t t1; _time64(&t1);
-            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
-                   zone_packet_names[kind], t1,
-                   session->isReady, session->finished_loading, session->characterReleased);
-
-            if (session->isReady) {
-                printf("[*] Ignoring duplicate ClientIsReady\n");
-                break;
-            }
-            session->isReady = TRUE;
-
-            DeployCharacter(app, session);
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            ZoneHandleReadySignal(app, session, "ClientIsReady");
         } break;
         case ZONE_CLIENTFINISHEDLOADING_ID: {
             kind = Zone_Packet_Kind_ClientFinishedLoading;
             PRINT_TIMESTAMP(); printf("[*] ClientFinishedLoading received\n");
-            __time64_t t2; _time64(&t2);
-            printf(MESSAGE_CONCAT_INFO("Handling %s [TIMESTAMP=%lld] isReady=%d finished_loading=%d characterReleased=%d\n"),
-                zone_packet_names[kind], t2,
-                session->isReady, session->finished_loading, session->characterReleased);
-
-            if (session->finished_loading) {
-                printf("[*] Ignoring duplicate ClientFinishedLoading\n");
-                break;
-            }
-            session->finished_loading = TRUE;
-
-            printf("[*] ClientFinishedLoading acknowledged\n");
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+            ZoneHandleFinishedLoadingSignal(session, "ClientFinishedLoading");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
             kind = Zone_Packet_Kind_GameTimeSync;
@@ -178,11 +230,10 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_PlayerWorldTransferRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
 
-            // If transfer state is already active, acknowledge only and avoid replaying zoning.
-            // Legitimate matchmaking transfers are handled when the character is in-world
-            // (isReady/finished_loading are true before reset).
-            if (!session->isReady && !session->finished_loading && !session->characterDeployed) {
-                printf("[TRANSFER] Duplicate transfer request while transfer in progress; reply-only\n");
+            // Only start a new transfer from a fully synced in-world state.
+            if (session->zonePhase < ZoneFlowPhase_PostLoadSynced) {
+                printf("[TRANSFER] Transfer requested before post-load sync (phase=%d); reply-only\n",
+                       (int)session->zonePhase);
 
                 Zone_Packet_PlayerWorldTransferReply transferReply = { 0 };
                 transferReply.world_id_reply = 1;
@@ -243,22 +294,38 @@ packetIdSwitch:
             beginZoning.name_id                    = 61609;
             beginZoning.unk_dword_1                = 0x0f2b07d0;
             beginZoning.unk_bool_1                 = FALSE;
+            // Keep FALSE: transfer flow doesn't send an extra zone-ready packet,
+            // so TRUE can leave the client stuck in WaitForWorldReady.
             beginZoning.wait_for_zone_ready        = FALSE;
             beginZoning.unk_bool_2                 = FALSE;
             ZonePacketSend(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
 
-            // 3. Reset loading flags
+            // 3. Reset loading flags for the new zone cycle
             session->finished_loading = FALSE;
             session->isReady = FALSE;
             session->characterReleased = FALSE;
             session->characterDeployed = FALSE;
+            session->is_synced = FALSE;
+            session->characterDataSent = FALSE;
+            session->equipmentDataSent = FALSE;
+            session->characterAppearanceSent = FALSE;
+            session->resourcesSent = FALSE;
+            session->pendingClientReady = FALSE;
+            session->pendingFinishedLoading = FALSE;
+            session->needsProximityComplete = 0;
+            session->needsUpdateCamera = 0;
             session->zoneCycleId += 1;
             if (session->zoneCycleId == 0) {
                 session->zoneCycleId = 1;
             }
+            session->zonePhase = ZoneFlowPhase_LoginBegin;
             printf("[TRANSFER] Reset lifecycle: zoneCycleId=%u deployedCycleId=%u characterReleased=%d\n",
                    session->zoneCycleId, session->deployedCycleId, session->characterReleased);
+
+            // Re-run full init payloads (SendSelf, containers, item defs, init packets)
+            // so hotbar/inventory state is rebuilt after matchmaking transfer.
+            OnLogin(app, session);
         } break;
         case 0x11: {
             // ClientUpdateBase — check sub-opcode
@@ -268,8 +335,8 @@ packetIdSwitch:
 
             if (subOpcode == 0x97) {
                 // 0x11 0x97 — Zone ready notification from client after a zone transition.
-                printf(MESSAGE_CONCAT_INFO("Client reports zone ready! Deploying character...\n"));
-                DeployCharacter(app, session);
+                printf(MESSAGE_CONCAT_INFO("Client reports zone ready\n"));
+                ZoneHandleReadySignal(app, session, "ClientUpdateBase(0x97)");
             } else {
                 printf(MESSAGE_CONCAT_WARN("Unhandled ClientUpdateBase sub-opcode 0x%02x\n"),
                        subOpcode);
@@ -292,6 +359,13 @@ packetIdSwitch:
         case ZONE_COMMAND_INTERACTREQUEST_ID: {
             kind = Zone_Packet_Kind_Command_InteractRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+
+            if (session->zonePhase < ZoneFlowPhase_Deployed || !session->characterDeployed) {
+                printf("[INTERACT] Ignoring interact request before deploy (phase=%d)\n",
+                       (int)session->zonePhase);
+                break;
+            }
+
             ZonePacketSend(app, session, &app->arenaPerTick,
                         Zone_Packet_Kind_Command_InteractCancel, 0);
         } break;

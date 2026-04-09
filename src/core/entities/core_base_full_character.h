@@ -6,21 +6,53 @@
 // Loadout profile ID used for KotK player characters (LoadoutId column = 17)
 #define LOADOUT_ID_KOTK_CHARACTER 17
 
+// Character profile ID used by SendSelf/Equipment profile packets.
+#define KOTK_CHARACTER_PROFILE_ID 3
+
 // Loadout slot IDs (SlotId column in LoadoutSlotDefinitionDataSource)
 #define LOADOUT_SLOT_PRIMARY      1
-#define LOADOUT_SLOT_SECONDARY    2
+#define LOADOUT_SLOT_SECONDARY    3
 #define LOADOUT_SLOT_TERTIARY     4
+#define LOADOUT_SLOT_FISTS        7
+#define LOADOUT_SLOT_CHEST        10
+#define LOADOUT_SLOT_HEAD         11
+#define LOADOUT_SLOT_BACK         12
+#define LOADOUT_SLOT_FEET         13
+#define LOADOUT_SLOT_LEGS         14
+#define LOADOUT_SLOT_BELT         25
+#define LOADOUT_SLOT_EYES         29
+#define LOADOUT_SLOT_ARMOR        38
+#define LOADOUT_SLOT_RADIO        39
+#define LOADOUT_SLOT_ITEM1        40
+#define LOADOUT_SLOT_ITEM2        41
+// Protocol 1087 client expects binoculars on slot 5 for hotbar rendering.
 #define LOADOUT_SLOT_BINOCULARS   5
-#define LOADOUT_SLOT_MELEE        7
+#define LOADOUT_SLOT_MELEE        LOADOUT_SLOT_FISTS
 #define LOADOUT_SLOT_THROWABLES   9
+// Client attachment/profile validator may request an internal required slot 105.
+#define LOADOUT_SLOT_REQUIRED_EYES 105
 
-// Equipment slot IDs (BaseClient.EquipmentSlots: Slot 7 = Right Hand)
+// Equipment slot IDs (renderer-side visual slots)
+#define EQUIPMENT_SLOT_HEAD       1
+#define EQUIPMENT_SLOT_HANDS      2
+#define EQUIPMENT_SLOT_CHEST      3
+#define EQUIPMENT_SLOT_LEGS       4
+#define EQUIPMENT_SLOT_FEET       5
 #define EQUIPMENT_SLOT_RIGHT_HAND 7
+#define EQUIPMENT_SLOT_BACKPACK   10
+#define EQUIPMENT_SLOT_HAIR       27
+#define EQUIPMENT_SLOT_FACE       28
+#define EQUIPMENT_SLOT_EYES       29
+#define EQUIPMENT_SLOT_ARMOR      100
+// Legacy passive slot used by older experiments; avoid for 2016 loadout/hotbar mapping.
+#define EQUIPMENT_SLOT_PASSIVE_WEAPON 85
 
 // Placeholder item GUIDs for the default character loadout.
 // These are server-assigned values unique to the initial spawn state.
 #define ITEM_GUID_FISTS       0x0001000000000001ULL
 #define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+#define ITEM_GUID_EYES_ATTACHMENT 0x0001000000000004ULL
+#define ITEM_DEF_EYES_ATTACHMENT 900105
 
 typedef enum Items {
     // #region WEAPONS
