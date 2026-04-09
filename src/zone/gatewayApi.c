@@ -1,6 +1,35 @@
+// ============================================================================
+// Gateway Protocol Layer — Routes packets between SOE protocol and zone server
+//
+// Based on H1emu/h1z1-server GatewayServer implementation.
+//
+// The gateway sits between the SOE transport layer and the game protocol:
+//   SOE Protocol (UDP) → Gateway → Zone/Login Packet Handler
+//
+// Gateway packet types:
+//   LoginRequest (0x01)  — Client authenticates with character_id + server_ticket
+//   LoginReply (0x02)    — Server confirms login, enables encryption
+//   TunnelPacketTo (0x05)   — Server → Client tunnel data (zone packets)
+//   TunnelPacketFrom (0x06) — Client → Server tunnel data (zone packets)
+//   ChannelIsRoutable (0x07) — Declare channels 0-5 as routable
+//
+// Channel routing:
+//   Channel 0 = Main game data (zone packets)
+//   Channel 1 = Secondary data
+//   Channel 2 = Position updates (dropped for now)
+//   Channel 4 = Auxiliary data
+//   Channel 5 = Auxiliary data
+//
+// Login flow:
+//   1. Client sends LoginRequest with characterId, serverTicket, clientProtocol
+//   2. Server extracts character name from ticket (format: "steamId:charName")
+//   3. Server enables RC4 encryption on all channels
+//   4. Server replies with LoginReply + ChannelIsRoutable for channels 0-5
+//   5. Server triggers OnLogin to start the zone initialization sequence
+// ============================================================================
+
 u32 GatewayPacketPack(GatewayKindEnum kind, void* packetPtr, u8* buffer) {
     u32 offset = 0;
-    printf("\n");
 
     switch (kind) {
         case GatewayKindLoginRequest: {
@@ -210,10 +239,12 @@ void GatewayPacketSend(AppState* app, SessionState* session, Arena* arena, u32 m
 }
 
 // ============================================================================
-// Extract character name from server ticket.
-// Ticket format: "7y3Bh44sKWZCYZH:CharacterName"
-// Everything after the first ':' is the character name.
-// Stores into session->characterName using arenaTotal so it persists.
+// GatewayExtractCharacterName — Extract identity and name from server ticket
+//
+// H1emu ticket format: "steamId64:CharacterName"
+//   - Everything before the first ':' is the ticket identity (Steam64-like ID)
+//   - Everything after is the character name
+//   - Both are stored in session for use by SendSelfToClient
 // ============================================================================
 void GatewayExtractCharacterName(AppState* app, SessionState* session,
                                  char* ticket, u32 ticketLen) {

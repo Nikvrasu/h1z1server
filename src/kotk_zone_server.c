@@ -1,3 +1,22 @@
+// ============================================================================
+// H1Z1-C-Server — Zone Server Entry Point
+//
+// A server emulator for H1Z1: King of the Kill, Preseason 3 (Protocol 1087)
+// Architecture based on H1emu/h1z1-server (TypeScript), rewritten in C.
+//
+// Layer architecture:
+//   1. SOE Protocol (coreProtocol.c)    — UDP transport, fragmentation, RC4
+//   2. Gateway (gatewayApi.c)           — Channel routing, tunnel data, login
+//   3. Zone (zonePacketHandler.c)       — Game packets, character lifecycle
+//
+// Character lifecycle:
+//   Phase 1: OnLogin            — Init data, SendSelfToClient, containers
+//   Phase 2: DeployCharacter    — World presence, equipment, movement
+//   Phase 3: ClientFinishedLoading — Acknowledge, proximity updates
+//
+// This file sets up includes, defines the DLL export, and wires the main loop.
+// ============================================================================
+
 // C headers
 #include <stdio.h>
 #include <stdlib.h>
