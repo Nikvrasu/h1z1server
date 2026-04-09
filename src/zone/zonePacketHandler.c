@@ -81,6 +81,11 @@ packetIdSwitch:
             }
             session->finished_loading = TRUE;
 
+            if (!session->equipmentDataSent) {
+                SendEquipmentAndMovement(app, session);
+                session->equipmentDataSent = TRUE;
+            }
+
             printf("[*] ClientFinishedLoading acknowledged\n");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
@@ -253,6 +258,7 @@ packetIdSwitch:
             session->isReady = FALSE;
             session->characterReleased = FALSE;
             session->characterDeployed = FALSE;
+            session->equipmentDataSent = FALSE;
             session->zoneCycleId += 1;
             if (session->zoneCycleId == 0) {
                 session->zoneCycleId = 1;

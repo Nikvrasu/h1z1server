@@ -218,7 +218,7 @@ sendSelf.payload_self = (struct payload_self_s[1]){
         [0] = {
             .guid = session->characterId,
             .character_id = session->characterId,
-            .transient_id.value = 1,
+            .transient_id.value = session->zoneCycleId ? session->zoneCycleId : 1,
             .last_login_date = 0,
             .actor_model_id = actorModelId,
             .head_actor = headActor,
@@ -303,8 +303,8 @@ sendSelf.payload_self = (struct payload_self_s[1]){
             .unk_list_count = 0,
             .collections_count = 0,
             // Inventory
-            .items1_count = 5,
-            .items1 = (struct items1_s[5]){
+            .items1_count = 6,
+            .items1 = (struct items1_s[6]){
                 [0] = {
                     .item_def_id1       = 85,     // WEAPON_FISTS
                     .tint_id            = 0,
@@ -344,14 +344,14 @@ sendSelf.payload_self = (struct payload_self_s[1]){
                 [2] = {
                     .item_def_id1       = 5747,   // Hoodie
                     .tint_id            = 0,
-                    .guid               = 0x1005,
+                    .guid               = ITEM_GUID_CHEST,
                     .count              = 1,
                     .unk_qword_21       = 0,
                     .unk_dword_53       = 0,
                     .unk_dword_24       = 0,
-                    .container_guid     = 0x1005,
+                    .container_guid     = ITEM_GUID_CHEST,
                     .container_def_id   = 5747,
-                    .container_slot_id  = 10,
+                    .container_slot_id  = LOADOUT_SLOT_CHEST,
                     .base_durability    = 0,
                     .current_durability = 0,
                     .max_durability_from_def = 0,
@@ -362,14 +362,14 @@ sendSelf.payload_self = (struct payload_self_s[1]){
                 [3] = {
                     .item_def_id1       = 2178,   // Jeans
                     .tint_id            = 0,
-                    .guid               = 0x1006,
+                    .guid               = ITEM_GUID_LEGS,
                     .count              = 1,
                     .unk_qword_21       = 0,
                     .unk_dword_53       = 0,
                     .unk_dword_24       = 0,
-                    .container_guid     = 0x1006,
+                    .container_guid     = ITEM_GUID_LEGS,
                     .container_def_id   = 2178,
-                    .container_slot_id  = 14,
+                    .container_slot_id  = LOADOUT_SLOT_LEGS,
                     .base_durability    = 0,
                     .current_durability = 0,
                     .max_durability_from_def = 0,
@@ -380,14 +380,32 @@ sendSelf.payload_self = (struct payload_self_s[1]){
                 [4] = {
                     .item_def_id1       = 2216,   // Sneakers
                     .tint_id            = 0,
-                    .guid               = 0x1007,
+                    .guid               = ITEM_GUID_FEET,
                     .count              = 1,
                     .unk_qword_21       = 0,
                     .unk_dword_53       = 0,
                     .unk_dword_24       = 0,
-                    .container_guid     = 0x1007,
+                    .container_guid     = ITEM_GUID_FEET,
                     .container_def_id   = 2216,
-                    .container_slot_id  = 13,
+                    .container_slot_id  = LOADOUT_SLOT_FEET,
+                    .base_durability    = 0,
+                    .current_durability = 0,
+                    .max_durability_from_def = 0,
+                    .unk_bool_13        = FALSE,
+                    .owner_character_id = session->characterId,
+                    .unk_dword_9        = 0,
+                },
+                [5] = {
+                    .item_def_id1       = ITEM_DEF_SURVIVOR_EYES,
+                    .tint_id            = 0,
+                    .guid               = ITEM_GUID_EYES,
+                    .count              = 1,
+                    .unk_qword_21       = 0,
+                    .unk_dword_53       = 0,
+                    .unk_dword_24       = 0,
+                    .container_guid     = ITEM_GUID_EYES,
+                    .container_def_id   = ITEM_DEF_SURVIVOR_EYES,
+                    .container_slot_id  = LOADOUT_SLOT_EYES,
                     .base_durability    = 0,
                     .current_durability = 0,
                     .max_durability_from_def = 0,
@@ -498,13 +516,13 @@ sendSelf.payload_self = (struct payload_self_s[1]){
             .equipment_slots = (struct equipment_slots_s[9]){
                 [0] = { .unk_dword_7199=15,  .unk_dword_890=15,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=15,  .equipment_slot_id3=15,  .guid=0,                    .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
                 [1] = { .unk_dword_7199=27,  .unk_dword_890=27,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=27,  .equipment_slot_id3=27,  .guid=0,                    .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [2] = { .unk_dword_7199=3,   .unk_dword_890=3,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=3,   .equipment_slot_id3=3,   .guid=0x1005,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [3] = { .unk_dword_7199=4,   .unk_dword_890=4,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=4,   .equipment_slot_id3=4,   .guid=0x1006,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [2] = { .unk_dword_7199=3,   .unk_dword_890=3,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=3,   .equipment_slot_id3=3,   .guid=ITEM_GUID_CHEST,      .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [3] = { .unk_dword_7199=4,   .unk_dword_890=4,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=4,   .equipment_slot_id3=4,   .guid=ITEM_GUID_LEGS,       .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
                 [4] = { .unk_dword_7199=7,   .unk_dword_890=7,   .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=7,   .equipment_slot_id3=7,   .guid=ITEM_GUID_FISTS,      .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [5] = { .unk_dword_7199=105, .unk_dword_890=105, .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=105, .equipment_slot_id3=105, .guid=0,                    .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [6] = { .unk_dword_7199=10,  .unk_dword_890=10,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=10,  .equipment_slot_id3=10,  .guid=0x1005,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [7] = { .unk_dword_7199=14,  .unk_dword_890=14,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=14,  .equipment_slot_id3=14,  .guid=0x1006,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
-                [8] = { .unk_dword_7199=13,  .unk_dword_890=13,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=13,  .equipment_slot_id3=13,  .guid=0x1007,               .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [5] = { .unk_dword_7199=105, .unk_dword_890=105, .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=105, .equipment_slot_id3=105, .guid=ITEM_GUID_EYES,       .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [6] = { .unk_dword_7199=10,  .unk_dword_890=10,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=10,  .equipment_slot_id3=10,  .guid=ITEM_GUID_CHEST,      .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [7] = { .unk_dword_7199=14,  .unk_dword_890=14,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=14,  .equipment_slot_id3=14,  .guid=ITEM_GUID_LEGS,       .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
+                [8] = { .unk_dword_7199=13,  .unk_dword_890=13,  .unk_string_4=STR8("Default"), .unk_string_2=STR8("#"), .equipment_slot_id2=13,  .equipment_slot_id3=13,  .guid=ITEM_GUID_FEET,       .tint_alias=STR8("Default"), .decal_alias=STR8("#") },
             },
             .unk_array_2135_count = 0,
             .unk_dword_8123 = 0,
@@ -539,8 +557,8 @@ sendSelf.payload_self = (struct payload_self_s[1]){
             .unk_array_36_count = 0,
             // Loadout — KotK character loadout (profile 17) with default melee + binoculars
             .loadout_id = LOADOUT_ID_KOTK_CHARACTER,
-            .loadout_slots_array_count = 5,
-            .loadout_slots_array = (struct loadout_slots_array_s[5]){
+            .loadout_slots_array_count = 6,
+            .loadout_slots_array = (struct loadout_slots_array_s[6]){
                 [0] = {
                     .hotbar_slot_id    = LOADOUT_SLOT_MELEE,
                     .loadout_id        = LOADOUT_ID_KOTK_CHARACTER,
@@ -560,29 +578,38 @@ sendSelf.payload_self = (struct payload_self_s[1]){
                     .unk_dword_111     = 22,
                 },
                 [2] = {
-                    .hotbar_slot_id    = 10,
+                    .hotbar_slot_id    = LOADOUT_SLOT_CHEST,
                     .loadout_id        = LOADOUT_ID_KOTK_CHARACTER,
-                    .slot_id           = 10,
+                    .slot_id           = LOADOUT_SLOT_CHEST,
                     .item_def_id4      = 5747,
-                    .loadout_item_guid = 0x1005,
+                    .loadout_item_guid = ITEM_GUID_CHEST,
                     .unk_byte_17       = 1,
                     .unk_dword_111     = 22,
                 },
                 [3] = {
-                    .hotbar_slot_id    = 14,
+                    .hotbar_slot_id    = LOADOUT_SLOT_LEGS,
                     .loadout_id        = LOADOUT_ID_KOTK_CHARACTER,
-                    .slot_id           = 14,
+                    .slot_id           = LOADOUT_SLOT_LEGS,
                     .item_def_id4      = 2178,
-                    .loadout_item_guid = 0x1006,
+                    .loadout_item_guid = ITEM_GUID_LEGS,
                     .unk_byte_17       = 1,
                     .unk_dword_111     = 22,
                 },
                 [4] = {
-                    .hotbar_slot_id    = 13,
+                    .hotbar_slot_id    = LOADOUT_SLOT_FEET,
                     .loadout_id        = LOADOUT_ID_KOTK_CHARACTER,
-                    .slot_id           = 13,
+                    .slot_id           = LOADOUT_SLOT_FEET,
                     .item_def_id4      = 2216,
-                    .loadout_item_guid = 0x1007,
+                    .loadout_item_guid = ITEM_GUID_FEET,
+                    .unk_byte_17       = 1,
+                    .unk_dword_111     = 22,
+                },
+                [5] = {
+                    .hotbar_slot_id    = LOADOUT_SLOT_EYES,
+                    .loadout_id        = LOADOUT_ID_KOTK_CHARACTER,
+                    .slot_id           = LOADOUT_SLOT_EYES,
+                    .item_def_id4      = ITEM_DEF_SURVIVOR_EYES,
+                    .loadout_item_guid = ITEM_GUID_EYES,
                     .unk_byte_17       = 1,
                     .unk_dword_111     = 22,
                 },
@@ -694,12 +721,13 @@ sendSelf.payload_self = (struct payload_self_s[1]){
         }
     };
 
-        printf("[SENDSELF] item_guid summary: fists=0x%llx bino=0x%llx hoodie=0x%llx jeans=0x%llx shoes=0x%llx\n",
+        printf("[SENDSELF] item_guid summary: fists=0x%llx bino=0x%llx hoodie=0x%llx jeans=0x%llx shoes=0x%llx eyes=0x%llx\n",
             (unsigned long long)ITEM_GUID_FISTS,
             (unsigned long long)ITEM_GUID_BINOCULARS,
-            (unsigned long long)0x1005ull,
-            (unsigned long long)0x1006ull,
-            (unsigned long long)0x1007ull);
+            (unsigned long long)ITEM_GUID_CHEST,
+            (unsigned long long)ITEM_GUID_LEGS,
+            (unsigned long long)ITEM_GUID_FEET,
+            (unsigned long long)ITEM_GUID_EYES);
 
     // Use the debug version that hex-dumps the packed data
     // This will show us the stream:u32 length prefix and verify it matches
