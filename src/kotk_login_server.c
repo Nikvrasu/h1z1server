@@ -1,3 +1,22 @@
+// ============================================================================
+// H1Z1-C-Server — Login Server Entry Point
+//
+// A server emulator for H1Z1: King of the Kill, Preseason 3 (LoginUdp_11)
+// Architecture based on H1emu/h1z1-server LoginServer implementation.
+//
+// Login flow (client perspective):
+//   1. Client connects via SOE protocol to port 20042
+//   2. Client sends LoginRequest → Server replies LoginReply
+//   3. Client requests CharacterSelectInfo → Server sends character list
+//   4. Client requests ServerList → Server sends server list
+//   5. Client validates name via TunnelAppPacket → Server validates
+//   6. Client creates character → Server generates GUID
+//   7. Client selects character → Server sends zone ticket + address
+//   8. Client disconnects and connects to zone server
+//
+// This file sets up includes, defines the DLL export, and wires the main loop.
+// ============================================================================
+
 // C headers
 #include <stdio.h>
 #include <stdlib.h>

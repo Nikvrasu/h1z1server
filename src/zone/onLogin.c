@@ -1,5 +1,41 @@
 // ============================================================================
-// Hex dump helper
+// Zone Initialization — OnLogin, DeployCharacter, SendEquipmentAndMovement
+//
+// Based on H1emu/h1z1-server ZoneServer2016 character lifecycle:
+//
+// Phase 1: OnLogin (gateway login complete)
+//   → Hide character state (UpdateCharacterState state1=0)
+//   → InitializationParameters (environment, SKU)
+//   → SendZoneDetails (zone name, weather, lighting)
+//   → ClientGameSettings (interact distance, timescale, weapons, damage)
+//   → ReferenceData.DynamicAppearance (empty)
+//   → SendSelfToClient (full character data)
+//   → Character.UpdateScale
+//   → Container.InitEquippedContainers
+//   → Command.ItemDefinitions
+//
+// Phase 2: DeployCharacter (triggered by ClientIsReady or 0x97 zone ready)
+//   → POIChangeMessage
+//   → Character.UpdateCharacterState (all visible)
+//   → ClientUpdate.DoneSendingPreloadCharacters
+//   → UpdateCamera
+//   → DtoObjectInitialData
+//   → Character.CharacterStateDelta
+//   → AddLightweightPc (register self as world entity)
+//   → Equipment + Movement (via SendEquipmentAndMovement)
+//   → LightweightToFullPc
+//   → ZoneDoneSendingInitialData
+//   → ResourceEventBase (set health/hunger/hydration/stamina)
+//   → AccountItemManagerStateChanged
+//   → Character.WeaponStance
+//   → Schedule deferred NetworkProximityUpdatesComplete (+5s)
+//
+// Phase 3: ClientFinishedLoading
+//   → (acknowledged, no response needed — equipment was already sent in Phase 2)
+// ============================================================================
+
+// ============================================================================
+// HexDumpBuffer — Debug helper for printing raw packet data
 // ============================================================================
 void HexDumpBuffer(const char* label, u8* data, u32 len) {
     printf("\n[HEX DUMP] %s (%u bytes):\n", label, len);
@@ -10,6 +46,9 @@ void HexDumpBuffer(const char* label, u8* data, u32 len) {
     printf("\n\n");
 }
 
+// ============================================================================
+// ZonePacketSendDebug — Send with hex dump for debugging
+// ============================================================================
 void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zone_Packet_Kind kind,
                          void* packetPtr, const char* label) {
     u8* baseBuffer = arena_push_size(arena, MAX_PACKET_LENGTH);
@@ -23,74 +62,26 @@ void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zon
 
 
 // ============================================================================
-// SendEquipmentAndMovement — called from ClientFinishedLoading
+// SendEquipmentAndMovement — Sends equipment, loadout, and movement packets
+//
+// Called during DeployCharacter (Phase 2) BEFORE ZoneDoneSendingInitialData
+// so that ProcessNewAttachment fires while the client is still loading,
+// giving geometry time to load before the Running state attachment check.
+//
+// Sends in order (matching H1emu ZoneServer2016.initClient):
+//   1. GameTimeSync
+//   2. UpdateWeatherData
+//   3. Character.WeaponStance
+//   4. Equipment.SetCharacterEquipment (8 slots, profile_id=4)
+//   5. ClientUpdate.ActivateProfile (profile_id=4, 8 attachments)
+//   6. Loadout.SetLoadoutSlots (melee=fists, binoculars, clothing)
+//   7. Command.RunSpeed (7.5f)
+//   8. ClientUpdate.ModifyMovementSpeed (2.0f)
 // ============================================================================
 void SendEquipmentAndMovement(AppState* app, SessionState* session) {
-    __time64_t eqTime;
-    _time64(&eqTime);
-    static int eqCount = 0;
-    eqCount++;
-    PRINT_TIMESTAMP(); printf("========== SEND EQUIPMENT & MOVEMENT (ClientFinishedLoading) ==========\n");
-    printf("[EQUIP] SendEquipmentAndMovement called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
-           eqCount, eqTime, (unsigned long long)session->characterId,
-           session->isReady, session->finished_loading, session->characterReleased,
-           session->characterDeployed);
+    printf("[EQUIP] SendEquipmentAndMovement BEGIN\n");
 
-    // 1. GameTimeSync
-    Zone_Packet_GameTimeSync gameTimeSync = { 0 };
-    gameTimeSync.cycle_speed = 0.0f;
-    gameTimeSync.time = 300000;
-    gameTimeSync.unk_bool = TRUE;
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
-
-    // 2. UpdateWeatherData
-    Zone_Packet_UpdateWeatherData updt_weather_data = {
-        .overcast = 1.0f,
-        .fogDensity = 0.000173f,
-        .fogFloor = 10.0f,
-        .fogGradient = 0.0144f,
-        .globalPrecipitation = 0,
-        .temperature = 75,
-        .skyClarity = 0,
-        .cloudWeight0 = 0.05f,
-        .cloudWeight1 = 0.0f,
-        .cloudWeight2 = 0.05f,
-        .cloudWeight3 = 0.15f,
-        .transitionTime = 0,
-        .sunAxisX = 38,
-        .sunAxisY = -15,
-        .sunAxisZ = 0,
-        .windDirX = -1.0f,
-        .windDirY = -0.5f,
-        .windDirZ = -1.0f,
-        .wind = 3,
-        .rainMinStrength = 0,
-        .rainRampUpTimeSeconds = 1,
-        .cloudFile = STR8("sky_Z_clouds.dds"),
-        .stratusCloudTiling = 0.30f,
-        .stratusCloudScrollU = -0.002f,
-        .stratusCloudScrollV = 0,
-        .stratusCloudHeight = 1000,
-        .cumulusCloudTiling = 0.20f,
-        .cumulusCloudScrollU = 0,
-        .cumulusCloudScrollV = 0.002f,
-        .cumulusCloudHeight = 8000,
-        .cloudAnimationSpeed = 0,
-        .cloudSilverLiningThickness = 0.25f,
-        .cloudSilverLiningBrightness = 7.0f,
-        .cloudShadows = 0.5f,
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData,
-                   &updt_weather_data);
-
-    // 3. Character.WeaponStance
-    Zone_Packet_Character_WeaponStance weaponStance = { 0 };
-    weaponStance.character_id = session->characterId;
-    weaponStance.stance = 0;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
-
-    // 4. Equipment.SetCharacterEquipment — profile_id=3, unk_bool_2=FALSE (initial set not update)
+    // Resolve gender-specific models
     u32 gender = session->pGetPlayerActor.gender;
     if (gender == 0) gender = 1;
 
@@ -100,6 +91,40 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     String8 eqChestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
     String8 eqLegsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
     String8 eqEyesModel  = (gender == 2) ? STR8("SurvivorFemale_Eyes_01.adr") : STR8("SurvivorMale_Eyes_01.adr");
+
+    // 1. GameTimeSync — synchronize client time
+    Zone_Packet_GameTimeSync gameTimeSync = { 0 };
+    gameTimeSync.cycle_speed = 0.0f;
+    gameTimeSync.time = 300000;
+    gameTimeSync.unk_bool = TRUE;
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_GameTimeSync, &gameTimeSync);
+
+    // 2. UpdateWeatherData — set environment
+    Zone_Packet_UpdateWeatherData weatherData = {
+        .overcast = 1.0f, .fogDensity = 0.000173f, .fogFloor = 10.0f, .fogGradient = 0.0144f,
+        .globalPrecipitation = 0, .temperature = 75, .skyClarity = 0,
+        .cloudWeight0 = 0.05f, .cloudWeight1 = 0.0f, .cloudWeight2 = 0.05f, .cloudWeight3 = 0.15f,
+        .transitionTime = 0, .sunAxisX = 38, .sunAxisY = -15, .sunAxisZ = 0,
+        .windDirX = -1.0f, .windDirY = -0.5f, .windDirZ = -1.0f, .wind = 3,
+        .rainMinStrength = 0, .rainRampUpTimeSeconds = 1,
+        .cloudFile = STR8("sky_Z_clouds.dds"),
+        .stratusCloudTiling = 0.30f, .stratusCloudScrollU = -0.002f, .stratusCloudScrollV = 0,
+        .stratusCloudHeight = 1000,
+        .cumulusCloudTiling = 0.20f, .cumulusCloudScrollU = 0, .cumulusCloudScrollV = 0.002f,
+        .cumulusCloudHeight = 8000, .cloudAnimationSpeed = 0,
+        .cloudSilverLiningThickness = 0.25f, .cloudSilverLiningBrightness = 7.0f,
+        .cloudShadows = 0.5f,
+    };
+    ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_UpdateWeatherData, &weatherData);
+
+    // 3. Character.WeaponStance — default unarmed stance
+    Zone_Packet_Character_WeaponStance weaponStance = { 0 };
+    weaponStance.character_id = session->characterId;
+    weaponStance.stance = 0;
+    ZonePacketSend(app, session, &app->arenaPerTick,
+                   Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
+
+    // 4. Equipment.SetCharacterEquipment — 8 slots with proper GUIDs
 
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
@@ -133,9 +158,9 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-    printf("[EQUIP] Sent Equipment.SetCharacterEquipment (8 slots, profile_id=3, unk_bool_2=FALSE)\n");
+    printf("[EQUIP] Sent Equipment.SetCharacterEquipment (8 slots)\n");
 
-    // 5. ClientUpdate.ActivateProfile — profile_id=3, full attachment list, actor_model_id set
+    // 5. ClientUpdate.ActivateProfile — profile_id=4, full attachment list
     Zone_Packet_ClientUpdate_ActivateProfile activateProfile = { 0 };
     activateProfile.profile_payload = (struct profile_payload_s[1]){
         [0] = {
@@ -184,10 +209,10 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     activateProfile.decal_alias    = STR8("#");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_ActivateProfile, &activateProfile);
-    printf("[EQUIP] Sent ActivateProfile (profile_id=3, 8 attachments, actor_model_id=%u)\n",
+    printf("[EQUIP] Sent ActivateProfile (profile_id=4, 8 attachments, model=%u)\n",
            session->pGetPlayerActor.actorModelId);
 
-    // 6. Loadout.SetLoadoutSlots
+    // 6. Loadout.SetLoadoutSlots — melee=fists, binoculars, clothing slots
     Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
     loadoutSlots.character_id = session->characterId;
     loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
@@ -237,58 +262,56 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
 
-    // 7. Command.RunSpeed
+    // 7. Command.RunSpeed — set movement speed
     Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 7.5f };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
 
-    // 8. ClientUpdate.ModifyMovementSpeed
+    // 8. ClientUpdate.ModifyMovementSpeed — additional movement modifier
     Zone_Packet_ClientUpdate_ModifyMovementSpeed moveSpeed = { 0 };
     moveSpeed.speed = 2.0f;
     moveSpeed.movementVersion = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_ModifyMovementSpeed, &moveSpeed);
 
-    printf("========== SEND EQUIPMENT & MOVEMENT END ==========\n\n");
+    printf("[EQUIP] SendEquipmentAndMovement END\n");
 }
 
 
+// ============================================================================
+// DeployCharacter — Phase 2: Make the character visible in the world
+//
+// Based on H1emu ZoneServer2016 managed_object lifecycle:
+//   - Triggered by ClientIsReady or 0x97 (zone ready) packet
+//   - Sends character state, world presence, equipment, and initial data
+//   - Protected by deploy guard (one deploy per zone cycle)
+//   - Schedules deferred NetworkProximityUpdatesComplete (+5s)
+// ============================================================================
 void DeployCharacter(AppState* app, SessionState* session) {
     __time64_t timer;
-    __time64_t deployTime;
     _time64(&timer);
-    _time64(&deployTime);
-    static int deployCount = 0;
-    deployCount++;
-    printf("[DEPLOY] DeployCharacter called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d zoneCycleId=%u deployedCycleId=%u\n",
-           deployCount, deployTime, (unsigned long long)session->characterId,
-           session->isReady, session->finished_loading, session->characterReleased,
-           session->characterDeployed, session->zoneCycleId, session->deployedCycleId);
 
-    // Ensure first login on older sessions gets a valid cycle.
+    printf("[DEPLOY] DeployCharacter BEGIN (charId=0x%llx)\n",
+           (unsigned long long)session->characterId);
+
+    // Deploy guard: ensure first login has a valid cycle
     if (session->zoneCycleId == 0) {
         session->zoneCycleId = 1;
     }
 
-    // Deploy exactly once per zone cycle; protects ClientIsReady/0x97 race.
+    // Deploy guard: prevent duplicate deploys in same zone cycle
     if (session->deployedCycleId == session->zoneCycleId) {
-        printf("[DEPLOY GUARD] Duplicate deploy blocked for zoneCycleId=%u\n",
+        printf("[DEPLOY] Duplicate deploy blocked for zoneCycleId=%u\n",
                session->zoneCycleId);
         return;
     }
-    printf("[DEPLOY] Session actor: model=%u gender=%u head=%u hair='%.*s' headActor='%.*s'\n",
-           session->pGetPlayerActor.actorModelId, session->pGetPlayerActor.gender,
-           session->pGetPlayerActor.headType,
-           (int)session->pGetPlayerActor.hairModel.size, session->pGetPlayerActor.hairModel.data,
-           (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
-
-    PRINT_TIMESTAMP(); printf("========== DEPLOY CHARACTER BEGIN ==========\n");
 
     // 1. POIChangeMessage
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_POIChangeMessage, 0);
 
-    // 2. Character.UpdateCharacterState — show fully visible
+    // 2. Character.UpdateCharacterState — make character visible (all states=1)
+    // H1emu: character.isVisible = true
     Zone_Packet_Character_UpdateCharacterState showState = { 0 };
     showState.character_id = session->characterId;
     showState.state1 = 1;
@@ -301,39 +324,40 @@ void DeployCharacter(AppState* app, SessionState* session) {
     showState.game_time = timer & 0x7fffffff;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_UpdateCharacterState, &showState);
-    printf("[STATE] Sent CharacterState: all visible (state1-7=1)\n");
 
-    // 3. DoneSendingPreloadCharacters
+    // 3. ClientUpdate.DoneSendingPreloadCharacters
     Zone_Packet_ClientUpdate_DoneSendingPreloadCharacters preloadDone = { 0 };
     preloadDone.is_done = TRUE;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // UpdateCamera
-    u8 updateCamera[] = { 0x57 };
-    u8* camBuf = arena_push_size(&app->arenaPerTick, sizeof(updateCamera) + TunnelDataHeaderLen);
-    memcpy(camBuf + TunnelDataHeaderLen, updateCamera, sizeof(updateCamera));
-    GatewayTunnelDataSend(app, session, camBuf, sizeof(updateCamera) + TunnelDataHeaderLen);
+    // 4. UpdateCamera (0x57) — orient client camera
+    {
+        u8 updateCamera[] = { 0x57 };
+        u8* camBuf = arena_push_size(&app->arenaPerTick, sizeof(updateCamera) + TunnelDataHeaderLen);
+        memcpy(camBuf + TunnelDataHeaderLen, updateCamera, sizeof(updateCamera));
+        GatewayTunnelDataSend(app, session, camBuf, sizeof(updateCamera) + TunnelDataHeaderLen);
+    }
 
-    // 4. DtoObjectInitialData
+    // 5. DtoObjectInitialData (0x0503) — H1emu: unknownDword1=1, empty arrays
     {
         u8 dtoData[] = {
             0x05, 0x03,
-            0x01, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x00, 0x00,  // unknownDword1 = 1
+            0x00, 0x00, 0x00, 0x00,  // unknownArray1 count = 0
+            0x00, 0x00, 0x00, 0x00,  // unknownArray2 count = 0
         };
         u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(dtoData) + TunnelDataHeaderLen);
         memcpy(baseBuffer + TunnelDataHeaderLen, dtoData, sizeof(dtoData));
         GatewayTunnelDataSend(app, session, baseBuffer, sizeof(dtoData) + TunnelDataHeaderLen);
-        printf("[DEPLOY] Sent DtoObjectInitialData (raw 0x0503)\n");
     }
 
+    // Mark character as released and deployed
     session->characterReleased = TRUE;
     session->characterDeployed = TRUE;
     session->deployedCycleId = session->zoneCycleId;
 
-    // 5. Character.CharacterStateDelta
+    // 6. Character.CharacterStateDelta — initial state
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_3 = 0x40000000ull;
@@ -341,8 +365,8 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 5b. AddLightweightPc — registers self as world entity, initializes CharacterAttachmentGroup
-    printf("[DEPLOY] Sending AddLightweightPc...\n");
+    // 7. AddLightweightPc — register self as world entity
+    //    H1emu: createLightweightCharacter(character)
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
     lightweightPc.character_id       = session->characterId;
     lightweightPc.transient_id.value = session->zoneCycleId;
@@ -354,28 +378,20 @@ void DeployCharacter(AppState* app, SessionState* session) {
     lightweightPc.flags1             = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
-    printf("[DEPLOY] Sent AddLightweightPc\n");
 
-    // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
-    //    while client is still in WaitForFirstZone, giving geometry time to load
-    //    before the Running state attachment group check.
+    // 8. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
+    //    while client is still in WaitForFirstZone
     SendEquipmentAndMovement(app, session);
 
-    // 7. LightweightToFullPc — full character upgrade with position
-    printf("[DEPLOY] Sending LightweightToFullPc...\n");
+    // 9. LightweightToFullPc — upgrade lightweight character to full
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
-    printf("[DEPLOY] LightweightToFullPc sent\n");
 
-    // 8. ZoneDoneSendingInitialData
-    {
-        __time64_t zdSendTime;
-        _time64(&zdSendTime);
-        printf("[TIMING] ZoneDoneSendingInitialData sent at %lld\n", zdSendTime);
-    }
+    // 10. ZoneDoneSendingInitialData — signals client to finish loading
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
-    // 9. ResourceEventBase
+    // 11. ResourceEventBase — set initial resource values
+    //     H1emu: character.resources = { health: 10000, hunger: 10000, ... }
     {
         Zone_Packet_ResourceEventBase resourceEvent = { 0 };
         resourceEvent.gametime = timer & 0x7fffffff;
@@ -392,51 +408,65 @@ void DeployCharacter(AppState* app, SessionState* session) {
                     Zone_Packet_Kind_ResourceEventBase, &resourceEvent);
     }
 
-    // 10. AccountItemManagerStateChanged
+    // 12. AccountItemManagerStateChanged — notify client of escrow state
     {
         u8 escrowData[] = {
-            0x23, 0x00,
-            0x00,
-            0x01,
-            0x01,
-            0x00,
+            0x23, 0x00,  // opcode
+            0x00,        // unknown
+            0x01,        // state = 1
+            0x01,        // unknown
+            0x00,        // unknown
         };
         u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(escrowData) + TunnelDataHeaderLen);
         memcpy(baseBuffer + TunnelDataHeaderLen, escrowData, sizeof(escrowData));
         GatewayTunnelDataSend(app, session, baseBuffer, sizeof(escrowData) + TunnelDataHeaderLen);
-        printf("[DEPLOY] Sent AccountItemManagerStateChanged\n");
     }
 
-    // 11. WeaponStance
-    Zone_Packet_Character_WeaponStance weaponStance = { 0 };
-    weaponStance.character_id = session->characterId;
-    weaponStance.stance = 0;
+    // 13. Character.WeaponStance — ensure unarmed stance after equipment
+    Zone_Packet_Character_WeaponStance deployStance = { 0 };
+    deployStance.character_id = session->characterId;
+    deployStance.stance = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
+                   Zone_Packet_Kind_Character_WeaponStance, &deployStance);
 
-    // 12. Deferred NetworkProximityUpdatesComplete
+    // 14. Schedule deferred NetworkProximityUpdatesComplete (+5s)
+    //     H1emu: setTimeout(() => sendProximityUpdatesComplete(), 5000)
     session->needsProximityComplete = 1;
     _time64(&session->proximityCompleteTime);
     session->proximityCompleteTime += 5;
 
-    printf("[TIMER_DEFER] NetworkProximityUpdatesComplete scheduled for +5s\n");
-    printf("========== DEPLOY CHARACTER END ==========\n\n");
+    printf("[DEPLOY] DeployCharacter END (proximity scheduled +5s)\n");
 }
 
 
+// ============================================================================
+// OnLogin — Phase 1: Initialize zone client after gateway login
+//
+// Based on H1emu ZoneServer2016.onLogin():
+//   Sends all initial data the client needs to start the zone loading screen.
+//   After this, the client sends ClientIsReady → triggers DeployCharacter.
+//
+// Packet sequence:
+//   0. Character.UpdateCharacterState (hide during loading)
+//   1. InitializationParameters (environment, SKU)
+//   2. SendZoneDetails (zone name, weather, lighting)
+//   3. ClientGameSettings (interact, timescale, weapons, damage)
+//   4. ReferenceData.DynamicAppearance (empty)
+//   5. SendSelfToClient (full character data)
+//   6. Character.UpdateScale
+//   7. Container.InitEquippedContainers
+//   8. Command.ItemDefinitions
+// ============================================================================
 void OnLogin(AppState* app, SessionState* session) {
-    __time64_t onLoginTime;
-    _time64(&onLoginTime);
     __time64_t timer;
     _time64(&timer);
-    static int onLoginCount = 0;
-    onLoginCount++;
-    printf("[ONLOGIN] OnLogin called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx\n",
-           onLoginCount, onLoginTime, (unsigned long long)session->characterId);
 
-    // FIRST: ensure actor data has valid defaults before any packet uses it.
-    // pGetPlayerActor is populated by the login server's GetHeadTypeId, but
-    // the zone server session starts fresh. If the data didn't transfer, default to male head 1.
+    printf("[ONLOGIN] OnLogin BEGIN (charId=0x%llx)\n",
+           (unsigned long long)session->characterId);
+
+    // Ensure actor data has valid defaults
+    // (pGetPlayerActor is populated by the login server's CharacterCreateHandler,
+    //  but the zone server session starts fresh — apply defaults if needed)
     if (session->pGetPlayerActor.actorModelId == 0) {
         session->pGetPlayerActor.actorModelId = 9469;
         session->pGetPlayerActor.gender       = 1;
@@ -446,20 +476,17 @@ void OnLogin(AppState* app, SessionState* session) {
         printf("[ONLOGIN] Actor data was empty — applied male head 1 defaults\n");
     }
 
-    PRINT_TIMESTAMP(); printf("[*] [TIMING] OnLogin BEGIN: 0. Hide Character\n");
-
     // 0. Character.UpdateCharacterState — hide during loading (state1=0)
+    //    H1emu: character.isVisible = false during init phase
     Zone_Packet_Character_UpdateCharacterState hideState = { 0 };
     hideState.character_id = session->characterId;
     hideState.state1 = 0;
     hideState.game_time = timer & 0x7fffffff;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_UpdateCharacterState, &hideState);
-    printf("[STATE] Sent CharacterState: hidden (state1=0)\n");
 
-    PRINT_TIMESTAMP(); printf("[*] [TIMING] OnLogin BEGIN: 1. InitializationParameters\n");
-
-    // 1. InitializationParameters
+    // 1. InitializationParameters — environment and SKU identification
+    //    H1emu: "LIVE_KOTK" environment, "SKU_Is_KotK" for King of the Kill
     Zone_Packet_InitializationParameters init_params = {
         .environment  = STR8("LIVE_KOTK"),
         .unk_string_1 = STR8("SKU_Is_KotK"),
@@ -468,9 +495,8 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_InitializationParameters,
                    &init_params);
 
-    PRINT_TIMESTAMP(); printf("[*] [TIMING] 2. SendZoneDetails\n");
-
-    // 2. SendZoneDetails
+    // 2. SendZoneDetails — zone name, weather, lighting
+    //    H1emu: zone_name="Z2" (Battle Royale map), zone_type=4
     Zone_Packet_SendZoneDetails send_zone_details = {
         .zone_name = STR8("Z2"),
         .zone_type = 4,
@@ -520,7 +546,8 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_SendZoneDetails,
                    &send_zone_details);
 
-    // 3. ClientGameSettings
+    // 3. ClientGameSettings — gameplay parameters
+    //    H1emu: interactGlowAndDist=16, enableWeapons=1, damageMultiplier=11
     Zone_Packet_ClientGameSettings game_settings = {
         .interact_glow_and_dist = 16,
         .unk_bool         = TRUE,
@@ -534,6 +561,7 @@ void OnLogin(AppState* app, SessionState* session) {
                    &game_settings);
 
     // 4. ReferenceData.DynamicAppearance — empty valid packet
+    //    H1emu: sends empty dynamic appearance data (opcode 0x17 0x06)
     {
         u8 emptyDynAppearance[] = {
             0x17, 0x06,
@@ -545,47 +573,21 @@ void OnLogin(AppState* app, SessionState* session) {
         GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
     }
 
-    // 5. SendSelfToClient
-    printf("[DEBUG] characterName: '%.*s' len=%d\n",
-           (int)session->characterName.size,
-           session->characterName.data,
-           (int)session->characterName.size);
-    printf("[DEBUG] characterId: 0x%llx\n", (unsigned long long)session->characterId);
-    printf("[DEBUG] actorModelId: %u gender: %u headType: %u\n",
-           session->pGetPlayerActor.actorModelId,
-           session->pGetPlayerActor.gender,
-           session->pGetPlayerActor.headType);
-
+    // 5. SendSelfToClient — full character initialization
+    //    H1emu: this.sendCharacterData(client, client.character)
     SendSelfToClient(app, session, FALSE);
 
-    // 6. AddLightweightPc — broadcast self presence to proximity system
-    // Zone_Packet_AddLightweightPc lightweightPc = { 0 };
-    // lightweightPc.character_id          = session->characterId;
-    // lightweightPc.transient_id.value    = 1;
-    // lightweightPc.id_characterFirstName = session->characterName;
-    // lightweightPc.id_characterLastName  = STR8("");
-    // lightweightPc.id_unknownString1     = STR8("00000000000000000");
-    // lightweightPc.id_characterName      = session->characterName;
-    // lightweightPc.actorModelId          = session->pGetPlayerActor.actorModelId;
-    // lightweightPc.position = (vec3){
-    //     .x = -297.31f, .y = 506.06f, .z = -4894.10f
-    // };
-    // lightweightPc.rotation = (vec4){
-    //     .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f
-    // };
-    // lightweightPc.movementVersion = 1;
-    // lightweightPc.flags1          = 0;
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_AddLightweightPc, &lightweightPc, "AddLightweightPc");
+    // (Note: AddLightweightPc is sent in DeployCharacter phase, not here)
 
-    // 7. Character.UpdateScale
+    // 6. Character.UpdateScale — set character scale to 1:1:1:1
     Zone_Packet_Character_UpdateScale updateScale = { 0 };
     updateScale.character_id = session->characterId;
     updateScale.scale = (vec4){ .x = 1.0f, .y = 1.0f, .z = 1.0f, .w = 1.0f };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_UpdateScale, &updateScale);
 
-    // 8. Container.InitEquippedContainers
+    // 7. Container.InitEquippedContainers — initialize equipped containers
+    //    H1emu: character.getEquippedContainers()
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
     containers.character_id = session->characterId;
     containers.ignore_this  = 0;
@@ -700,10 +702,9 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 9. Reference data
-    //ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(10), "..\\data\\Command_ItemDefinitions.bin");
-    // Command.ItemDefinitions — empty list, no server-side item defs
-    // Command.ItemDefinitions — 5 items: fists, binoculars, hoodie, jeans, sneakers
+    // 8. Command.ItemDefinitions — define items for client-side resolution
+    //    H1emu: this.sendItemDefinitions(client)
+    //    Includes: fists, binoculars, hoodie, jeans, sneakers
 Zone_Packet_CommandItemDefinitions itemDefs = { 0 };
 
 itemDefs.item_def_reply_2_length = 1;
@@ -876,65 +877,7 @@ ZonePacketSend(app, session, &app->arenaPerTick,
     session->finished_loading = FALSE;
     session->isReady          = FALSE;
 
-    printf("[ONLOGIN] Flags: finished_loading=%d isReady=%d characterReleased=%d\n",
-           session->finished_loading, session->isReady, session->characterReleased);
-    printf("[ONLOGIN] Session actorModelId=%u gender=%u headType=%u headActor='%.*s'\n",
-           session->pGetPlayerActor.actorModelId, session->pGetPlayerActor.gender,
-           session->pGetPlayerActor.headType,
-           (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
-
-    // 10. ClientBeginZoning
-    // Zone_Packet_ClientBeginZoning beginZoning = { 0 };
-    // beginZoning.zone_name  = STR8("Z2");
-    // beginZoning.zone_type  = 4;
-    // beginZoning.pos        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-    // beginZoning.rot        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
-    // beginZoning.overcast   = 1.0f;
-    // beginZoning.fogDensity = 0.000173f;
-    // beginZoning.fogFloor   = 10.0f;
-    // beginZoning.fogGradient = 0.0144f;
-    // beginZoning.globalPrecipitation = 0.0f;
-    // beginZoning.temperature = 75.0f;
-    // beginZoning.skyClarity  = 0.0f;
-    // beginZoning.cloudWeight0 = 0.05f;
-    // beginZoning.cloudWeight1 = 0.0f;
-    // beginZoning.cloudWeight2 = 0.05f;
-    // beginZoning.cloudWeight3 = 0.15f;
-    // beginZoning.transitionTime = 0.0f;
-    // beginZoning.sunAxisX = 38.0f;
-    // beginZoning.sunAxisY = -15.0f;
-    // beginZoning.sunAxisZ = 0.0f;
-    // beginZoning.windDirX = -1.0f;
-    // beginZoning.windDirY = -0.5f;
-    // beginZoning.windDirZ = -1.0f;
-    // beginZoning.wind = 3.0f;
-    // beginZoning.rainMinStrength       = 0.0f;
-    // beginZoning.rainRampUpTimeSeconds = 1.0f;
-    // beginZoning.cloudFile             = STR8("sky_Z_clouds.dds");
-    // beginZoning.stratusCloudTiling    = 0.30f;
-    // beginZoning.stratusCloudScrollU   = -0.002f;
-    // beginZoning.stratusCloudScrollV   = 0.0f;
-    // beginZoning.stratusCloudHeight    = 1000.0f;
-    // beginZoning.cumulusCloudTiling    = 0.20f;
-    // beginZoning.cumulusCloudScrollU   = 0.0f;
-    // beginZoning.cumulusCloudScrollV   = 0.002f;
-    // beginZoning.cumulusCloudHeight    = 8000.0f;
-    // beginZoning.cloudAnimationSpeed   = 0.0f;
-    // beginZoning.cloudSilverLiningThickness  = 0.25f;
-    // beginZoning.cloudSilverLiningBrightness = 7.0f;
-    // beginZoning.cloudShadows    = 0.5f;
-    // beginZoning.unk_byte_1      = 4;
-    // beginZoning.zone_id_1       = 5;
-    // beginZoning.zone_id_2       = 5;
-    // beginZoning.name_id         = 61609;
-    // beginZoning.unk_dword_1     = 0x0f2b07d0;
-    // beginZoning.unk_bool_1      = FALSE;
-    // beginZoning.wait_for_zone_ready = FALSE;
-    // beginZoning.unk_bool_2      = FALSE;
-    // ZonePacketSend(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
-
-    // 11. UpdateLocation
+    // 9. ClientUpdate.UpdateLocation — set initial spawn position
     Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
         .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
         .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
@@ -945,14 +888,11 @@ ZonePacketSend(app, session, &app->arenaPerTick,
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
 
-    // 12. ClientInitializationDetails
+    // 10. ClientInitializationDetails
     Zone_Packet_ClientInitializationDetails initDetails = { 0 };
     initDetails.unk_u32_1 = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientInitializationDetails, &initDetails);
 
-    __time64_t tzEnd; _time64(&tzEnd);
-    printf("[ONLOGIN] All init packets sent in %lld seconds, waiting for ClientIsReady\n", tzEnd - onLoginTime);
-    printf("[ONLOGIN] Post-init flags: finished_loading=%d isReady=%d characterReleased=%d\n",
-           session->finished_loading, session->isReady, session->characterReleased);
+    printf("[ONLOGIN] OnLogin END — waiting for ClientIsReady\n");
 }
