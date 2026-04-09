@@ -703,109 +703,109 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
 
-    // 8. Command.ItemDefinitions — 5 items: fists, binoculars, hoodie, jeans, sneakers
+    // 8. Command.ItemDefinitions — 1 reply block containing 5 item defs
     // Ref: H1emu zoneserver.ts sendInitData() → Command.ItemDefinitions
     Zone_Packet_CommandItemDefinitions itemDefs = { 0 };
 
-itemDefs.item_def_reply_2_length = 1;
-itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
-    [0] = {
-        .item_defs_count = 5,
-        .item_defs = (struct item_defs_s[5]){
-            [0] = {
-                // Fists
-                .defs_id       = 85,
-                .bitflags1     = 0,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP | FLAG_NO_DRAG_DROP yes drop
-                .name_id       = 0,
-                .item_class    = 25006,
-                .item_type     = 20,
-                .item_type_1   = 20,
-                .category_id   = 11,
-                .model_name    = STR8("Weapon_Empty.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 43001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [1] = {
-                // Binoculars
-                .defs_id       = 1542,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25054,
-                .item_type     = 20,
-                .item_type_1   = 20,
-                .category_id   = 16,
-                .model_name    = STR8("Weapon_Binoculars_3P.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [2] = {
-                // Gas Runner Hoodie
-                .defs_id       = 5747,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25002,
-                .item_type     = 34,
-                .item_type_1   = 34,
-                .category_id   = 1,
-                .model_name    = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 55001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [3] = {
-                // Jeans
-                .defs_id       = 2178,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25003,
-                .item_type     = 34,
-                .item_type_1   = 34,
-                .category_id   = 3,
-                .model_name    = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 55001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [4] = {
-                // Conveys Sneakers
-                .defs_id       = 2216,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25005,
-                .item_type     = 28,
-                .item_type_1   = 28,
-                .category_id   = 107,
-                .model_name    = STR8("SurvivorMale_Feet_Conveys.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 200,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 49001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
+    itemDefs.item_def_reply_2_length = 1;
+    itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
+        [0] = {
+            .item_defs_count = 5,
+            .item_defs = (struct item_defs_s[5]){
+                [0] = {
+                    // Fists
+                    .defs_id       = 85,
+                    .bitflags1     = 0,
+                    .bitflags2     = 0b00000100,
+                    .name_id       = 0,
+                    .item_class    = 25006,
+                    .item_type     = 20,
+                    .item_type_1   = 20,
+                    .category_id   = 11,
+                    .model_name    = STR8("Weapon_Empty.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 0,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .power_rating  = 43001,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
+                [1] = {
+                    // Binoculars
+                    .defs_id       = 1542,
+                    .bitflags2     = 0b00000100,
+                    .item_class    = 25054,
+                    .item_type     = 20,
+                    .item_type_1   = 20,
+                    .category_id   = 16,
+                    .model_name    = STR8("Weapon_Binoculars_3P.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 50,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
+                [2] = {
+                    // Gas Runner Hoodie
+                    .defs_id       = 5747,
+                    .bitflags2     = 0b00000100,
+                    .item_class    = 25002,
+                    .item_type     = 34,
+                    .item_type_1   = 34,
+                    .category_id   = 1,
+                    .model_name    = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 50,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .power_rating  = 55001,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
+                [3] = {
+                    // Jeans
+                    .defs_id       = 2178,
+                    .bitflags2     = 0b00000100,
+                    .item_class    = 25003,
+                    .item_type     = 34,
+                    .item_type_1   = 34,
+                    .category_id   = 3,
+                    .model_name    = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 50,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .power_rating  = 55001,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
+                [4] = {
+                    // Conveys Sneakers
+                    .defs_id       = 2216,
+                    .bitflags2     = 0b00000100,
+                    .item_class    = 25005,
+                    .item_type     = 28,
+                    .item_type_1   = 28,
+                    .category_id   = 107,
+                    .model_name    = STR8("SurvivorMale_Feet_Conveys.adr"),
+                    .texture_alias = STR8(""),
+                    .tint_alias    = STR8(""),
+                    .bulk          = 200,
+                    .max_stack_size = 1,
+                    .min_stack_size = 1,
+                    .power_rating  = 49001,
+                    .curreny_type  = -1,
+                    .stats_item_def_2_count = 0,
+                },
             },
         },
-    },
-};
+    };
 
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_CommandItemDefinitions, &itemDefs);
@@ -816,62 +816,61 @@ itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
 
     weaponDefs.weapon_byteswithlength_length = 1;
     weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
-    [0] = {
-        .weapon_defs_count = 1,
-        .weapon_defs = (struct weapon_defs_s[1]){
-            [0] = {
-                .id1                 = 85,
-                .id2                 = 85,
-                .weapon_group_id     = 0,
-                .flags1              = 0,
-                .equip_ms            = 500,
-                .unequip_ms          = 500,
-                .melee_detect_width  = 100,
-                .melee_detect_height = 100,
-                .anim_set_name       = STR8("Fists"),
-                .ammo_slots_count    = 0,
-                .fire_groups_count   = 1,
-                .fire_groups = (struct fire_groups_s[1]){
-                    [0] = { .fire_group_id = 1 },
+        [0] = {
+            .weapon_defs_count = 1,
+            .weapon_defs = (struct weapon_defs_s[1]){
+                [0] = {
+                    .id1                 = 85,
+                    .id2                 = 85,
+                    .weapon_group_id     = 0,
+                    .flags1              = 0,
+                    .equip_ms            = 500,
+                    .unequip_ms          = 500,
+                    .melee_detect_width  = 100,
+                    .melee_detect_height = 100,
+                    .anim_set_name       = STR8("Fists"),
+                    .ammo_slots_count    = 0,
+                    .fire_groups_count   = 1,
+                    .fire_groups = (struct fire_groups_s[1]){
+                        [0] = { .fire_group_id = 1 },
+                    },
                 },
             },
-        },
-        .fire_group_defs_count = 1,
-        .fire_group_defs = (struct fire_group_defs_s[1]){
-            [0] = {
-                .id3 = 1,
-                .id4 = 1,
-                .fire_mode_list_count = 1,
-                .fire_mode_list = (struct fire_mode_list_s[1]){
-                    [0] = { .fire_mode_1 = 1 },
+            .fire_group_defs_count = 1,
+            .fire_group_defs = (struct fire_group_defs_s[1]){
+                [0] = {
+                    .id3 = 1,
+                    .id4 = 1,
+                    .fire_mode_list_count = 1,
+                    .fire_mode_list = (struct fire_mode_list_s[1]){
+                        [0] = { .fire_mode_1 = 1 },
+                    },
                 },
             },
-        },
-        .fire_mode_defs_count = 1,
-        .fire_mode_defs = (struct fire_mode_defs_s[1]){
-            [0] = {
-                .id5            = 1,
-                .id6            = 1,
-                .type           = 1,
-                .refire_time_ms = 500,
-                .range          = 2.0f,
-                // Third person camera
-                .tp_force_camera_overrides  = TRUE,
-                .tp_camera_distance         = 3.5f,
-                .tp_cr_camera_distance      = 3.0f,
-                .tp_pr_camera_distance      = 3.5f,
-                .tp_camera_fov              = 75.0f,
-                .tp_cr_camera_fov           = 75.0f,
-                .tp_pr_camera_fov           = 75.0f,
-                .fp_force_camera_overrides  = FALSE,
-                .fp_camera_fov              = 250.0f,
+            .fire_mode_defs_count = 1,
+            .fire_mode_defs = (struct fire_mode_defs_s[1]){
+                [0] = {
+                    .id5            = 1,
+                    .id6            = 1,
+                    .type           = 1,
+                    .refire_time_ms = 500,
+                    .range          = 2.0f,
+                    .tp_force_camera_overrides  = TRUE,
+                    .tp_camera_distance         = 3.5f,
+                    .tp_cr_camera_distance      = 3.0f,
+                    .tp_pr_camera_distance      = 3.5f,
+                    .tp_camera_fov              = 75.0f,
+                    .tp_cr_camera_fov           = 75.0f,
+                    .tp_pr_camera_fov           = 75.0f,
+                    .fp_force_camera_overrides  = FALSE,
+                    .fp_camera_fov              = 250.0f,
+                },
             },
+            .player_state_group_defs_count          = 0,
+            .fire_mode_projectile_mapping_data_count = 0,
+            .aim_assist_defs_count                  = 0,
         },
-        .player_state_group_defs_count          = 0,
-        .fire_mode_projectile_mapping_data_count = 0,
-        .aim_assist_defs_count                  = 0,
-    },
-};
+    };
 
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ReferenceDataWeaponDefinitions, &weaponDefs);
