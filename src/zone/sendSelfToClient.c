@@ -236,8 +236,10 @@ sendSelf.payload_self = (struct payload_self_s[1]){
             .unk_u32_4 = 0,
             .unk_u32_5 = 0,
             // Position matching ClientBeginZoning
-            .position = {.x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f},
-            .rotation = {.x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f},
+            // .position = {.x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f},
+            // .rotation = {.x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f},
+            .position = {.x = 317.43f, .y = 50.0f, .z = 288.68f, .w = 1.0f},
+            .rotation = {.x = 0.0f, .y = 0.492f, .z = 0.0f, .w = 0.871f},
             // Identity
             .unk_u32_iden = (u32)(session->characterId & 0xFFFFFFFF),
             .unk_u32_iden_2 = (u32)((session->characterId >> 32) & 0xFFFFFFFF),

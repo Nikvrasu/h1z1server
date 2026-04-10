@@ -132,6 +132,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     String8 eqHoodieModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Hoodie_Down.adr") : STR8("SurvivorMale_Chest_Hoodie_Down.adr");
     String8 eqPantsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_SkinnyLeg.adr") : STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr");
     String8 eqShoesModel  = (gender == 2) ? STR8("SurvivorFemale_Feet_Conveys.adr") : STR8("SurvivorMale_Feet_Conveys.adr");
+    String8 eqEyesModel   = (gender == 2) ? STR8("SurvivorFemale_Eyes_Cigar.adr") : STR8("SurvivorMale_Eyes_Cigar.adr");
 
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
@@ -141,8 +142,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         .character_id = session->characterId,
         .profile_id = KOTK_CHARACTER_PROFILE_ID,
     }};
-    setEquipment.equipment_slot_array_count = 7;
-    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[7]){
+    setEquipment.equipment_slot_array_count = 8;
+    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[8]){
         [0] = { .equipment_slot_id_1 = 1,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 1,   .guid =      0,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [1] = { .equipment_slot_id_1 = 3,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3,   .guid = 0x1001,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [2] = { .equipment_slot_id_1 = 4,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4,   .guid = 0x1002,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
@@ -150,9 +151,10 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [4] = { .equipment_slot_id_1 = 10,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 10,  .guid = 0x1005,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [5] = { .equipment_slot_id_1 = 14,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 14,  .guid = 0x1006,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
         [6] = { .equipment_slot_id_1 = 13,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 13,  .guid = 0x1007,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
+        [7] = { .equipment_slot_id_1 = LOADOUT_SLOT_REQUIRED_EYES, .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = LOADOUT_SLOT_REQUIRED_EYES, .guid = ITEM_GUID_EYES_ATTACHMENT, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
     };
-    setEquipment.attachments_data_1_count = 7;
-    setEquipment.attachments_data_1 = (struct attachments_data_1_s[7]){
+    setEquipment.attachments_data_1_count = 8;
+    setEquipment.attachments_data_1 = (struct attachments_data_1_s[8]){
         [0] = { .model_name = eqHeadActor,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1   },
         [1] = { .model_name = eqChestModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3   },
         [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4   },
@@ -160,10 +162,11 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [4] = { .model_name = eqHoodieModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10  },
         [5] = { .model_name = eqPantsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14  },
         [6] = { .model_name = eqShoesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13  },
+        [7] = { .model_name = eqEyesModel,                                     .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = LOADOUT_SLOT_REQUIRED_EYES },
     };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-    printf("[EQUIP] Sent Equipment.SetCharacterEquipment (7 baseline slots, profile_id=%u, unk_bool_2=TRUE)\n",
+    printf("[EQUIP] Sent Equipment.SetCharacterEquipment (8 baseline slots, profile_id=%u, unk_bool_2=TRUE)\n",
            KOTK_CHARACTER_PROFILE_ID);
 
     // 5. ClientUpdate.ActivateProfile — activate the same profile used by equipment/loadout.
@@ -197,8 +200,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .unk_dword_13 = 0,
         },
     };
-    activateProfile.attachment_list_count = 7;
-    activateProfile.attachment_list = (struct attachment_list_s[7]){
+    activateProfile.attachment_list_count = 8;
+    activateProfile.attachment_list = (struct attachment_list_s[8]){
         [0] = { .model_name = eqHeadActor,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1,   .unk_bool_1 = FALSE },
         [1] = { .model_name = eqChestModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3,   .unk_bool_1 = FALSE },
         [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4,   .unk_bool_1 = FALSE },
@@ -206,6 +209,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
         [4] = { .model_name = eqHoodieModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10,  .unk_bool_1 = FALSE },
         [5] = { .model_name = eqPantsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14,  .unk_bool_1 = FALSE },
         [6] = { .model_name = eqShoesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13,  .unk_bool_1 = FALSE },
+        [7] = { .model_name = eqEyesModel,                                     .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = LOADOUT_SLOT_REQUIRED_EYES, .unk_bool_1 = FALSE },
     };
     activateProfile.unk_dword_1    = 0;
     activateProfile.unk_dword_2    = 0;
@@ -214,7 +218,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     activateProfile.decal_alias    = STR8("#");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_ActivateProfile, &activateProfile);
-    printf("[EQUIP] Sent ActivateProfile (profile_id=%u, 7 baseline attachments, actor_model_id=%u)\n",
+    printf("[EQUIP] Sent ActivateProfile (profile_id=%u, 8 baseline attachments, actor_model_id=%u)\n",
            KOTK_CHARACTER_PROFILE_ID,
            session->pGetPlayerActor.actorModelId);
 
@@ -222,8 +226,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
     loadoutSlots.character_id = session->characterId;
     loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
-    loadoutSlots.loadout_slot_data_count = 2;
-    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
+    loadoutSlots.loadout_slot_data_count = 3;
+    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[3]){
         [0] = {
             .hotbar_slot_id = LOADOUT_SLOT_MELEE,
             .loadout_id_1   = LOADOUT_ID_KOTK_CHARACTER,
@@ -239,6 +243,15 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .slot_id        = LOADOUT_SLOT_BINOCULARS,
             .item_def_id1   = WEAPON_BINOCULARS,
             .loadout_item_guid = ITEM_GUID_BINOCULARS,
+            .unk_byte_1     = 1,
+            .unk_dword_1    = 22,
+        },
+        [2] = {
+            .hotbar_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+            .loadout_id_1   = LOADOUT_ID_KOTK_CHARACTER,
+            .slot_id        = LOADOUT_SLOT_REQUIRED_EYES,
+            .item_def_id1   = ITEM_DEF_EYES_ATTACHMENT,
+            .loadout_item_guid = ITEM_GUID_EYES_ATTACHMENT,
             .unk_byte_1     = 1,
             .unk_dword_1    = 22,
         },
@@ -886,8 +899,8 @@ ZonePacketSend(app, session, &app->arenaPerTick,
 weaponDefs.weapon_byteswithlength_length = 1;
 weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
     [0] = {
-        .weapon_defs_count = 1,
-        .weapon_defs = (struct weapon_defs_s[1]){
+        .weapon_defs_count = 2,
+        .weapon_defs = (struct weapon_defs_s[2]){
             [0] = {
                 .id1                 = 85,
                 .id2                 = 85,
@@ -904,9 +917,25 @@ weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
                     [0] = { .fire_group_id = 1 },
                 },
             },
+            [1] = {
+                .id1                 = 12,
+                .id2                 = 12,
+                .weapon_group_id     = 0,
+                .flags1              = 0,
+                .equip_ms            = 500,
+                .unequip_ms          = 500,
+                .melee_detect_width  = 0,
+                .melee_detect_height = 0,
+                .anim_set_name       = STR8("Binoculars"),
+                .ammo_slots_count    = 0,
+                .fire_groups_count   = 1,
+                .fire_groups = (struct fire_groups_s[1]){
+                    [0] = { .fire_group_id = 2 },
+                },
+            },
         },
-        .fire_group_defs_count = 1,
-        .fire_group_defs = (struct fire_group_defs_s[1]){
+        .fire_group_defs_count = 2,
+        .fire_group_defs = (struct fire_group_defs_s[2]){
             [0] = {
                 .id3 = 1,
                 .id4 = 1,
@@ -915,9 +944,17 @@ weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
                     [0] = { .fire_mode_1 = 1 },
                 },
             },
+            [1] = {
+                .id3 = 2,
+                .id4 = 2,
+                .fire_mode_list_count = 1,
+                .fire_mode_list = (struct fire_mode_list_s[1]){
+                    [0] = { .fire_mode_1 = 2 },
+                },
+            },
         },
-        .fire_mode_defs_count = 1,
-        .fire_mode_defs = (struct fire_mode_defs_s[1]){
+        .fire_mode_defs_count = 2,
+        .fire_mode_defs = (struct fire_mode_defs_s[2]){
             [0] = {
                 .id5            = 1,
                 .id6            = 1,
@@ -934,6 +971,23 @@ weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
                 .tp_pr_camera_fov           = 75.0f,
                 .fp_force_camera_overrides  = FALSE,
                 .fp_camera_fov              = 250.0f,
+            },
+            [1] = {
+                .id5            = 2,
+                .id6            = 2,
+                .type           = 0,
+                .refire_time_ms = 0,
+                .range          = 0.0f,
+                // Binoculars zoom camera
+                .tp_force_camera_overrides  = TRUE,
+                .tp_camera_distance         = 0.5f,
+                .tp_cr_camera_distance      = 0.5f,
+                .tp_pr_camera_distance      = 0.5f,
+                .tp_camera_fov              = 30.0f,
+                .tp_cr_camera_fov           = 30.0f,
+                .tp_pr_camera_fov           = 30.0f,
+                .fp_force_camera_overrides  = TRUE,
+                .fp_camera_fov              = 20.0f,
             },
         },
         .player_state_group_defs_count          = 0,

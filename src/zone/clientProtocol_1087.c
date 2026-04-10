@@ -313,9 +313,16 @@ void StaticViewBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
     zone_packet_unpack(data + 3, dataLen - 3, Zone_Packet_Kind_StaticViewRequest, &request,
                        &app->arenaPerTick);
 
-    printf("StaticView Loc: %s\n", request.viewpoint);
+    printf("StaticView Loc: '%.*s' (len=%u)\n", (int)request.viewpoint.size,
+           request.viewpoint.data, request.viewpoint.size);
+    printf("StaticView Raw: ");
+    for (u32 i = 0; i < request.viewpoint.size; i++) {
+        printf("%02x ", (u8)request.viewpoint.data[i]);
+    }
+    printf("\n");
 
-    if (strcmp(request.viewpoint.data, "kotkdefault") == 0) {
+    if (request.viewpoint.size == (sizeof("kotkdefault") - 1)
+        && memcmp(request.viewpoint.data, "kotkdefault", sizeof("kotkdefault") - 1) == 0) {
         Zone_Packet_ClientUpdate_UpdateLocation updateLoc = {
             .position = { .x = -32.26f, .y = 506.41f, .z = 280.21f, .w = 1.f },
             .rotation = { .x = -0.11f, .y = -0.58f, .z = -0.08f, .w = 1.f },
@@ -328,7 +335,7 @@ void StaticViewBase(AppState* app, SessionState* session, u8* data, u32 dataLen)
 
         Zone_Packet_StaticViewReply reply = {
             .state = 1,
-            .position = { .x = 74.8f, .y = 201.5f, .z = 458.1f, .w = 99.01f },
+            .position = { .x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 0.0f },
             .rotation = { .x = 199.99f, .y = 289.99999f, .z = 370.17f, .w = 6.79f },
             .lookAt = { .x = 69.81f, .y = 56.f, .z = 0.f, .w = 0.f },
             .unk_byte_1 = 255,

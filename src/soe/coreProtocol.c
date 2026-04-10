@@ -278,6 +278,15 @@ void CorePacketHandle(AppState* app, SessionState* session, PlatformApi* api, u8
     printf("\n");
     u16 packetId = endian_read_u16_big(data);
 
+    if (packetId == CoreAckId || packetId == CoreAck1Id || packetId == CoreAck2Id
+        || packetId == CoreAck3Id || packetId == CoreAck4Id || packetId == CoreAck5Id) {
+        printf("[CORE ACK RAW] opcode=0x%04x len=%u bytes=", packetId, dataLen);
+        for (u32 i = 0; i < dataLen; i++) {
+            printf("%02x ", data[i]);
+        }
+        printf("\n");
+    }
+
     if (isSubPacket) {
         printf("isSubPacket: %d\n", isSubPacket);
     }

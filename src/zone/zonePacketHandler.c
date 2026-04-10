@@ -68,6 +68,49 @@ static void ZoneDrainQueuedLifecycleSignals(AppState* app, SessionState* session
     }
 }
 
+static void ZoneSendLobbyDefinitionsTestResponse(AppState* app, SessionState* session,
+                                                 const char* sourceTag) {
+    static u32 responseVariant = 0;
+    const char* variants[] = {
+        "",
+        "{}",
+        "[]",
+        "{\"definitions\":[]}",
+    };
+    u32 variantCount = (u32)(sizeof(variants) / sizeof(variants[0]));
+    const char* payload = variants[responseVariant % variantCount];
+    u32 variantUsed = responseVariant % variantCount;
+    responseVariant += 1;
+
+    u32 payloadLen = (u32)strlen(payload);
+    u32 definitionsStreamLen = sizeof(u32) + payloadLen;
+    u32 responseLen = 2 + sizeof(u32) + definitionsStreamLen;
+
+    u8* response = arena_push_size(&app->arenaPerTick, responseLen + TunnelDataHeaderLen);
+    u8* packed = response + TunnelDataHeaderLen;
+    u32 offset = 0;
+
+    packed[offset++] = 0x42;
+    packed[offset++] = 0x02;
+    endian_write_u32_little(packed + offset, definitionsStreamLen);
+    offset += sizeof(u32);
+    endian_write_u32_little(packed + offset, payloadLen);
+    offset += sizeof(u32);
+    memcpy(packed + offset, payload, payloadLen);
+
+    GatewayTunnelDataSend(app, session, response, responseLen + TunnelDataHeaderLen);
+
+    printf("[LOBBYDEF] %s Sent test DefinitionsResponse variant=%u payloadLen=%u payload='%s'\n",
+           sourceTag, variantUsed, payloadLen, payload);
+    printf("[LOBBYDEF] Out bytes: %02x %02x %02x %02x %02x %02x",
+           packed[0], packed[1], packed[2], packed[3], packed[4], packed[5]);
+    if (responseLen > 6) {
+        printf(" ... (total=%u)\n", responseLen);
+    } else {
+        printf(" (total=%u)\n", responseLen);
+    }
+}
+
 void ZonePacketHandler(AppState* app, SessionState* session, u8* data, u32 dataLen) {
     if (dataLen == 0) {
         printf(MESSAGE_CONCAT_WARN("ZonePacketHandler called with 0 length data\n"));
@@ -172,6 +215,24 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientInitializationDetails;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
         } break;
+        case ZONE_INVENTORYBASE_ID: {
+            kind = Zone_Packet_Kind_InventoryBase;
+            printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+
+            printf("[INVENTORYBASE] packetId=0x%02x len=%u\n", data[0], dataLen);
+            if (dataLen > 1) {
+                printf("[INVENTORYBASE] extra bytes: ");
+                for (u32 i = 1; i < (dataLen < 32 ? dataLen : 32); i++) {
+                    printf("%02x ", data[i]);
+                }
+                if (dataLen > 32) {
+                    printf("... ");
+                }
+                printf("\n");
+            } else {
+                printf("[INVENTORYBASE] no payload bytes after base opcode\n");
+            }
+        } break;
         case ZONE_WALLOFDATA_UIEVENT_ID: {
             // No-op — client spam, nothing to handle
         } break;
@@ -210,6 +271,17 @@ packetIdSwitch:
         case ZONE_LOBBYGAMEDEFINITION_DEFINITIONSREQUEST_ID: {
             kind = Zone_Packet_Kind_LobbyGameDefinition_DefinitionsRequest;
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
+
+            // Protocol 1087 registers this as full packet kind 0x4201.
+            printf("[LOBBYDEF] Received DefinitionsRequest packetId=0x%04x (bytes: 0x%02x 0x%02x) len=%u\n",
+                   packetId, data[0], dataLen > 1 ? data[1] : 0, dataLen);
+            printf("[LOBBYDEF] In bytes: ");
+            for (u32 i = 0; i < (dataLen < 24 ? dataLen : 24); i++) {
+                printf("%02x ", data[i]);
+            }
+            printf("\n");
+
+            ZoneSendLobbyDefinitionsTestResponse(app, session, "0x4201");
         } break;
         case ZONE_KEEPALIVE_ID: {
             kind = Zone_Packet_Kind_KeepAlive;
@@ -249,11 +321,13 @@ packetIdSwitch:
                         Zone_Packet_Kind_PlayerWorldTransferReply, &transferReply);
 
             // 2. ClientBeginZoning — triggers the zone load
-            Zone_Packet_ClientBeginZoning beginZoning = { 0 };
+            Zone_Packet_ClientBeginZoning beginZoning = { 0 }; // position ingame, not menu
             beginZoning.zone_name                  = STR8("Z2");
             beginZoning.zone_type                  = 4;
-            beginZoning.pos                        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-            beginZoning.rot                        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+            // beginZoning.pos                        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
+            // beginZoning.rot                        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
+            beginZoning.pos                        = (vec4){ .x = 122.58f, .y = 50.0f, .z = -70.34f, .w = 1.0f };
+            beginZoning.rot                        = (vec4){ .x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f };
             beginZoning.overcast                   = 1.0f;
             beginZoning.fogDensity                 = 0.000173f;
             beginZoning.fogFloor                   = 10.0f;
@@ -408,6 +482,22 @@ packetIdSwitch:
             u8* buf = arena_push_size(&app->arenaPerTick, sizeof(sessionResponse) + TunnelDataHeaderLen);
             memcpy(buf + TunnelDataHeaderLen, sessionResponse, sizeof(sessionResponse));
             GatewayTunnelDataSend(app, session, buf, sizeof(sessionResponse) + TunnelDataHeaderLen);
+        } break;
+        case 0x42: {
+            printf("[LOBBYDEF] Received base packet 0x42 (bytes: 0x%02x 0x%02x)\n",
+                   data[0], dataLen > 1 ? data[1] : 0);
+            u8 subID = dataLen > 1 ? data[1] : 0;
+            switch (subID) {
+                case 0x01: {
+                    // 0x42 0x02 LobbyGameDefinition_DefinitionsResponse
+                    // payload: stream:u32 definitions_data { string:u32 data }
+                    printf("[LOBBYDEF] Received fallback sub-packet 0x42 0x01\n");
+                    ZoneSendLobbyDefinitionsTestResponse(app, session, "0x42/0x01-fallback");
+                } break;
+                default: {
+                    printf(MESSAGE_CONCAT_WARN("Unhandled sub-packet 0x42 0x%02x\n"), subID);
+                } break;
+            }
         } break;
         default: {
             printf(MESSAGE_CONCAT_WARN("Unhandled Zone packet 0x%02x (len=%u)\n"), packetId, dataLen);
