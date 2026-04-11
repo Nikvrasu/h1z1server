@@ -30,11 +30,11 @@ static void ZoneHandleReadySignal(AppState* app, SessionState* session, const ch
     }
 
     if (session->pendingFinishedLoading && !session->finished_loading) {
-        ZoneFinalizePostLoad(session, "deferred-after-ready");
+        ZoneFinalizePostLoad(app, session, "deferred-after-ready");
     }
 }
 
-static void ZoneHandleFinishedLoadingSignal(SessionState* session, const char* source) {
+static void ZoneHandleFinishedLoadingSignal(AppState* app, SessionState* session, const char* source) {
     __time64_t now;
     _time64(&now);
 
@@ -48,7 +48,7 @@ static void ZoneHandleFinishedLoadingSignal(SessionState* session, const char* s
         return;
     }
 
-    ZoneFinalizePostLoad(session, source);
+    ZoneFinalizePostLoad(app, session, source);
 }
 
 static void ZoneDrainQueuedLifecycleSignals(AppState* app, SessionState* session) {
@@ -64,7 +64,7 @@ static void ZoneDrainQueuedLifecycleSignals(AppState* app, SessionState* session
         && session->zonePhase >= ZoneFlowPhase_Deployed
         && session->characterDeployed) {
         printf("[ZONE LOAD] Draining queued ClientFinishedLoading\n");
-        ZoneFinalizePostLoad(session, "QueuedClientFinishedLoading");
+        ZoneFinalizePostLoad(app, session, "QueuedClientFinishedLoading");
     }
 }
 
@@ -176,7 +176,7 @@ packetIdSwitch:
             kind = Zone_Packet_Kind_ClientFinishedLoading;
             PRINT_TIMESTAMP(); printf("[*] ClientFinishedLoading received\n");
             printf(MESSAGE_CONCAT_INFO("Handling %s\n"), zone_packet_names[kind]);
-            ZoneHandleFinishedLoadingSignal(session, "ClientFinishedLoading");
+            ZoneHandleFinishedLoadingSignal(app, session, "ClientFinishedLoading");
         } break;
         case ZONE_GAMETIMESYNC_ID: {
             kind = Zone_Packet_Kind_GameTimeSync;

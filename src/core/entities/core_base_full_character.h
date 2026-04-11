@@ -51,8 +51,20 @@
 // These are server-assigned values unique to the initial spawn state.
 #define ITEM_GUID_FISTS       0x0001000000000001ULL
 #define ITEM_GUID_BINOCULARS  0x0001000000000002ULL
+#define ITEM_GUID_HOODIE      0x0001000000000005ULL
+#define ITEM_GUID_JEANS       0x0001000000000006ULL
+#define ITEM_GUID_SHOES       0x0001000000000007ULL
 #define ITEM_GUID_EYES_ATTACHMENT 0x0001000000000004ULL
 #define ITEM_DEF_EYES_ATTACHMENT 900105
+
+// Starter clothing item definitions (naming aligned to en_us_data.dat_extracted.txt labels).
+#define ITEM_DEF_HOODIE        5747
+#define ITEM_DEF_SKINNY_JEANS  2178
+#define ITEM_DEF_CONVEYS       2216
+
+// Matches protocol behavior used by h1z1-server for loadout-backed inventory items.
+#define LOADOUT_CONTAINER_GUID 0xFFFFFFFFFFFFFFFFULL
+#define LOADOUT_CONTAINER_ID   101
 
 typedef enum Items {
     // #region WEAPONS

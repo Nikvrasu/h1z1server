@@ -276,7 +276,7 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .stats_item_def_2_count = 0,
                 },
                 [2] = {
-                    .defs_id       = 5747,
+                    .defs_id       = ITEM_DEF_HOODIE,
                     .bitflags2     = 0b00000100,
                     .item_class    = 25002,
                     .item_type     = 34,
@@ -296,7 +296,7 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .stats_item_def_2_count = 0,
                 },
                 [3] = {
-                    .defs_id       = 2178,
+                    .defs_id       = ITEM_DEF_SKINNY_JEANS,
                     .bitflags2     = 0b00000100,
                     .item_class    = 25003,
                     .item_type     = 34,
@@ -316,7 +316,7 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
                     .stats_item_def_2_count = 0,
                 },
                 [4] = {
-                    .defs_id       = 2216,
+                    .defs_id       = ITEM_DEF_CONVEYS,
                     .bitflags2     = 0b00000100,
                     .item_class    = 25005,
                     .item_type     = 28,
