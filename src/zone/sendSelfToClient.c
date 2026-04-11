@@ -96,15 +96,16 @@ u32 getResourceType(u32 resourceId) {
     }
 }
 
-#define CHARACTER_INIT_MAX_ITEMS 5
-#define CHARACTER_INIT_MAX_EQUIPMENT_SLOTS 7
+#define CHARACTER_INIT_MAX_ITEMS 6
+#define CHARACTER_INIT_MAX_EQUIPMENT_SLOTS 8
 #define CHARACTER_INIT_MAX_LOADOUT_SLOTS 2
-#define CHARACTER_INIT_MAX_ATTACHMENTS 7
+#define CHARACTER_INIT_MAX_ATTACHMENTS 8
 #define CHARACTER_INIT_STATE_CACHE_SIZE 64
 #define CHARACTER_INIT_DTO_PAYLOAD_SIZE 14
 #define CHARACTER_INIT_EQUIP_SLOT_HOODIE 10
 #define CHARACTER_INIT_EQUIP_SLOT_PANTS 14
 #define CHARACTER_INIT_EQUIP_SLOT_SHOES 13
+#define CHARACTER_INIT_EQUIP_SLOT_REQUIRED_EYES LOADOUT_SLOT_REQUIRED_EYES
 
 typedef struct CharacterInitItem {
     u32 item_def_id;
@@ -213,6 +214,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
     String8 hoodieModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Hoodie_Down.adr") : STR8("SurvivorMale_Chest_Hoodie_Down.adr");
     String8 pantsModel = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_SkinnyLeg.adr") : STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr");
     String8 shoesModel = (gender == 2) ? STR8("SurvivorFemale_Feet_Conveys.adr") : STR8("SurvivorMale_Feet_Conveys.adr");
+    String8 eyesModel = STR8("SurvivorMale_Eyes_01.adr");
 
     outState->character_id = session->characterId;
     outState->transient_id = session->zoneCycleId ? session->zoneCycleId : 1;
@@ -280,6 +282,16 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
         .container_slot_id = LOADOUT_SLOT_FEET,
         .owner_character_id = session->characterId,
     };
+    outState->items[5] = (CharacterInitItem){
+        .item_def_id = ITEM_DEF_EYES_ATTACHMENT,
+        .guid = ITEM_GUID_EYES_ATTACHMENT,
+        .loadout_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+        .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_REQUIRED_EYES,
+        .container_guid = ITEM_GUID_EYES_ATTACHMENT,
+        .container_def_id = 1,
+        .container_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+        .owner_character_id = session->characterId,
+    };
 
     outState->loadout_slots_count = CHARACTER_INIT_MAX_LOADOUT_SLOTS;
     outState->loadout_slots[0] = (CharacterInitLoadoutSlot){
@@ -303,6 +315,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
     outState->equipment_slots[4] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_HOODIE, .guid = ITEM_GUID_HOODIE };
     outState->equipment_slots[5] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_PANTS, .guid = ITEM_GUID_JEANS };
     outState->equipment_slots[6] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_SHOES, .guid = ITEM_GUID_SHOES };
+    outState->equipment_slots[7] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_REQUIRED_EYES, .guid = ITEM_GUID_EYES_ATTACHMENT };
 
     outState->attachments_count = CHARACTER_INIT_MAX_ATTACHMENTS;
     outState->attachments[0] = (CharacterInitAttachment){ .slot_id = EQUIPMENT_SLOT_HEAD, .model_name = headActor };
@@ -312,6 +325,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
     outState->attachments[4] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_HOODIE, .model_name = hoodieModel };
     outState->attachments[5] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_PANTS, .model_name = pantsModel };
     outState->attachments[6] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_SHOES, .model_name = shoesModel };
+    outState->attachments[7] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_REQUIRED_EYES, .model_name = eyesModel };
 
     outState->dto_payload_len = CHARACTER_INIT_DTO_PAYLOAD_SIZE;
     {
@@ -415,6 +429,7 @@ static b8 ValidateCharacterInitState(SessionState* session, const CharacterInitS
     i32 hoodieItem = CharacterInitFindItemIndexByGuid(state, ITEM_GUID_HOODIE);
     i32 jeansItem = CharacterInitFindItemIndexByGuid(state, ITEM_GUID_JEANS);
     i32 shoesItem = CharacterInitFindItemIndexByGuid(state, ITEM_GUID_SHOES);
+    i32 eyesItem = CharacterInitFindItemIndexByGuid(state, ITEM_GUID_EYES_ATTACHMENT);
     if (fistsItem < 0 || binoItem < 0) {
         printf("[CHAR_INIT] required fists/binocular items missing\n");
         valid = FALSE;
@@ -450,6 +465,16 @@ static b8 ValidateCharacterInitState(SessionState* session, const CharacterInitS
             printf("[CHAR_INIT] shoes slot/item invariant failed\n");
             valid = FALSE;
         }
+    }
+
+    if (eyesItem < 0) {
+        printf("[CHAR_INIT] required slot-105 eyes item missing\n");
+        valid = FALSE;
+    } else if (state->items[eyesItem].item_def_id != ITEM_DEF_EYES_ATTACHMENT
+               || state->items[eyesItem].equipment_slot_id != CHARACTER_INIT_EQUIP_SLOT_REQUIRED_EYES
+               || state->items[eyesItem].container_slot_id != LOADOUT_SLOT_REQUIRED_EYES) {
+        printf("[CHAR_INIT] required slot-105 eyes item invariant failed\n");
+        valid = FALSE;
     }
 
     if (state->profile_id != KOTK_CHARACTER_PROFILE_ID || state->loadout_id != LOADOUT_ID_KOTK_CHARACTER) {
