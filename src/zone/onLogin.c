@@ -65,6 +65,12 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed);
 
+    CharacterInitState* initState = 0;
+    if (!GetCharacterInitState(session, &initState)) {
+        printf("[EQUIP] aborted: CharacterInitState validation failed\n");
+        return;
+    }
+
     // 1. GameTimeSync
     Zone_Packet_GameTimeSync gameTimeSync = { 0 };
     gameTimeSync.cycle_speed = 0.0f;
@@ -121,23 +127,30 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
 
     // Tell the client which profile is active before equipment/attachment payloads arrive.
     Zone_Packet_Command_SetProfile setProfile = { 0 };
-    setProfile.profile_id = KOTK_CHARACTER_PROFILE_ID;
+    setProfile.profile_id = initState->profile_id;
     setProfile.interaction_id = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Command_SetProfile, &setProfile);
+    CharacterInitTraceProfileLoadout("Command.SetProfile", initState, setProfile.profile_id, initState->loadout_id);
 
-    // 4. Equipment.SetCharacterEquipment — use the active character profile with attachment data enabled.
-    u32 gender = session->pGetPlayerActor.gender;
-    if (gender == 0) gender = 1;
+    struct equipment_slot_array_s eqSlots[CHARACTER_INIT_MAX_EQUIPMENT_SLOTS] = { 0 };
+    struct length_2_s eqSlotDetails[CHARACTER_INIT_MAX_EQUIPMENT_SLOTS] = { 0 };
+    for (u32 i = 0; i < initState->equipment_slots_count && i < CHARACTER_INIT_MAX_EQUIPMENT_SLOTS; i++) {
+        eqSlotDetails[i].equipment_slot_id_2 = initState->equipment_slots[i].equipment_slot_id;
+        eqSlotDetails[i].guid = initState->equipment_slots[i].guid;
+        eqSlotDetails[i].tint_alias = STR8("Default");
+        eqSlotDetails[i].decal_alias = STR8("#");
+        eqSlots[i].equipment_slot_id_1 = initState->equipment_slots[i].equipment_slot_id;
+        eqSlots[i].length_2 = &eqSlotDetails[i];
+    }
 
-    String8 eqHeadActor = session->pGetPlayerActor.headActor;
-    if (eqHeadActor.size == 0) eqHeadActor = STR8("SurvivorMale_Head_01.adr");
-
-    String8 eqChestModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Bra.adr") : STR8("SurvivorMale_Chest_Bra.adr");
-    String8 eqLegsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_Underwear.adr") : STR8("SurvivorMale_Legs_Pants_Underwear.adr");
-    String8 eqHoodieModel = (gender == 2) ? STR8("SurvivorFemale_Chest_Hoodie_Down.adr") : STR8("SurvivorMale_Chest_Hoodie_Down.adr");
-    String8 eqPantsModel  = (gender == 2) ? STR8("SurvivorFemale_Legs_Pants_SkinnyLeg.adr") : STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr");
-    String8 eqShoesModel  = (gender == 2) ? STR8("SurvivorFemale_Feet_Conveys.adr") : STR8("SurvivorMale_Feet_Conveys.adr");
+    struct attachments_data_1_s eqAttachments[CHARACTER_INIT_MAX_ATTACHMENTS] = { 0 };
+    for (u32 i = 0; i < initState->attachments_count && i < CHARACTER_INIT_MAX_ATTACHMENTS; i++) {
+        eqAttachments[i].model_name = initState->attachments[i].model_name;
+        eqAttachments[i].tint_alias = STR8("Default");
+        eqAttachments[i].decal_alias = STR8("#");
+        eqAttachments[i].slot_id = initState->attachments[i].slot_id;
+    }
 
     Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
     setEquipment.unk_string_1 = STR8("Default");
@@ -145,38 +158,32 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     setEquipment.unk_bool_2 = TRUE;
     setEquipment.length_1 = (struct length_1_s[1]){[0] = {
         .character_id = session->characterId,
-        .profile_id = KOTK_CHARACTER_PROFILE_ID,
+        .profile_id = initState->profile_id,
     }};
-    setEquipment.equipment_slot_array_count = 7;
-    setEquipment.equipment_slot_array = (struct equipment_slot_array_s[7]){
-        [0] = { .equipment_slot_id_1 = 1,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 1,   .guid =      0,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [1] = { .equipment_slot_id_1 = 3,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 3,   .guid = 0x1001,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [2] = { .equipment_slot_id_1 = 4,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 4,   .guid = 0x1002,          .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [3] = { .equipment_slot_id_1 = 7,   .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 7,   .guid = ITEM_GUID_FISTS, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [4] = { .equipment_slot_id_1 = 10,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 10,  .guid = ITEM_GUID_HOODIE, .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [5] = { .equipment_slot_id_1 = 14,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 14,  .guid = ITEM_GUID_JEANS,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-        [6] = { .equipment_slot_id_1 = 13,  .length_2 = (struct length_2_s[1]){[0] = { .equipment_slot_id_2 = 13,  .guid = ITEM_GUID_SHOES,  .tint_alias = STR8("Default"), .decal_alias = STR8("#") }} },
-    };
-    setEquipment.attachments_data_1_count = 7;
-    setEquipment.attachments_data_1 = (struct attachments_data_1_s[7]){
-        [0] = { .model_name = eqHeadActor,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1   },
-        [1] = { .model_name = eqChestModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3   },
-        [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4   },
-        [3] = { .model_name = STR8("Weapon_Empty.adr"),                       .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7   },
-        [4] = { .model_name = eqHoodieModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10  },
-        [5] = { .model_name = eqPantsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14  },
-        [6] = { .model_name = eqShoesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13  },
-    };
+    setEquipment.equipment_slot_array_count = initState->equipment_slots_count;
+    setEquipment.equipment_slot_array = eqSlots;
+    setEquipment.attachments_data_1_count = initState->attachments_count;
+    setEquipment.attachments_data_1 = eqAttachments;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
     printf("[EQUIP] Sent Equipment.SetCharacterEquipment (7 baseline slots, profile_id=%u, unk_bool_2=TRUE)\n",
-           KOTK_CHARACTER_PROFILE_ID);
+           initState->profile_id);
+    CharacterInitTraceProfileLoadout("Equipment.SetCharacterEquipment", initState, initState->profile_id, initState->loadout_id);
 
     // 5. ClientUpdate.ActivateProfile — activate the same profile used by equipment/loadout.
+    struct attachment_list_s activateAttachments[CHARACTER_INIT_MAX_ATTACHMENTS] = { 0 };
+    for (u32 i = 0; i < initState->attachments_count && i < CHARACTER_INIT_MAX_ATTACHMENTS; i++) {
+        activateAttachments[i].model_name = initState->attachments[i].model_name;
+        activateAttachments[i].tint_alias = STR8("Default");
+        activateAttachments[i].decal_alias = STR8("#");
+        activateAttachments[i].slot_id = initState->attachments[i].slot_id;
+        activateAttachments[i].unk_bool_1 = FALSE;
+    }
+
     Zone_Packet_ClientUpdate_ActivateProfile activateProfile = { 0 };
     activateProfile.profile_payload = (struct profile_payload_s[1]){
         [0] = {
-            .profile_id   = KOTK_CHARACTER_PROFILE_ID,
+            .profile_id   = initState->profile_id,
             .name_id      = 0,
             .desc_id      = 0,
             .type         = 3,
@@ -191,8 +198,8 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .unk_dword_6  = 0,
             .unk_dword_7  = 0,
             .unk_byte_3   = 0,
-            .unk_float_1  = 1.7f,
-            .unk_float_2  = 0.95f,
+            .unk_float_1  = 0.0f,
+            .unk_float_2  = 0.0f,
             .unk_float_3  = 0.0f,
             .unk_dword_8  = 0,
             .unk_float_4  = 0.0f,
@@ -203,55 +210,41 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .unk_dword_13 = 0,
         },
     };
-    activateProfile.attachment_list_count = 7;
-    activateProfile.attachment_list = (struct attachment_list_s[7]){
-        [0] = { .model_name = eqHeadActor,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 1,   .unk_bool_1 = FALSE },
-        [1] = { .model_name = eqChestModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 3,   .unk_bool_1 = FALSE },
-        [2] = { .model_name = eqLegsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 4,   .unk_bool_1 = FALSE },
-        [3] = { .model_name = STR8("Weapon_Empty.adr"),                       .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 7,   .unk_bool_1 = FALSE },
-        [4] = { .model_name = eqHoodieModel,                                   .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 10,  .unk_bool_1 = FALSE },
-        [5] = { .model_name = eqPantsModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 14,  .unk_bool_1 = FALSE },
-        [6] = { .model_name = eqShoesModel,                                    .tint_alias = STR8("Default"), .decal_alias = STR8("#"), .slot_id = 13,  .unk_bool_1 = FALSE },
-    };
+    activateProfile.attachment_list_count = initState->attachments_count;
+    activateProfile.attachment_list = activateAttachments;
     activateProfile.unk_dword_1    = 0;
     activateProfile.unk_dword_2    = 0;
-    activateProfile.actor_model_id = session->pGetPlayerActor.actorModelId;
+    activateProfile.actor_model_id = initState->actor_model_id;
     activateProfile.tint_alias     = STR8("Default");
     activateProfile.decal_alias    = STR8("#");
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_ActivateProfile, &activateProfile);
     printf("[EQUIP] Sent ActivateProfile (profile_id=%u, 7 baseline attachments, actor_model_id=%u)\n",
-           KOTK_CHARACTER_PROFILE_ID,
-           session->pGetPlayerActor.actorModelId);
+           initState->profile_id,
+           initState->actor_model_id);
+    CharacterInitTraceProfileLoadout("ClientUpdate.ActivateProfile", initState, initState->profile_id, initState->loadout_id);
 
     // 6. Loadout.SetLoadoutSlots
+    struct loadout_slot_data_s loadoutData[CHARACTER_INIT_MAX_LOADOUT_SLOTS] = { 0 };
+    for (u32 i = 0; i < initState->loadout_slots_count && i < CHARACTER_INIT_MAX_LOADOUT_SLOTS; i++) {
+        loadoutData[i].hotbar_slot_id = initState->loadout_slots[i].hotbar_slot_id;
+        loadoutData[i].loadout_id_1 = initState->loadout_id;
+        loadoutData[i].slot_id = initState->loadout_slots[i].slot_id;
+        loadoutData[i].item_def_id1 = initState->loadout_slots[i].item_def_id;
+        loadoutData[i].loadout_item_guid = initState->loadout_slots[i].loadout_item_guid;
+        loadoutData[i].unk_byte_1 = 1;
+        loadoutData[i].unk_dword_1 = 22;
+    }
+
     Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
     loadoutSlots.character_id = session->characterId;
-    loadoutSlots.loadout_id = LOADOUT_ID_KOTK_CHARACTER;
-    loadoutSlots.loadout_slot_data_count = 2;
-    loadoutSlots.loadout_slot_data = (struct loadout_slot_data_s[2]){
-        [0] = {
-            .hotbar_slot_id = LOADOUT_SLOT_MELEE,
-            .loadout_id_1   = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id        = LOADOUT_SLOT_MELEE,
-            .item_def_id1   = WEAPON_FISTS,
-            .loadout_item_guid = ITEM_GUID_FISTS,
-            .unk_byte_1     = 1,
-            .unk_dword_1    = 22,
-        },
-        [1] = {
-            .hotbar_slot_id = LOADOUT_SLOT_BINOCULARS,
-            .loadout_id_1   = LOADOUT_ID_KOTK_CHARACTER,
-            .slot_id        = LOADOUT_SLOT_BINOCULARS,
-            .item_def_id1   = WEAPON_BINOCULARS,
-            .loadout_item_guid = ITEM_GUID_BINOCULARS,
-            .unk_byte_1     = 1,
-            .unk_dword_1    = 22,
-        },
-    };
-    loadoutSlots.current_slot_id = LOADOUT_SLOT_MELEE;
+    loadoutSlots.loadout_id = initState->loadout_id;
+    loadoutSlots.loadout_slot_data_count = initState->loadout_slots_count;
+    loadoutSlots.loadout_slot_data = loadoutData;
+    loadoutSlots.current_slot_id = initState->current_loadout_slot_id;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
+    CharacterInitTraceProfileLoadout("Loadout.SetLoadoutSlots", initState, initState->profile_id, loadoutSlots.loadout_id);
 
     // 7. Command.RunSpeed
     Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 7.5f };
@@ -298,6 +291,12 @@ void DeployCharacter(AppState* app, SessionState* session) {
            (int)session->pGetPlayerActor.hairModel.size, session->pGetPlayerActor.hairModel.data,
            (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
 
+    CharacterInitState* initState = 0;
+    if (!GetCharacterInitState(session, &initState)) {
+        printf("[DEPLOY] aborted: CharacterInitState validation failed\n");
+        return;
+    }
+
     PRINT_TIMESTAMP(); printf("========== DEPLOY CHARACTER BEGIN ==========\n");
 
     // 1. POIChangeMessage
@@ -333,15 +332,9 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
     // 4. DtoObjectInitialData
     {
-        u8 dtoData[] = {
-            0x05, 0x03,
-            0x01, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-        };
-        u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(dtoData) + TunnelDataHeaderLen);
-        memcpy(baseBuffer + TunnelDataHeaderLen, dtoData, sizeof(dtoData));
-        GatewayTunnelDataSend(app, session, baseBuffer, sizeof(dtoData) + TunnelDataHeaderLen);
+        u8* baseBuffer = arena_push_size(&app->arenaPerTick, initState->dto_payload_len + TunnelDataHeaderLen);
+        memcpy(baseBuffer + TunnelDataHeaderLen, initState->dto_payload, initState->dto_payload_len);
+        GatewayTunnelDataSend(app, session, baseBuffer, initState->dto_payload_len + TunnelDataHeaderLen);
         printf("[DEPLOY] Sent DtoObjectInitialData (raw 0x0503)\n");
     }
 
@@ -363,16 +356,16 @@ void DeployCharacter(AppState* app, SessionState* session) {
     //      needed to initialize CharacterAttachmentGroup.
     printf("[DEPLOY] Sending AddLightweightNpc (self)...\n");
     Zone_Packet_AddLightweightNpc lightweightNpc = { 0 };
-    lightweightNpc.characterId        = session->characterId;
-    lightweightNpc.transientId.value  = session->zoneCycleId;
+    lightweightNpc.characterId        = initState->character_id;
+    lightweightNpc.transientId.value  = initState->transient_id;
     lightweightNpc.nameId             = 0;
-    lightweightNpc.actorModelId       = session->pGetPlayerActor.actorModelId;
+    lightweightNpc.actorModelId       = initState->actor_model_id;
     lightweightNpc.scale              = (vec4){ 1.0f, 1.0f, 1.0f, 1.0f };
-    lightweightNpc.headActor          = session->pGetPlayerActor.headActor;
-    lightweightNpc.position           = (vec3){ -297.309998f, 506.059998f, -4894.100098f };
-    lightweightNpc.rotation           = (vec4){ 0.0f, -0.707100f, 0.0f, 0.707100f };
+    lightweightNpc.headActor          = initState->head_actor;
+    lightweightNpc.position           = (vec3){ initState->position.x, initState->position.y, initState->position.z };
+    lightweightNpc.rotation           = initState->rotation;
     lightweightNpc.unknownFloatVector4 = (vec4){ 0.0f, 0.0f, 0.0f, 0.0f };
-    lightweightNpc.profileId          = KOTK_CHARACTER_PROFILE_ID;
+    lightweightNpc.profileId          = initState->profile_id;
     lightweightNpc.isLightweight      = 0;
     lightweightNpc.flags1             = 0;
     lightweightNpc.flags2             = 0;
@@ -381,21 +374,30 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_AddLightweightNpc, &lightweightNpc);
     printf("[DEPLOY] Sent AddLightweightNpc\n");
+    CharacterInitTraceProfileLoadout("AddLightweightNpc", initState, lightweightNpc.profileId, initState->loadout_id);
+    {
+        vec4 npcPos = { .x = lightweightNpc.position.x, .y = lightweightNpc.position.y, .z = lightweightNpc.position.z, .w = 1.0f };
+        CharacterInitTraceTransform("AddLightweightNpc", initState, &npcPos, &lightweightNpc.rotation, lightweightNpc.transientId.value);
+    }
 
     // 5c. AddLightweightPc — also sent for PC identity/name registration
     printf("[DEPLOY] Sending AddLightweightPc...\n");
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
-    lightweightPc.character_id       = session->characterId;
-    lightweightPc.transient_id.value = session->zoneCycleId;
-    lightweightPc.id_characterName   = session->characterName;
-    lightweightPc.actorModelId       = session->pGetPlayerActor.actorModelId;
-    lightweightPc.position           = (vec3){ -297.309998f, 506.059998f, -4894.100098f };
-    lightweightPc.rotation           = (vec4){ 0.0f, -0.707100f, 0.0f, 0.707100f };
+    lightweightPc.character_id       = initState->character_id;
+    lightweightPc.transient_id.value = initState->transient_id;
+    lightweightPc.id_characterName   = initState->character_name;
+    lightweightPc.actorModelId       = initState->actor_model_id;
+    lightweightPc.position           = (vec3){ initState->position.x, initState->position.y, initState->position.z };
+    lightweightPc.rotation           = initState->rotation;
     lightweightPc.unknownFloat1      = 1.0f;
     lightweightPc.flags1             = 0;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_AddLightweightPc, &lightweightPc);
     printf("[DEPLOY] Sent AddLightweightPc\n");
+    {
+        vec4 pcPos = { .x = lightweightPc.position.x, .y = lightweightPc.position.y, .z = lightweightPc.position.z, .w = 1.0f };
+        CharacterInitTraceTransform("AddLightweightPc", initState, &pcPos, &lightweightPc.rotation, lightweightPc.transient_id.value);
+    }
 
     // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
     //    while client is still in WaitForFirstZone, giving geometry time to load
@@ -492,6 +494,12 @@ void OnLogin(AppState* app, SessionState* session) {
         session->pGetPlayerActor.headActor    = STR8("SurvivorMale_Head_01.adr");
         session->pGetPlayerActor.hairModel    = STR8("SurvivorMale_Hair_MediumMessy.adr");
         printf("[ONLOGIN] Actor data was empty — applied male head 1 defaults\n");
+    }
+
+    CharacterInitState* initState = 0;
+    if (!GetCharacterInitState(session, &initState)) {
+        printf("[ONLOGIN] aborted: CharacterInitState validation failed\n");
+        return;
     }
 
     PRINT_TIMESTAMP(); printf("[*] [TIMING] OnLogin BEGIN: 0. Hide Character\n");
@@ -634,116 +642,42 @@ void OnLogin(AppState* app, SessionState* session) {
                    Zone_Packet_Kind_Character_UpdateScale, &updateScale);
 
     // 8. Container.InitEquippedContainers
+    struct container_list_s containerList[CHARACTER_INIT_MAX_ITEMS] = { 0 };
+    struct items_list_s containerItems[CHARACTER_INIT_MAX_ITEMS] = { 0 };
+    for (u32 i = 0; i < initState->items_count && i < CHARACTER_INIT_MAX_ITEMS; i++) {
+        const CharacterInitItem* item = &initState->items[i];
+        containerItems[i].item_defs_id_1 = item->item_def_id;
+        containerItems[i].item_defs_id_2 = item->item_def_id;
+        containerItems[i].tint_id = 0;
+        containerItems[i].guid_2 = item->guid;
+        containerItems[i].count = 1;
+        containerItems[i].container_guid = item->container_guid;
+        containerItems[i].contain_def_id = item->container_def_id;
+        containerItems[i].container_slot_id = item->container_slot_id;
+        containerItems[i].base_durability = 0;
+        containerItems[i].current_durability = 0;
+        containerItems[i].max_durability_from_defs = 0;
+        containerItems[i].unk_bool_1 = FALSE;
+        containerItems[i].owner_character_id = item->owner_character_id;
+
+        containerList[i].loadout_slot_id = item->loadout_slot_id;
+        containerList[i].guid_1 = item->guid;
+        containerList[i].defs_id = item->item_def_id;
+        containerList[i].associated_character_id = session->characterId;
+        containerList[i].slots = 1;
+        containerList[i].items_list_count = 1;
+        containerList[i].items_list = &containerItems[i];
+        containerList[i].show_bulk = FALSE;
+        containerList[i].max_bulk = 0;
+        containerList[i].bulk_used = 0;
+        containerList[i].has_bulk_limit = FALSE;
+    }
+
     Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
     containers.character_id = session->characterId;
     containers.ignore_this  = 0;
-
-    containers.container_list_count = 5;
-    containers.container_list = (struct container_list_s[5]){
-        [0] = {
-            .loadout_slot_id        = 10,
-            .guid_1                 = ITEM_GUID_HOODIE,
-            .defs_id                = ITEM_DEF_HOODIE,
-            .associated_character_id = session->characterId,
-            .slots                  = 1,
-            .items_list_count       = 1,
-            .items_list = (struct items_list_s[1]){[0] = {
-                .item_defs_id_1     = ITEM_DEF_HOODIE,
-                .item_defs_id_2     = ITEM_DEF_HOODIE,
-                .tint_id            = 0,
-                .guid_2             = ITEM_GUID_HOODIE,
-                .count              = 1,
-                .container_guid     = ITEM_GUID_HOODIE,
-                .contain_def_id     = 1,
-                .container_slot_id  = 10,
-                .base_durability    = 0,
-                .current_durability = 0,
-                .max_durability_from_defs = 0,
-                .unk_bool_1         = FALSE,
-                .owner_character_id = session->characterId,
-            }},
-            .show_bulk      = FALSE,
-            .max_bulk       = 0,
-            .bulk_used      = 0,
-            .has_bulk_limit = FALSE,
-        },
-        [1] = {
-            .loadout_slot_id        = 14,
-            .guid_1                 = ITEM_GUID_JEANS,
-            .defs_id                = ITEM_DEF_SKINNY_JEANS,
-            .associated_character_id = session->characterId,
-            .slots                  = 1,
-            .items_list_count       = 1,
-            .items_list = (struct items_list_s[1]){[0] = {
-                .item_defs_id_1     = ITEM_DEF_SKINNY_JEANS,
-                .item_defs_id_2     = ITEM_DEF_SKINNY_JEANS,
-                .guid_2             = ITEM_GUID_JEANS,
-                .count              = 1,
-                .container_guid     = ITEM_GUID_JEANS,
-                .contain_def_id     = 1,
-                .container_slot_id  = 14,
-                .owner_character_id = session->characterId,
-            }},
-            .show_bulk      = FALSE,
-        },
-        [2] = {
-            .loadout_slot_id        = 13,
-            .guid_1                 = ITEM_GUID_SHOES,
-            .defs_id                = ITEM_DEF_CONVEYS,
-            .associated_character_id = session->characterId,
-            .slots                  = 1,
-            .items_list_count       = 1,
-            .items_list = (struct items_list_s[1]){[0] = {
-                .item_defs_id_1     = ITEM_DEF_CONVEYS,
-                .item_defs_id_2     = ITEM_DEF_CONVEYS,
-                .guid_2             = ITEM_GUID_SHOES,
-                .count              = 1,
-                .container_guid     = ITEM_GUID_SHOES,
-                .contain_def_id     = 1,
-                .container_slot_id  = 13,
-                .owner_character_id = session->characterId,
-            }},
-            .show_bulk      = FALSE,
-        },
-        [3] = {
-            .loadout_slot_id        = LOADOUT_SLOT_MELEE,
-            .guid_1                 = ITEM_GUID_FISTS,
-            .defs_id                = WEAPON_FISTS,
-            .associated_character_id = session->characterId,
-            .slots                  = 1,
-            .items_list_count       = 1,
-            .items_list = (struct items_list_s[1]){[0] = {
-                .item_defs_id_1     = WEAPON_FISTS,
-                .item_defs_id_2     = WEAPON_FISTS,
-                .guid_2             = ITEM_GUID_FISTS,
-                .count              = 1,
-                .container_guid     = ITEM_GUID_FISTS,
-                .contain_def_id     = 1,
-                .container_slot_id  = LOADOUT_SLOT_MELEE,
-                .owner_character_id = session->characterId,
-            }},
-            .show_bulk      = FALSE,
-        },
-        [4] = {
-            .loadout_slot_id        = LOADOUT_SLOT_BINOCULARS,
-            .guid_1                 = ITEM_GUID_BINOCULARS,
-            .defs_id                = WEAPON_BINOCULARS,
-            .associated_character_id = session->characterId,
-            .slots                  = 1,
-            .items_list_count       = 1,
-            .items_list = (struct items_list_s[1]){[0] = {
-                .item_defs_id_1     = WEAPON_BINOCULARS,
-                .item_defs_id_2     = WEAPON_BINOCULARS,
-                .guid_2             = ITEM_GUID_BINOCULARS,
-                .count              = 1,
-                .container_guid     = ITEM_GUID_BINOCULARS,
-                .contain_def_id     = 1,
-                .container_slot_id  = LOADOUT_SLOT_BINOCULARS,
-                .owner_character_id = session->characterId,
-            }},
-            .show_bulk      = FALSE,
-        },
-    };
+    containers.container_list_count = initState->items_count;
+    containers.container_list = containerList;
 
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
@@ -1061,14 +995,17 @@ ZonePacketSend(app, session, &app->arenaPerTick,
 
     // 11. UpdateLocation
     Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-        .position = { .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.f },
-        .rotation = { .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f },
+        .position = { .x = initState->position.x, .y = initState->position.y, .z = initState->position.z, .w = initState->position.w },
+        .rotation = { .x = initState->rotation.x, .y = initState->rotation.y, .z = initState->rotation.z, .w = initState->rotation.w },
         .trigger_loading_screen = FALSE,
         .unk_u8_1 = 0,
         .unk_bool = FALSE,
     };
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
+    CharacterInitTraceTransform("ClientUpdate.UpdateLocation", initState,
+                                &updateLocation.position, &updateLocation.rotation,
+                                initState->transient_id);
 
     // 12. ClientInitializationDetails
     Zone_Packet_ClientInitializationDetails initDetails = { 0 };
