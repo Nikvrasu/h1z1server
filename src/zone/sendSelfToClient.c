@@ -102,6 +102,9 @@ u32 getResourceType(u32 resourceId) {
 #define CHARACTER_INIT_MAX_ATTACHMENTS 7
 #define CHARACTER_INIT_STATE_CACHE_SIZE 64
 #define CHARACTER_INIT_DTO_PAYLOAD_SIZE 14
+#define CHARACTER_INIT_EQUIP_SLOT_HOODIE 10
+#define CHARACTER_INIT_EQUIP_SLOT_PANTS 14
+#define CHARACTER_INIT_EQUIP_SLOT_SHOES 13
 
 typedef struct CharacterInitItem {
     u32 item_def_id;
@@ -251,7 +254,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
         .item_def_id = ITEM_DEF_HOODIE,
         .guid = ITEM_GUID_HOODIE,
         .loadout_slot_id = LOADOUT_SLOT_CHEST,
-        .equipment_slot_id = 10,
+        .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_HOODIE,
         .container_guid = ITEM_GUID_HOODIE,
         .container_def_id = 1,
         .container_slot_id = LOADOUT_SLOT_CHEST,
@@ -261,7 +264,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
         .item_def_id = ITEM_DEF_SKINNY_JEANS,
         .guid = ITEM_GUID_JEANS,
         .loadout_slot_id = LOADOUT_SLOT_LEGS,
-        .equipment_slot_id = LOADOUT_SLOT_LEGS,
+        .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_PANTS,
         .container_guid = ITEM_GUID_JEANS,
         .container_def_id = 1,
         .container_slot_id = LOADOUT_SLOT_LEGS,
@@ -271,7 +274,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
         .item_def_id = ITEM_DEF_CONVEYS,
         .guid = ITEM_GUID_SHOES,
         .loadout_slot_id = LOADOUT_SLOT_FEET,
-        .equipment_slot_id = LOADOUT_SLOT_FEET,
+        .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_SHOES,
         .container_guid = ITEM_GUID_SHOES,
         .container_def_id = 1,
         .container_slot_id = LOADOUT_SLOT_FEET,
@@ -297,18 +300,18 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
     outState->equipment_slots[1] = (CharacterInitEquipmentSlot){ .equipment_slot_id = EQUIPMENT_SLOT_CHEST, .guid = 0 };
     outState->equipment_slots[2] = (CharacterInitEquipmentSlot){ .equipment_slot_id = EQUIPMENT_SLOT_LEGS, .guid = 0 };
     outState->equipment_slots[3] = (CharacterInitEquipmentSlot){ .equipment_slot_id = EQUIPMENT_SLOT_RIGHT_HAND, .guid = ITEM_GUID_FISTS };
-    outState->equipment_slots[4] = (CharacterInitEquipmentSlot){ .equipment_slot_id = 10, .guid = ITEM_GUID_HOODIE };
-    outState->equipment_slots[5] = (CharacterInitEquipmentSlot){ .equipment_slot_id = LOADOUT_SLOT_LEGS, .guid = ITEM_GUID_JEANS };
-    outState->equipment_slots[6] = (CharacterInitEquipmentSlot){ .equipment_slot_id = LOADOUT_SLOT_FEET, .guid = ITEM_GUID_SHOES };
+    outState->equipment_slots[4] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_HOODIE, .guid = ITEM_GUID_HOODIE };
+    outState->equipment_slots[5] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_PANTS, .guid = ITEM_GUID_JEANS };
+    outState->equipment_slots[6] = (CharacterInitEquipmentSlot){ .equipment_slot_id = CHARACTER_INIT_EQUIP_SLOT_SHOES, .guid = ITEM_GUID_SHOES };
 
     outState->attachments_count = CHARACTER_INIT_MAX_ATTACHMENTS;
     outState->attachments[0] = (CharacterInitAttachment){ .slot_id = EQUIPMENT_SLOT_HEAD, .model_name = headActor };
     outState->attachments[1] = (CharacterInitAttachment){ .slot_id = EQUIPMENT_SLOT_CHEST, .model_name = chestModel };
     outState->attachments[2] = (CharacterInitAttachment){ .slot_id = EQUIPMENT_SLOT_LEGS, .model_name = legsModel };
     outState->attachments[3] = (CharacterInitAttachment){ .slot_id = EQUIPMENT_SLOT_RIGHT_HAND, .model_name = STR8("Weapon_Empty.adr") };
-    outState->attachments[4] = (CharacterInitAttachment){ .slot_id = 10, .model_name = hoodieModel };
-    outState->attachments[5] = (CharacterInitAttachment){ .slot_id = LOADOUT_SLOT_LEGS, .model_name = pantsModel };
-    outState->attachments[6] = (CharacterInitAttachment){ .slot_id = LOADOUT_SLOT_FEET, .model_name = shoesModel };
+    outState->attachments[4] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_HOODIE, .model_name = hoodieModel };
+    outState->attachments[5] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_PANTS, .model_name = pantsModel };
+    outState->attachments[6] = (CharacterInitAttachment){ .slot_id = CHARACTER_INIT_EQUIP_SLOT_SHOES, .model_name = shoesModel };
 
     outState->dto_payload_len = CHARACTER_INIT_DTO_PAYLOAD_SIZE;
     {
@@ -482,6 +485,8 @@ static b8 GetCharacterInitState(SessionState* session, CharacterInitState** outS
 
     if (!entry) {
         // Cache full: overwrite index 0 as a deterministic fallback.
+        printf("[CHAR_INIT] state cache full; evicting slot 0 for charId=0x%llx\n",
+               (unsigned long long)session->characterId);
         entry = freeEntry ? freeEntry : &g_characterInitStateCache[0];
         memset(entry, 0, sizeof(*entry));
         entry->session = session;
@@ -646,9 +651,9 @@ void SendSelfToClient(AppState* app, SessionState* session, int withStats) {
     String8 hairModel = initState->hair_model;
     String8 chestModel = CharacterInitFindAttachmentModel(initState, EQUIPMENT_SLOT_CHEST);
     String8 legsModel = CharacterInitFindAttachmentModel(initState, EQUIPMENT_SLOT_LEGS);
-    String8 hoodieModel = CharacterInitFindAttachmentModel(initState, 10);
-    String8 pantsModel = CharacterInitFindAttachmentModel(initState, LOADOUT_SLOT_LEGS);
-    String8 shoesModel = CharacterInitFindAttachmentModel(initState, LOADOUT_SLOT_FEET);
+    String8 hoodieModel = CharacterInitFindAttachmentModel(initState, CHARACTER_INIT_EQUIP_SLOT_HOODIE);
+    String8 pantsModel = CharacterInitFindAttachmentModel(initState, CHARACTER_INIT_EQUIP_SLOT_PANTS);
+    String8 shoesModel = CharacterInitFindAttachmentModel(initState, CHARACTER_INIT_EQUIP_SLOT_SHOES);
 
     String8 charName = initState->character_name;
 
@@ -759,6 +764,7 @@ sendSelf.payload_self = (struct payload_self_s[1]){
                     .unk_u32_5 = 0,
                     .unk_u32_6 = 0,
                     .unk_u8 = 0,
+                    // Keep these at 0.0f to match expected KotK/h1emu profile behavior.
                     .unk_f32 = 0.0f,
                     .unk_f32_2 = 0.0f,
                     .unk_f32_3 = 0,

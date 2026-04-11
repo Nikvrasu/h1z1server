@@ -198,6 +198,7 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
             .unk_dword_6  = 0,
             .unk_dword_7  = 0,
             .unk_byte_3   = 0,
+            // Keep these at 0.0f to match expected KotK/h1emu profile behavior.
             .unk_float_1  = 0.0f,
             .unk_float_2  = 0.0f,
             .unk_float_3  = 0.0f,
