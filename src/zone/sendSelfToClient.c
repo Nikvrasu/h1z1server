@@ -101,6 +101,7 @@ u32 getResourceType(u32 resourceId) {
 #define CHARACTER_INIT_MAX_LOADOUT_SLOTS 2
 #define CHARACTER_INIT_MAX_ATTACHMENTS 7
 #define CHARACTER_INIT_STATE_CACHE_SIZE 64
+#define CHARACTER_INIT_DTO_PAYLOAD_SIZE 14
 
 typedef struct CharacterInitItem {
     u32 item_def_id;
@@ -157,7 +158,7 @@ typedef struct CharacterInitState {
     u32 attachments_count;
     CharacterInitAttachment attachments[CHARACTER_INIT_MAX_ATTACHMENTS];
 
-    u8 dto_payload[14];
+    u8 dto_payload[CHARACTER_INIT_DTO_PAYLOAD_SIZE];
     u32 dto_payload_len;
 } CharacterInitState;
 
@@ -168,6 +169,7 @@ typedef struct CharacterInitStateCacheEntry {
     CharacterInitState state;
 } CharacterInitStateCacheEntry;
 
+// Zone server session/packet handling is single-threaded; no locking is required here.
 static CharacterInitStateCacheEntry g_characterInitStateCache[CHARACTER_INIT_STATE_CACHE_SIZE] = { 0 };
 
 static String8 CharacterInitFindAttachmentModel(const CharacterInitState* state, u32 slotId) {
@@ -308,7 +310,7 @@ static b8 CharacterInitBuildFromSession(SessionState* session, CharacterInitStat
     outState->attachments[5] = (CharacterInitAttachment){ .slot_id = LOADOUT_SLOT_LEGS, .model_name = pantsModel };
     outState->attachments[6] = (CharacterInitAttachment){ .slot_id = LOADOUT_SLOT_FEET, .model_name = shoesModel };
 
-    outState->dto_payload_len = 14;
+    outState->dto_payload_len = CHARACTER_INIT_DTO_PAYLOAD_SIZE;
     {
         u8 dtoPayload[] = {
             0x05, 0x03,
@@ -361,7 +363,7 @@ static b8 ValidateCharacterInitState(SessionState* session, const CharacterInitS
         const CharacterInitLoadoutSlot* slot = &state->loadout_slots[i];
         i32 itemIndex = CharacterInitFindItemIndexByGuid(state, slot->loadout_item_guid);
         if (itemIndex < 0) {
-            printf("[CHAR_INIT] loadout guid missing in items1 guid=0x%llx slot=%u\n",
+            printf("[CHAR_INIT] loadout guid missing in items guid=0x%llx slot=%u\n",
                    (unsigned long long)slot->loadout_item_guid, slot->slot_id);
             valid = FALSE;
             continue;
@@ -379,7 +381,7 @@ static b8 ValidateCharacterInitState(SessionState* session, const CharacterInitS
         if (slot->guid == 0) continue;
 
         if (CharacterInitFindItemIndexByGuid(state, slot->guid) < 0) {
-            printf("[CHAR_INIT] equipment guid missing in items1 guid=0x%llx slot=%u\n",
+            printf("[CHAR_INIT] equipment guid missing in items guid=0x%llx slot=%u\n",
                    (unsigned long long)slot->guid, slot->equipment_slot_id);
             valid = FALSE;
         }
@@ -479,6 +481,7 @@ static b8 GetCharacterInitState(SessionState* session, CharacterInitState** outS
     }
 
     if (!entry) {
+        // Cache full: overwrite index 0 as a deterministic fallback.
         entry = freeEntry ? freeEntry : &g_characterInitStateCache[0];
         memset(entry, 0, sizeof(*entry));
         entry->session = session;
