@@ -1,26 +1,3 @@
-// ============================================================================
-// Hex dump helper
-// ============================================================================
-void HexDumpBuffer(const char* label, u8* data, u32 len) {
-    printf("\n[HEX DUMP] %s (%u bytes):\n", label, len);
-    for (u32 i = 0; i < len; i++) {
-        printf("%02x ", data[i]);
-        if ((i + 1) % 16 == 0) printf("\n");
-    }
-    printf("\n\n");
-}
-
-void ZonePacketSendDebug(AppState* app, SessionState* session, Arena* arena, Zone_Packet_Kind kind,
-                         void* packetPtr, const char* label) {
-    u8* baseBuffer = arena_push_size(arena, MAX_PACKET_LENGTH);
-    u8* packedBuffer = baseBuffer + TunnelDataHeaderLen;
-    u32 packedLen = zone_packet_pack(kind, packetPtr, packedBuffer);
-    printf("[ZONE SEND DEBUG] %s kind=%d packedLen=%u\n", label, kind, packedLen);
-    HexDumpBuffer(label, packedBuffer, packedLen);
-    u32 totalLen = packedLen + TunnelDataHeaderLen;
-    GatewayTunnelDataSend(app, session, baseBuffer, totalLen);
-}
-
 void ZoneFinalizePostLoad(AppState* app, SessionState* session, const char* source) {
     const char* reason = source ? source : "unknown";
 
@@ -55,10 +32,10 @@ void ZoneFinalizePostLoad(AppState* app, SessionState* session, const char* sour
 // SendEquipmentAndMovement — called from ClientFinishedLoading
 // ============================================================================
 void SendEquipmentAndMovement(AppState* app, SessionState* session) {
-    __time64_t eqTime;
-    _time64(&eqTime);
     static int eqCount = 0;
     eqCount++;
+    __time64_t eqTime;
+    _time64(&eqTime);
     PRINT_TIMESTAMP(); printf("========== SEND EQUIPMENT & MOVEMENT (ClientFinishedLoading) ==========\n");
     printf("[EQUIP] SendEquipmentAndMovement called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d\n",
            eqCount, eqTime, (unsigned long long)session->characterId,
@@ -125,136 +102,21 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_WeaponStance, &weaponStance);
 
-    // Tell the client which profile is active before equipment/attachment payloads arrive.
-    Zone_Packet_Command_SetProfile setProfile = { 0 };
-    setProfile.profile_id = initState->profile_id;
-    setProfile.interaction_id = 0;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Command_SetProfile, &setProfile);
-    CharacterInitTraceProfileLoadout("Command.SetProfile", initState, setProfile.profile_id, initState->loadout_id);
 
-    struct equipment_slot_array_s eqSlots[CHARACTER_INIT_MAX_EQUIPMENT_SLOTS] = { 0 };
-    struct length_2_s eqSlotDetails[CHARACTER_INIT_MAX_EQUIPMENT_SLOTS] = { 0 };
-    for (u32 i = 0; i < initState->equipment_slots_count && i < CHARACTER_INIT_MAX_EQUIPMENT_SLOTS; i++) {
-        eqSlotDetails[i].equipment_slot_id_2 = initState->equipment_slots[i].equipment_slot_id;
-        eqSlotDetails[i].guid = initState->equipment_slots[i].guid;
-        eqSlotDetails[i].tint_alias = STR8("Default");
-        eqSlotDetails[i].decal_alias = STR8("#");
-        eqSlots[i].equipment_slot_id_1 = initState->equipment_slots[i].equipment_slot_id;
-        eqSlots[i].length_2 = &eqSlotDetails[i];
-    }
 
-    struct attachments_data_1_s eqAttachments[CHARACTER_INIT_MAX_ATTACHMENTS] = { 0 };
-    for (u32 i = 0; i < initState->attachments_count && i < CHARACTER_INIT_MAX_ATTACHMENTS; i++) {
-        eqAttachments[i].model_name = initState->attachments[i].model_name;
-        eqAttachments[i].tint_alias = STR8("Default");
-        eqAttachments[i].decal_alias = STR8("#");
-        eqAttachments[i].slot_id = initState->attachments[i].slot_id;
-    }
+    // // 6. ClientUpdate.ActivateProfile — activate the same profile used by equipment/loadout.
+    // struct attachment_list_s activateAttachments[CHARACTER_INIT_MAX_ATTACHMENTS] = { 0 };
+    // for (u32 i = 0; i < initState->attachments_count && i < CHARACTER_INIT_MAX_ATTACHMENTS; i++) {
+    //     activateAttachments[i].model_name = initState->attachments[i].model_name;
+    //     activateAttachments[i].tint_alias = STR8("Default");
+    //     activateAttachments[i].decal_alias = STR8("#");
+    //     activateAttachments[i].slot_id = initState->attachments[i].slot_id;
+    //     activateAttachments[i].unk_bool_1 = FALSE;
+    // }
 
-    Zone_Packet_Equipment_SetCharacterEquipment setEquipment = { 0 };
-    setEquipment.unk_string_1 = STR8("Default");
-    setEquipment.unk_string_2 = STR8("#");
-    setEquipment.unk_bool_2 = TRUE;
-    setEquipment.length_1 = (struct length_1_s[1]){[0] = {
-        .character_id = session->characterId,
-        .profile_id = initState->profile_id,
-    }};
-    setEquipment.equipment_slot_array_count = initState->equipment_slots_count;
-    setEquipment.equipment_slot_array = eqSlots;
-    setEquipment.attachments_data_1_count = initState->attachments_count;
-    setEquipment.attachments_data_1 = eqAttachments;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Equipment_SetCharacterEquipment, &setEquipment);
-    printf("[EQUIP] Sent Equipment.SetCharacterEquipment (7 baseline slots, profile_id=%u, unk_bool_2=TRUE)\n",
-           initState->profile_id);
-    CharacterInitTraceProfileLoadout("Equipment.SetCharacterEquipment", initState, initState->profile_id, initState->loadout_id);
-
-    // 5. ClientUpdate.ActivateProfile — activate the same profile used by equipment/loadout.
-    struct attachment_list_s activateAttachments[CHARACTER_INIT_MAX_ATTACHMENTS] = { 0 };
-    for (u32 i = 0; i < initState->attachments_count && i < CHARACTER_INIT_MAX_ATTACHMENTS; i++) {
-        activateAttachments[i].model_name = initState->attachments[i].model_name;
-        activateAttachments[i].tint_alias = STR8("Default");
-        activateAttachments[i].decal_alias = STR8("#");
-        activateAttachments[i].slot_id = initState->attachments[i].slot_id;
-        activateAttachments[i].unk_bool_1 = FALSE;
-    }
-
-    Zone_Packet_ClientUpdate_ActivateProfile activateProfile = { 0 };
-    activateProfile.profile_payload = (struct profile_payload_s[1]){
-        [0] = {
-            .profile_id   = initState->profile_id,
-            .name_id      = 0,
-            .desc_id      = 0,
-            .type         = 3,
-            .unk_dword_1  = 0,
-            .ability_bg_image_set = 0,
-            .badge_image_set      = 0,
-            .button_image_set     = 0,
-            .unk_byte_1   = 0,
-            .unk_byte_2   = 0,
-            .unk_dword_2  = 0,
-            .unk_list_1_count = 0,
-            .unk_dword_6  = 0,
-            .unk_dword_7  = 0,
-            .unk_byte_3   = 0,
-            // Keep these at 0.0f to match expected KotK/h1emu profile behavior.
-            .unk_float_1  = 0.0f,
-            .unk_float_2  = 0.0f,
-            .unk_float_3  = 0.0f,
-            .unk_dword_8  = 0,
-            .unk_float_4  = 0.0f,
-            .unk_dword_9  = 0,
-            .unk_dword_10 = 0,
-            .unk_dword_11 = 0,
-            .unk_dword_12 = 0,
-            .unk_dword_13 = 0,
-        },
-    };
-    activateProfile.attachment_list_count = initState->attachments_count;
-    activateProfile.attachment_list = activateAttachments;
-    activateProfile.unk_dword_1    = 0;
-    activateProfile.unk_dword_2    = 0;
-    activateProfile.actor_model_id = initState->actor_model_id;
-    activateProfile.tint_alias     = STR8("Default");
-    activateProfile.decal_alias    = STR8("#");
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_ActivateProfile, &activateProfile);
-    printf("[EQUIP] Sent ActivateProfile (profile_id=%u, 7 baseline attachments, actor_model_id=%u)\n",
-           initState->profile_id,
-           initState->actor_model_id);
-    CharacterInitTraceProfileLoadout("ClientUpdate.ActivateProfile", initState, initState->profile_id, initState->loadout_id);
-
-    // 6. Loadout.SetLoadoutSlots
-    struct loadout_slot_data_s loadoutData[CHARACTER_INIT_MAX_LOADOUT_SLOTS] = { 0 };
-    for (u32 i = 0; i < initState->loadout_slots_count && i < CHARACTER_INIT_MAX_LOADOUT_SLOTS; i++) {
-        loadoutData[i].hotbar_slot_id = initState->loadout_slots[i].hotbar_slot_id;
-        loadoutData[i].loadout_id_1 = initState->loadout_id;
-        loadoutData[i].slot_id = initState->loadout_slots[i].slot_id;
-        loadoutData[i].item_def_id1 = initState->loadout_slots[i].item_def_id;
-        loadoutData[i].loadout_item_guid = initState->loadout_slots[i].loadout_item_guid;
-        loadoutData[i].unk_byte_1 = 1;
-        loadoutData[i].unk_dword_1 = 22;
-    }
-
-    Zone_Packet_Loadout_SetLoadoutSlots loadoutSlots = { 0 };
-    loadoutSlots.character_id = session->characterId;
-    loadoutSlots.loadout_id = initState->loadout_id;
-    loadoutSlots.loadout_slot_data_count = initState->loadout_slots_count;
-    loadoutSlots.loadout_slot_data = loadoutData;
-    loadoutSlots.current_slot_id = initState->current_loadout_slot_id;
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Loadout_SetLoadoutSlots, &loadoutSlots);
-    CharacterInitTraceProfileLoadout("Loadout.SetLoadoutSlots", initState, initState->profile_id, loadoutSlots.loadout_id);
-
-    // 7. Command.RunSpeed
-    Zone_Packet_Command_RunSpeed runSpeed = { .run_speed = 7.5f };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Command_RunSpeed, &runSpeed);
-
-    // 8. ClientUpdate.ModifyMovementSpeed
+    // 9. ClientUpdate.ModifyMovementSpeed
     Zone_Packet_ClientUpdate_ModifyMovementSpeed moveSpeed = { 0 };
-    moveSpeed.speed = 2.0f;
+    moveSpeed.speed = 15.0f;
     moveSpeed.movementVersion = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_ModifyMovementSpeed, &moveSpeed);
@@ -264,14 +126,12 @@ void SendEquipmentAndMovement(AppState* app, SessionState* session) {
 
 
 void DeployCharacter(AppState* app, SessionState* session) {
-    __time64_t timer;
-    __time64_t deployTime;
-    _time64(&timer);
-    _time64(&deployTime);
     static int deployCount = 0;
     deployCount++;
+    __time64_t timer;
+    _time64(&timer);
     printf("[DEPLOY] DeployCharacter called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx isReady=%d finished_loading=%d characterReleased=%d characterDeployed=%d zoneCycleId=%u deployedCycleId=%u\n",
-           deployCount, deployTime, (unsigned long long)session->characterId,
+           deployCount, timer, (unsigned long long)session->characterId,
            session->isReady, session->finished_loading, session->characterReleased,
            session->characterDeployed, session->zoneCycleId, session->deployedCycleId);
 
@@ -325,13 +185,13 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientUpdate_DoneSendingPreloadCharacters, &preloadDone);
 
-    // UpdateCamera
+    // 4. UpdateCamera
     u8 updateCamera[] = { 0x57 };
     u8* camBuf = arena_push_size(&app->arenaPerTick, sizeof(updateCamera) + TunnelDataHeaderLen);
     memcpy(camBuf + TunnelDataHeaderLen, updateCamera, sizeof(updateCamera));
     GatewayTunnelDataSend(app, session, camBuf, sizeof(updateCamera) + TunnelDataHeaderLen);
 
-    // 4. DtoObjectInitialData
+    // 5. DtoObjectInitialData
     {
         u8* baseBuffer = arena_push_size(&app->arenaPerTick, initState->dto_payload_len + TunnelDataHeaderLen);
         memcpy(baseBuffer + TunnelDataHeaderLen, initState->dto_payload, initState->dto_payload_len);
@@ -344,7 +204,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     session->deployedCycleId = session->zoneCycleId;
     session->zonePhase = ZoneFlowPhase_Deployed;
 
-    // 5. Character.CharacterStateDelta
+    // 6. Character.CharacterStateDelta
     Zone_Packet_Character_CharacterStateDelta stateDelta = { 0 };
     stateDelta.guid_1 = session->characterId;
     stateDelta.guid_3 = 0x40000000ull;
@@ -352,9 +212,9 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_Character_CharacterStateDelta, &stateDelta);
 
-    // 5b. AddLightweightNpc — registers self as world entity with full model data
-    //      h1emu uses Npc (not Pc) for self, which carries headActor/texture/scale
-    //      needed to initialize CharacterAttachmentGroup.
+    // 7. AddLightweightNpc — registers self as world entity with full model data.
+    //    h1emu uses Npc (not Pc) for self, which carries headActor/texture/scale
+    //    needed to initialize CharacterAttachmentGroup.
     printf("[DEPLOY] Sending AddLightweightNpc (self)...\n");
     Zone_Packet_AddLightweightNpc lightweightNpc = { 0 };
     lightweightNpc.characterId        = initState->character_id;
@@ -381,7 +241,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
         CharacterInitTraceTransform("AddLightweightNpc", initState, &npcPos, &lightweightNpc.rotation, lightweightNpc.transientId.value);
     }
 
-    // 5c. AddLightweightPc — also sent for PC identity/name registration
+    // 8. AddLightweightPc — PC identity/name registration.
     printf("[DEPLOY] Sending AddLightweightPc...\n");
     Zone_Packet_AddLightweightPc lightweightPc = { 0 };
     lightweightPc.character_id       = initState->character_id;
@@ -400,17 +260,17 @@ void DeployCharacter(AppState* app, SessionState* session) {
         CharacterInitTraceTransform("AddLightweightPc", initState, &pcPos, &lightweightPc.rotation, lightweightPc.transient_id.value);
     }
 
-    // 6. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
+    // 9. Equipment + movement — BEFORE ZoneDone so ProcessNewAttachment fires
     //    while client is still in WaitForFirstZone, giving geometry time to load
     //    before the Running state attachment group check.
     SendEquipmentAndMovement(app, session);
 
-    // 7. LightweightToFullPc — full character upgrade with position
+    // 10. LightweightToFullPc — full character upgrade with position.
     printf("[DEPLOY] Sending LightweightToFullPc...\n");
     ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(2), "..\\data\\LightweightToFullPc.bin");
     printf("[DEPLOY] LightweightToFullPc sent\n");
 
-    // 8. ZoneDoneSendingInitialData
+    // 11. ZoneDoneSendingInitialData
     {
         __time64_t zdSendTime;
         _time64(&zdSendTime);
@@ -419,7 +279,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ZoneDoneSendingInitialData, 0);
 
-    // 9. ResourceEventBase
+    // 12. ResourceEventBase
     {
         Zone_Packet_ResourceEventBase resourceEvent = { 0 };
         resourceEvent.gametime = timer & 0x7fffffff;
@@ -436,7 +296,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
                     Zone_Packet_Kind_ResourceEventBase, &resourceEvent);
     }
 
-    // 10. AccountItemManagerStateChanged
+    // 13. AccountItemManagerStateChanged
     {
         u8 escrowData[] = {
             0x23, 0x00,
@@ -451,7 +311,7 @@ void DeployCharacter(AppState* app, SessionState* session) {
         printf("[DEPLOY] Sent AccountItemManagerStateChanged\n");
     }
 
-    // 11. WeaponStance
+    // 14. Character.WeaponStance
     Zone_Packet_Character_WeaponStance weaponStance = { 0 };
     weaponStance.character_id = session->characterId;
     weaponStance.stance = 0;
@@ -467,12 +327,12 @@ void DeployCharacter(AppState* app, SessionState* session) {
 
 
 void OnLogin(AppState* app, SessionState* session) {
+    static int onLoginCount = 0;
+    onLoginCount++;
     __time64_t onLoginTime;
     _time64(&onLoginTime);
     __time64_t timer;
     _time64(&timer);
-    static int onLoginCount = 0;
-    onLoginCount++;
     printf("[ONLOGIN] OnLogin called %d time(s) total [TIMESTAMP=%lld] charId=0x%llx\n",
            onLoginCount, onLoginTime, (unsigned long long)session->characterId);
 
@@ -485,7 +345,7 @@ void OnLogin(AppState* app, SessionState* session) {
     session->needsProximityComplete = 0;
     session->is_synced = FALSE;
 
-    // FIRST: ensure actor data has valid defaults before any packet uses it.
+    // Ensure actor data has valid defaults before any packet uses it.
     // pGetPlayerActor is populated by the login server's GetHeadTypeId, but
     // the zone server session starts fresh. If the data didn't transfer, default to male head 1.
     if (session->pGetPlayerActor.actorModelId == 0) {
@@ -590,18 +450,6 @@ void OnLogin(AppState* app, SessionState* session) {
     ZonePacketSend(app, session, &app->arenaPerTick, Zone_Packet_Kind_ClientGameSettings,
                    &game_settings);
 
-    // 4. ReferenceData.DynamicAppearance — empty valid packet
-    {
-        u8 emptyDynAppearance[] = {
-            0x17, 0x06,
-            0x04, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-        };
-        u8* baseBuffer = arena_push_size(&app->arenaPerTick, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
-        memcpy(baseBuffer + TunnelDataHeaderLen, emptyDynAppearance, sizeof(emptyDynAppearance));
-        GatewayTunnelDataSend(app, session, baseBuffer, sizeof(emptyDynAppearance) + TunnelDataHeaderLen);
-    }
-
     // 5. SendSelfToClient
     printf("[DEBUG] characterName: '%.*s' len=%d\n",
            (int)session->characterName.size,
@@ -615,324 +463,296 @@ void OnLogin(AppState* app, SessionState* session) {
 
     SendSelfToClient(app, session, FALSE);
 
-    // 6. AddLightweightPc — broadcast self presence to proximity system
-    // Zone_Packet_AddLightweightPc lightweightPc = { 0 };
-    // lightweightPc.character_id          = session->characterId;
-    // lightweightPc.transient_id.value    = 1;
-    // lightweightPc.id_characterFirstName = session->characterName;
-    // lightweightPc.id_characterLastName  = STR8("");
-    // lightweightPc.id_unknownString1     = STR8("00000000000000000");
-    // lightweightPc.id_characterName      = session->characterName;
-    // lightweightPc.actorModelId          = session->pGetPlayerActor.actorModelId;
-    // lightweightPc.position = (vec3){
-    //     .x = -297.31f, .y = 506.06f, .z = -4894.10f
+    // // 7. Container.InitEquippedContainers
+    // struct container_list_s containerList[CHARACTER_INIT_MAX_ITEMS] = { 0 };
+    // struct items_list_s containerItems[CHARACTER_INIT_MAX_ITEMS] = { 0 };
+    // for (u32 i = 0; i < initState->items_count && i < CHARACTER_INIT_MAX_ITEMS; i++) {
+    //     const CharacterInitItem* item = &initState->items[i];
+    //     containerItems[i].item_defs_id_1 = item->item_def_id;
+    //     containerItems[i].item_defs_id_2 = item->item_def_id;
+    //     containerItems[i].tint_id = 0;
+    //     containerItems[i].guid_2 = item->guid;
+    //     containerItems[i].count = 1;
+    //     containerItems[i].container_guid = item->container_guid;
+    //     containerItems[i].contain_def_id = item->container_def_id;
+    //     containerItems[i].container_slot_id = item->container_slot_id;
+    //     containerItems[i].base_durability = 0;
+    //     containerItems[i].current_durability = 0;
+    //     containerItems[i].max_durability_from_defs = 0;
+    //     containerItems[i].unk_bool_1 = FALSE;
+    //     containerItems[i].owner_character_id = item->owner_character_id;
+
+    //     containerList[i].loadout_slot_id = item->loadout_slot_id;
+    //     containerList[i].guid_1 = item->guid;
+    //     containerList[i].defs_id = item->item_def_id;
+    //     containerList[i].associated_character_id = session->characterId;
+    //     containerList[i].slots = 1;
+    //     containerList[i].items_list_count = 1;
+    //     containerList[i].items_list = &containerItems[i];
+    //     containerList[i].show_bulk = FALSE;
+    //     containerList[i].max_bulk = 0;
+    //     containerList[i].bulk_used = 0;
+    //     containerList[i].has_bulk_limit = FALSE;
+    // }
+
+    // Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
+    // containers.character_id = session->characterId;
+    // containers.ignore_this  = 0;
+    // containers.container_list_count = initState->items_count;
+    // containers.container_list = containerList;
+
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
+
+    // // 8. Command.ItemDefinitions — 6 items: fists, binoculars, hoodie, jeans, sneakers, eyes shim
+    // Zone_Packet_CommandItemDefinitions itemDefs = { 0 };
+
+    // itemDefs.item_def_reply_2_length = 1;
+    // itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
+    //     [0] = {
+    //         .item_defs_count = 6,
+    //         .item_defs = (struct item_defs_s[6]){
+    //             [0] = {
+    //                 // Fists
+    //                 .defs_id       = 85,
+    //                 .bitflags1     = 0,
+    //                 .bitflags2     = 0b00001100,
+    //                 .name_id       = 0,
+    //                 .item_class    = 25006,
+    //                 .item_type     = 20,
+    //                 .item_type_1   = 20,
+    //                 .category_id   = 11,
+    //                 .model_name    = STR8("Weapon_Empty.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 0,
+    //                 .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+    //                 .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+    //                 .passive_equip_slot_group_id = 0,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .power_rating  = 43001,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //             [1] = {
+    //                 // Binoculars
+    //                 .defs_id       = 1542,
+    //                 .bitflags2     = 0b00000100,
+    //                 .item_class    = 25054,
+    //                 .item_type     = 20,
+    //                 .item_type_1   = 20,
+    //                 .category_id   = 16,
+    //                 .model_name    = STR8("Weapon_Binoculars_3P.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 50,
+    //                 .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+    //                 .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
+    //                 .passive_equip_slot_group_id = 0,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //             [2] = {
+    //                 // Gas Runner Hoodie
+    //                 .defs_id       = 5747,
+    //                 .bitflags2     = 0b00000100,
+    //                 .item_class    = 25002,
+    //                 .item_type     = 34,
+    //                 .item_type_1   = 34,
+    //                 .category_id   = 1,
+    //                 .model_name    = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 50,
+    //                 .active_equip_slot_id = EQUIPMENT_SLOT_CHEST,
+    //                 .passive_equip_slot_id = EQUIPMENT_SLOT_CHEST,
+    //                 .passive_equip_slot_group_id = 0,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .power_rating  = 55001,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //             [3] = {
+    //                 // Jeans
+    //                 .defs_id       = 2178,
+    //                 .bitflags2     = 0b00000100,
+    //                 .item_class    = 25003,
+    //                 .item_type     = 34,
+    //                 .item_type_1   = 34,
+    //                 .category_id   = 3,
+    //                 .model_name    = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 50,
+    //                 .active_equip_slot_id = 4,
+    //                 .passive_equip_slot_id = 4,
+    //                 .passive_equip_slot_group_id = 0,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .power_rating  = 55001,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //             [4] = {
+    //                 // Conveys Sneakers
+    //                 .defs_id       = 2216,
+    //                 .bitflags2     = 0b00000100,
+    //                 .item_class    = 25005,
+    //                 .item_type     = 28,
+    //                 .item_type_1   = 28,
+    //                 .category_id   = 107,
+    //                 .model_name    = STR8("SurvivorMale_Feet_Conveys.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 200,
+    //                 .active_equip_slot_id = 5,
+    //                 .passive_equip_slot_id = 5,
+    //                 .passive_equip_slot_group_id = 0,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .power_rating  = 49001,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //             [5] = {
+    //                 // Eyes — shim for client slot-105 attachment validation
+    //                 .defs_id       = ITEM_DEF_EYES_ATTACHMENT,
+    //                 .bitflags2     = 0b00000100,
+    //                 .item_class    = 25004,
+    //                 .item_type     = 34,
+    //                 .item_type_1   = 34,
+    //                 .category_id   = 2,
+    //                 .model_name    = STR8("SurvivorMale_Eyes_01.adr"),
+    //                 .texture_alias = STR8(""),
+    //                 .tint_alias    = STR8(""),
+    //                 .bulk          = 0,
+    //                 .active_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+    //                 .passive_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
+    //                 .passive_equip_slot_group_id = LOADOUT_SLOT_REQUIRED_EYES,
+    //                 .max_stack_size = 1,
+    //                 .min_stack_size = 1,
+    //                 .power_rating  = 0,
+    //                 .curreny_type  = -1,
+    //                 .stats_item_def_2_count = 0,
+    //             },
+    //         },
+    //     },
     // };
-    // lightweightPc.rotation = (vec4){
-    //     .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f
+
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_CommandItemDefinitions, &itemDefs);
+
+    // 9. ReferenceData.WeaponDefinitions
+    // Zone_Packet_ReferenceDataWeaponDefinitions weaponDefs = { 0 };
+
+    // weaponDefs.weapon_byteswithlength_length = 1;
+    // weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
+    //     [0] = {
+    //         .weapon_defs_count = 2,
+    //         .weapon_defs = (struct weapon_defs_s[2]){
+    //             [0] = {
+    //                 .id1                 = 85,
+    //                 .id2                 = 85,
+    //                 .weapon_group_id     = 0,
+    //                 .flags1              = 0,
+    //                 .equip_ms            = 500,
+    //                 .unequip_ms          = 500,
+    //                 .melee_detect_width  = 100,
+    //                 .melee_detect_height = 100,
+    //                 .anim_set_name       = STR8("Fists"),
+    //                 .ammo_slots_count    = 0,
+    //                 .fire_groups_count   = 1,
+    //                 .fire_groups = (struct fire_groups_s[1]){
+    //                     [0] = { .fire_group_id = 1 },
+    //                 },
+    //             },
+    //             [1] = {
+    //                 .id1                 = 12,
+    //                 .id2                 = 12,
+    //                 .weapon_group_id     = 0,
+    //                 .flags1              = 0,
+    //                 .equip_ms            = 500,
+    //                 .unequip_ms          = 500,
+    //                 .melee_detect_width  = 0,
+    //                 .melee_detect_height = 0,
+    //                 .anim_set_name       = STR8("Binoculars"),
+    //                 .ammo_slots_count    = 0,
+    //                 .fire_groups_count   = 1,
+    //                 .fire_groups = (struct fire_groups_s[1]){
+    //                     [0] = { .fire_group_id = 2 },
+    //                 },
+    //             },
+    //         },
+    //         .fire_group_defs_count = 2,
+    //         .fire_group_defs = (struct fire_group_defs_s[2]){
+    //             [0] = {
+    //                 .id3 = 1,
+    //                 .id4 = 1,
+    //                 .fire_mode_list_count = 1,
+    //                 .fire_mode_list = (struct fire_mode_list_s[1]){
+    //                     [0] = { .fire_mode_1 = 1 },
+    //                 },
+    //             },
+    //             [1] = {
+    //                 .id3 = 2,
+    //                 .id4 = 2,
+    //                 .fire_mode_list_count = 1,
+    //                 .fire_mode_list = (struct fire_mode_list_s[1]){
+    //                     [0] = { .fire_mode_1 = 2 },
+    //                 },
+    //             },
+    //         },
+    //         .fire_mode_defs_count = 2,
+    //         .fire_mode_defs = (struct fire_mode_defs_s[2]){
+    //             [0] = {
+    //                 .id5            = 1,
+    //                 .id6            = 1,
+    //                 .type           = 1,
+    //                 .refire_time_ms = 500,
+    //                 .range          = 2.0f,
+    //                 // Third person camera
+    //                 .tp_force_camera_overrides  = TRUE,
+    //                 .tp_camera_distance         = 3.5f,
+    //                 .tp_cr_camera_distance      = 3.0f,
+    //                 .tp_pr_camera_distance      = 3.5f,
+    //                 .tp_camera_fov              = 75.0f,
+    //                 .tp_cr_camera_fov           = 75.0f,
+    //                 .tp_pr_camera_fov           = 75.0f,
+    //                 .fp_force_camera_overrides  = FALSE,
+    //                 .fp_camera_fov              = 250.0f,
+    //             },
+    //             [1] = {
+    //                 .id5            = 2,
+    //                 .id6            = 2,
+    //                 .type           = 0,
+    //                 .refire_time_ms = 0,
+    //                 .range          = 0.0f,
+    //                 // Binoculars zoom camera
+    //                 .tp_force_camera_overrides  = TRUE,
+    //                 .tp_camera_distance         = 0.5f,
+    //                 .tp_cr_camera_distance      = 0.5f,
+    //                 .tp_pr_camera_distance      = 0.5f,
+    //                 .tp_camera_fov              = 30.0f,
+    //                 .tp_cr_camera_fov           = 30.0f,
+    //                 .tp_pr_camera_fov           = 30.0f,
+    //                 .fp_force_camera_overrides  = TRUE,
+    //                 .fp_camera_fov              = 20.0f,
+    //             },
+    //         },
+    //         .player_state_group_defs_count           = 0,
+    //         .fire_mode_projectile_mapping_data_count = 0,
+    //         .aim_assist_defs_count                   = 0,
+    //     },
     // };
-    // lightweightPc.movementVersion = 1;
-    // lightweightPc.flags1          = 0;
-    // ZonePacketSendDebug(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_AddLightweightPc, &lightweightPc, "AddLightweightPc");
 
-    // 7. Character.UpdateScale
-    Zone_Packet_Character_UpdateScale updateScale = { 0 };
-    updateScale.character_id = session->characterId;
-    updateScale.scale = (vec4){ .x = 1.0f, .y = 1.0f, .z = 1.0f, .w = 1.0f };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_Character_UpdateScale, &updateScale);
+    // ZonePacketSend(app, session, &app->arenaPerTick,
+    //                Zone_Packet_Kind_ReferenceDataWeaponDefinitions, &weaponDefs);
 
-    // 8. Container.InitEquippedContainers
-    struct container_list_s containerList[CHARACTER_INIT_MAX_ITEMS] = { 0 };
-    struct items_list_s containerItems[CHARACTER_INIT_MAX_ITEMS] = { 0 };
-    for (u32 i = 0; i < initState->items_count && i < CHARACTER_INIT_MAX_ITEMS; i++) {
-        const CharacterInitItem* item = &initState->items[i];
-        containerItems[i].item_defs_id_1 = item->item_def_id;
-        containerItems[i].item_defs_id_2 = item->item_def_id;
-        containerItems[i].tint_id = 0;
-        containerItems[i].guid_2 = item->guid;
-        containerItems[i].count = 1;
-        containerItems[i].container_guid = item->container_guid;
-        containerItems[i].contain_def_id = item->container_def_id;
-        containerItems[i].container_slot_id = item->container_slot_id;
-        containerItems[i].base_durability = 0;
-        containerItems[i].current_durability = 0;
-        containerItems[i].max_durability_from_defs = 0;
-        containerItems[i].unk_bool_1 = FALSE;
-        containerItems[i].owner_character_id = item->owner_character_id;
-
-        containerList[i].loadout_slot_id = item->loadout_slot_id;
-        containerList[i].guid_1 = item->guid;
-        containerList[i].defs_id = item->item_def_id;
-        containerList[i].associated_character_id = session->characterId;
-        containerList[i].slots = 1;
-        containerList[i].items_list_count = 1;
-        containerList[i].items_list = &containerItems[i];
-        containerList[i].show_bulk = FALSE;
-        containerList[i].max_bulk = 0;
-        containerList[i].bulk_used = 0;
-        containerList[i].has_bulk_limit = FALSE;
-    }
-
-    Zone_Packet_ContainerInitEquippedContainers containers = { 0 };
-    containers.character_id = session->characterId;
-    containers.ignore_this  = 0;
-    containers.container_list_count = initState->items_count;
-    containers.container_list = containerList;
-
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ContainerInitEquippedContainers, &containers);
-
-    // 9. Reference data
-    //ZonePacketRawFileSend(app, session, &app->arenaPerTick, KB(10), "..\\data\\Command_ItemDefinitions.bin");
-    // Command.ItemDefinitions — empty list, no server-side item defs
-    // Command.ItemDefinitions — 6 items: fists, binoculars, hoodie, jeans, sneakers, eyes requirement
-Zone_Packet_CommandItemDefinitions itemDefs = { 0 };
-
-itemDefs.item_def_reply_2_length = 1;
-itemDefs.item_def_reply_2 = (struct item_def_reply_2_s[1]){
-    [0] = {
-        .item_defs_count = 6,
-        .item_defs = (struct item_defs_s[6]){
-            [0] = {
-                // Fists
-                .defs_id       = 85,
-                .bitflags1     = 0,
-                .bitflags2     = 0b00001100,
-                .name_id       = 0,
-                .item_class    = 25006,
-                .item_type     = 20,
-                .item_type_1   = 20,
-                .category_id   = 11,
-                .model_name    = STR8("Weapon_Empty.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 0,
-                .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
-                .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
-                .passive_equip_slot_group_id = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 43001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [1] = {
-                // Binoculars
-                .defs_id       = 1542,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25054,
-                .item_type     = 20,
-                .item_type_1   = 20,
-                .category_id   = 16,
-                .model_name    = STR8("Weapon_Binoculars_3P.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .active_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
-                .passive_equip_slot_id = EQUIPMENT_SLOT_RIGHT_HAND,
-                .passive_equip_slot_group_id = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [2] = {
-                // Gas Runner Hoodie
-                .defs_id       = 5747,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25002,
-                .item_type     = 34,
-                .item_type_1   = 34,
-                .category_id   = 1,
-                .model_name    = STR8("SurvivorMale_Chest_Hoodie_Down.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .active_equip_slot_id = EQUIPMENT_SLOT_CHEST,
-                .passive_equip_slot_id = EQUIPMENT_SLOT_CHEST,
-                .passive_equip_slot_group_id = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 55001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [3] = {
-                // Jeans
-                .defs_id       = 2178,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25003,
-                .item_type     = 34,
-                .item_type_1   = 34,
-                .category_id   = 3,
-                .model_name    = STR8("SurvivorMale_Legs_Pants_SkinnyLeg.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 50,
-                .active_equip_slot_id = 4,
-                .passive_equip_slot_id = 4,
-                .passive_equip_slot_group_id = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 55001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [4] = {
-                // Conveys Sneakers
-                .defs_id       = 2216,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25005,
-                .item_type     = 28,
-                .item_type_1   = 28,
-                .category_id   = 107,
-                .model_name    = STR8("SurvivorMale_Feet_Conveys.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 200,
-                .active_equip_slot_id = 5,
-                .passive_equip_slot_id = 5,
-                .passive_equip_slot_group_id = 0,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 49001,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-            [5] = {
-                // Eyes requirement shim for client slot-105 attachment validation
-                .defs_id       = ITEM_DEF_EYES_ATTACHMENT,
-                .bitflags2     = 0b00000100, // FLAG_CAN_EQUIP
-                .item_class    = 25004,
-                .item_type     = 34,
-                .item_type_1   = 34,
-                .category_id   = 2,
-                .model_name    = STR8("SurvivorMale_Eyes_01.adr"),
-                .texture_alias = STR8(""),
-                .tint_alias    = STR8(""),
-                .bulk          = 0,
-                .active_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
-                .passive_equip_slot_id = LOADOUT_SLOT_REQUIRED_EYES,
-                .passive_equip_slot_group_id = LOADOUT_SLOT_REQUIRED_EYES,
-                .max_stack_size = 1,
-                .min_stack_size = 1,
-                .power_rating  = 0,
-                .curreny_type  = -1,
-                .stats_item_def_2_count = 0,
-            },
-        },
-    },
-};
-
-ZonePacketSend(app, session, &app->arenaPerTick,
-               Zone_Packet_Kind_CommandItemDefinitions, &itemDefs);
-    Zone_Packet_ReferenceDataWeaponDefinitions weaponDefs = { 0 };
-
-weaponDefs.weapon_byteswithlength_length = 1;
-weaponDefs.weapon_byteswithlength = (struct weapon_byteswithlength_s[1]){
-    [0] = {
-        .weapon_defs_count = 2,
-        .weapon_defs = (struct weapon_defs_s[2]){
-            [0] = {
-                .id1                 = 85,
-                .id2                 = 85,
-                .weapon_group_id     = 0,
-                .flags1              = 0,
-                .equip_ms            = 500,
-                .unequip_ms          = 500,
-                .melee_detect_width  = 100,
-                .melee_detect_height = 100,
-                .anim_set_name       = STR8("Fists"),
-                .ammo_slots_count    = 0,
-                .fire_groups_count   = 1,
-                .fire_groups = (struct fire_groups_s[1]){
-                    [0] = { .fire_group_id = 1 },
-                },
-            },
-            [1] = {
-                .id1                 = 12,
-                .id2                 = 12,
-                .weapon_group_id     = 0,
-                .flags1              = 0,
-                .equip_ms            = 500,
-                .unequip_ms          = 500,
-                .melee_detect_width  = 0,
-                .melee_detect_height = 0,
-                .anim_set_name       = STR8("Binoculars"),
-                .ammo_slots_count    = 0,
-                .fire_groups_count   = 1,
-                .fire_groups = (struct fire_groups_s[1]){
-                    [0] = { .fire_group_id = 2 },
-                },
-            },
-        },
-        .fire_group_defs_count = 2,
-        .fire_group_defs = (struct fire_group_defs_s[2]){
-            [0] = {
-                .id3 = 1,
-                .id4 = 1,
-                .fire_mode_list_count = 1,
-                .fire_mode_list = (struct fire_mode_list_s[1]){
-                    [0] = { .fire_mode_1 = 1 },
-                },
-            },
-            [1] = {
-                .id3 = 2,
-                .id4 = 2,
-                .fire_mode_list_count = 1,
-                .fire_mode_list = (struct fire_mode_list_s[1]){
-                    [0] = { .fire_mode_1 = 2 },
-                },
-            },
-        },
-        .fire_mode_defs_count = 2,
-        .fire_mode_defs = (struct fire_mode_defs_s[2]){
-            [0] = {
-                .id5            = 1,
-                .id6            = 1,
-                .type           = 1,
-                .refire_time_ms = 500,
-                .range          = 2.0f,
-                // Third person camera
-                .tp_force_camera_overrides  = TRUE,
-                .tp_camera_distance         = 3.5f,
-                .tp_cr_camera_distance      = 3.0f,
-                .tp_pr_camera_distance      = 3.5f,
-                .tp_camera_fov              = 75.0f,
-                .tp_cr_camera_fov           = 75.0f,
-                .tp_pr_camera_fov           = 75.0f,
-                .fp_force_camera_overrides  = FALSE,
-                .fp_camera_fov              = 250.0f,
-            },
-            [1] = {
-                .id5            = 2,
-                .id6            = 2,
-                .type           = 0,
-                .refire_time_ms = 0,
-                .range          = 0.0f,
-                // Binoculars zoom camera
-                .tp_force_camera_overrides  = TRUE,
-                .tp_camera_distance         = 0.5f,
-                .tp_cr_camera_distance      = 0.5f,
-                .tp_pr_camera_distance      = 0.5f,
-                .tp_camera_fov              = 30.0f,
-                .tp_cr_camera_fov           = 30.0f,
-                .tp_pr_camera_fov           = 30.0f,
-                .fp_force_camera_overrides  = TRUE,
-                .fp_camera_fov              = 20.0f,
-            },
-        },
-        .player_state_group_defs_count          = 0,
-        .fire_mode_projectile_mapping_data_count = 0,
-        .aim_assist_defs_count                  = 0,
-    },
-};
-
-ZonePacketSend(app, session, &app->arenaPerTick,
-               Zone_Packet_Kind_ReferenceDataWeaponDefinitions, &weaponDefs);
-
-    // Reset loading flags before zone transition
+    // Reset loading flags before zone transition.
     session->finished_loading = FALSE;
     session->isReady          = FALSE;
 
@@ -943,78 +763,14 @@ ZonePacketSend(app, session, &app->arenaPerTick,
            session->pGetPlayerActor.headType,
            (int)session->pGetPlayerActor.headActor.size, session->pGetPlayerActor.headActor.data);
 
-    // 10. ClientBeginZoning
-    // Zone_Packet_ClientBeginZoning beginZoning = { 0 };
-    // beginZoning.zone_name  = STR8("Z2");
-    // beginZoning.zone_type  = 4;
-    // beginZoning.pos        = (vec4){ .x = -297.31f, .y = 506.06f, .z = -4894.10f, .w = 1.0f };
-    // beginZoning.rot        = (vec4){ .x = 0.0f, .y = -0.7071f, .z = 0.0f, .w = 0.7071f };
-    // beginZoning.overcast   = 1.0f;
-    // beginZoning.fogDensity = 0.000173f;
-    // beginZoning.fogFloor   = 10.0f;
-    // beginZoning.fogGradient = 0.0144f;
-    // beginZoning.globalPrecipitation = 0.0f;
-    // beginZoning.temperature = 75.0f;
-    // beginZoning.skyClarity  = 0.0f;
-    // beginZoning.cloudWeight0 = 0.05f;
-    // beginZoning.cloudWeight1 = 0.0f;
-    // beginZoning.cloudWeight2 = 0.05f;
-    // beginZoning.cloudWeight3 = 0.15f;
-    // beginZoning.transitionTime = 0.0f;
-    // beginZoning.sunAxisX = 38.0f;
-    // beginZoning.sunAxisY = -15.0f;
-    // beginZoning.sunAxisZ = 0.0f;
-    // beginZoning.windDirX = -1.0f;
-    // beginZoning.windDirY = -0.5f;
-    // beginZoning.windDirZ = -1.0f;
-    // beginZoning.wind = 3.0f;
-    // beginZoning.rainMinStrength       = 0.0f;
-    // beginZoning.rainRampUpTimeSeconds = 1.0f;
-    // beginZoning.cloudFile             = STR8("sky_Z_clouds.dds");
-    // beginZoning.stratusCloudTiling    = 0.30f;
-    // beginZoning.stratusCloudScrollU   = -0.002f;
-    // beginZoning.stratusCloudScrollV   = 0.0f;
-    // beginZoning.stratusCloudHeight    = 1000.0f;
-    // beginZoning.cumulusCloudTiling    = 0.20f;
-    // beginZoning.cumulusCloudScrollU   = 0.0f;
-    // beginZoning.cumulusCloudScrollV   = 0.002f;
-    // beginZoning.cumulusCloudHeight    = 8000.0f;
-    // beginZoning.cloudAnimationSpeed   = 0.0f;
-    // beginZoning.cloudSilverLiningThickness  = 0.25f;
-    // beginZoning.cloudSilverLiningBrightness = 7.0f;
-    // beginZoning.cloudShadows    = 0.5f;
-    // beginZoning.unk_byte_1      = 4;
-    // beginZoning.zone_id_1       = 5;
-    // beginZoning.zone_id_2       = 5;
-    // beginZoning.name_id         = 61609;
-    // beginZoning.unk_dword_1     = 0x0f2b07d0;
-    // beginZoning.unk_bool_1      = FALSE;
-    // beginZoning.wait_for_zone_ready = FALSE;
-    // beginZoning.unk_bool_2      = FALSE;
-    // ZonePacketSend(app, session, &app->arenaPerTick,
-    //                Zone_Packet_Kind_ClientBeginZoning, &beginZoning);
-
-    // 11. UpdateLocation
-    Zone_Packet_ClientUpdate_UpdateLocation updateLocation = {
-        .position = { .x = initState->position.x, .y = initState->position.y, .z = initState->position.z, .w = initState->position.w },
-        .rotation = { .x = initState->rotation.x, .y = initState->rotation.y, .z = initState->rotation.z, .w = initState->rotation.w },
-        .trigger_loading_screen = FALSE,
-        .unk_u8_1 = 0,
-        .unk_bool = FALSE,
-    };
-    ZonePacketSend(app, session, &app->arenaPerTick,
-                   Zone_Packet_Kind_ClientUpdate_UpdateLocation, &updateLocation);
-    CharacterInitTraceTransform("ClientUpdate.UpdateLocation", initState,
-                                &updateLocation.position, &updateLocation.rotation,
-                                initState->transient_id);
-
-    // 12. ClientInitializationDetails
+    // 10. ClientInitializationDetails
     Zone_Packet_ClientInitializationDetails initDetails = { 0 };
     initDetails.unk_u32_1 = 1;
     ZonePacketSend(app, session, &app->arenaPerTick,
                    Zone_Packet_Kind_ClientInitializationDetails, &initDetails);
 
-    __time64_t tzEnd; _time64(&tzEnd);
+    __time64_t tzEnd;
+    _time64(&tzEnd);
     printf("[ONLOGIN] All init packets sent in %lld seconds, waiting for ClientIsReady\n", tzEnd - onLoginTime);
     printf("[ONLOGIN] Post-init flags: finished_loading=%d isReady=%d characterReleased=%d\n",
            session->finished_loading, session->isReady, session->characterReleased);

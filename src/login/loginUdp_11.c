@@ -208,27 +208,27 @@ void CharacterSelectInfo(AppState* app, SessionState* session) {
         },
     };
 
-    packetReply.characters->payload->loadoutSlots_count = 2;
-    packetReply.characters->payload->loadoutSlots = (struct loadoutSlots_s[2]){
-        {
-            .hotbarSlotId    = LOADOUT_SLOT_MELEE,
-            .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
-            .slotId          = LOADOUT_SLOT_MELEE,
-            .itemDefId       = WEAPON_FISTS,
-            .loadoutItemGuid = ITEM_GUID_FISTS,
-            .unkByte1        = 1,
-            .unkDword1       = 22,
-        },
-        {
-            .hotbarSlotId    = LOADOUT_SLOT_BINOCULARS,
-            .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
-            .slotId          = LOADOUT_SLOT_BINOCULARS,
-            .itemDefId       = WEAPON_BINOCULARS,
-            .loadoutItemGuid = ITEM_GUID_BINOCULARS,
-            .unkByte1        = 1,
-            .unkDword1       = 22,
-        },
-    };
+    packetReply.characters->payload->loadoutSlots_count = 0;
+    // packetReply.characters->payload->loadoutSlots = (struct loadoutSlots_s[2]){
+    //     {
+    //         .hotbarSlotId    = LOADOUT_SLOT_MELEE,
+    //         .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
+    //         .slotId          = LOADOUT_SLOT_MELEE,
+    //         .itemDefId       = WEAPON_FISTS,
+    //         .loadoutItemGuid = ITEM_GUID_FISTS,
+    //         .unkByte1        = 1,
+    //         .unkDword1       = 22,
+    //     },
+    //     {
+    //         .hotbarSlotId    = LOADOUT_SLOT_BINOCULARS,
+    //         .loadoutId       = LOADOUT_ID_KOTK_CHARACTER,
+    //         .slotId          = LOADOUT_SLOT_BINOCULARS,
+    //         .itemDefId       = WEAPON_BINOCULARS,
+    //         .loadoutItemGuid = ITEM_GUID_BINOCULARS,
+    //         .unkByte1        = 1,
+    //         .unkDword1       = 22,
+    //     },
+    // };
 
     packetReply.characters->payload->itemDefinitions_count = 1;
     packetReply.characters->payload->itemDefinitions = (struct itemDefinitions_s[1]){
